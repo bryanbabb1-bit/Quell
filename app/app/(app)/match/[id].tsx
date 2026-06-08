@@ -121,7 +121,7 @@ export default function MatchDetailScreen() {
               <View style={styles.statusRow}>
                 <Ionicons name="checkmark-circle" size={18} color={colors.fairway} />
                 <Text style={styles.statusText}>
-                  Submitted ✓ {oppSubmitted ? '' : `— waiting on the ${isCreator ? 'opponent' : 'creator'} to finish.`}
+                  Submitted{oppSubmitted ? '' : ` — waiting on the ${isCreator ? 'opponent' : 'creator'} to finish.`}
                 </Text>
               </View>
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/score`)}>

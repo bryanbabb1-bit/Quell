@@ -175,15 +175,23 @@ async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Res
     if (!match) return error('Match not found', 404);
   }
 
-  const [creatorCard, opponentCard] = await Promise.all([
+  const [creatorCard, opponentCard, creatorUser, opponentUser] = await Promise.all([
     env.DB.prepare('SELECT * FROM scorecards WHERE id = ?').bind(match.creator_scorecard_id).first(),
     env.DB.prepare('SELECT * FROM scorecards WHERE id = ?').bind(match.opponent_scorecard_id).first(),
+    env.DB.prepare('SELECT first_name, last_name FROM users WHERE id = ?').bind(match.creator_id).first<any>(),
+    match.opponent_id
+      ? env.DB.prepare('SELECT first_name, last_name FROM users WHERE id = ?').bind(match.opponent_id).first<any>()
+      : Promise.resolve(null),
   ]);
+
+  const nameOf = (u: any) => (u ? [u.first_name, u.last_name].filter(Boolean).join(' ').trim() : '') || 'A golfer';
 
   return json({
     match,
     creator_scorecard: creatorCard,
     opponent_scorecard: opponentCard,
+    creator_name: nameOf(creatorUser),
+    opponent_name: nameOf(opponentUser),
     progression: match.match_progression ? JSON.parse(match.match_progression) : null,
   });
 }

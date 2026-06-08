@@ -92,6 +92,8 @@ export interface RevealResponse {
   match: Match;
   creator_scorecard: Scorecard;
   opponent_scorecard: Scorecard;
+  creator_name: string;
+  opponent_name: string;
   progression: MatchProgression | null;
 }
 

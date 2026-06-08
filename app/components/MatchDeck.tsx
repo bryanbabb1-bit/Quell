@@ -14,8 +14,8 @@ const { width } = Dimensions.get('window');
 const THRESHOLD = width * 0.25;
 const OFF = width * 1.4;
 
-// Full-screen swipeable deck of open matches. Swipe RIGHT (or tap ✓) to accept,
-// LEFT (or tap ✕) to pass. Accept is routed back to the parent (which runs the
+// Full-screen swipeable deck of open matches. Swipe RIGHT (or tap accept) to
+// accept, LEFT (or tap pass) to pass. Accept is routed back to the parent (runs the
 // index-confirm + acceptMatch); pass is purely local (advances the deck).
 export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   matches: DiscoveryMatch[];

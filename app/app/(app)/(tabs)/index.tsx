@@ -43,7 +43,7 @@ export default function DiscoveryScreen() {
     }
   };
 
-  // Swipe-right / ✓: confirm a stale index first, then accept.
+  // Swipe-right / accept: confirm a stale index first, then accept.
   const requestAccept = (m: DiscoveryMatch) => {
     if (user && isIndexStale(user.handicap, user.handicap_updated_at)) setPendingAccept(m);
     else doAccept(m);
