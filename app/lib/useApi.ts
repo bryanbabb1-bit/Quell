@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { apiJson } from '@/lib/api';
 import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
+  MyRecord, LeaderboardEntry,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -44,6 +45,10 @@ export function useApi() {
       getMe: () => call<any>('/me'),
       updateMe: (patch: Record<string, unknown>) =>
         call<any>('/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+
+      // Records / leaderboard
+      getMyRecord: () => call<MyRecord>('/me/record'),
+      getLeaderboard: () => call<{ entries: LeaderboardEntry[] }>('/leaderboard'),
 
       // Matches
       discover: () => call<{ matches: DiscoveryMatch[] }>('/matches'),

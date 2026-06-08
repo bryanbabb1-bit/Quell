@@ -3,7 +3,8 @@ import { json, error } from './lib/response';
 import { now } from './lib/id';
 import { ValidationError } from './lib/validate';
 import type { Env } from './types';
-import { handleGetMe, handleUpdateMe } from './routes/users';
+import { handleGetMe, handleUpdateMe, handleGetMyRecord } from './routes/users';
+import { handleLeaderboard } from './routes/leaderboard';
 import { handleMatches } from './routes/matches';
 import { handleScorecards } from './routes/scorecards';
 import { handleMessages } from './routes/messages';
@@ -74,9 +75,13 @@ async function handleRequest(
       response = await handleGetMe(auth, env);
     } else if (url.pathname === '/me' && method === 'PATCH') {
       response = await handleUpdateMe(auth, request, env);
+    } else if (url.pathname === '/me/record' && method === 'GET') {
+      response = await handleGetMyRecord(auth, env);
     } else {
       response = error('Not found', 404);
     }
+  } else if (root === 'leaderboard' && method === 'GET') {
+    response = await handleLeaderboard(auth, env);
   } else if (root === 'matches') {
     // The matches handler also owns the nested /matches/:id/scorecard,
     // /reveal, and /messages sub-resources once implemented; for now route

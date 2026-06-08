@@ -115,6 +115,39 @@ export interface HolesSetup {
   my_strokes: number[]; // aligned positionally to `holes`
 }
 
+// ── Records / leaderboard ───────────────────────────────────────────────────
+export type Outcome = 'win' | 'loss' | 'tie';
+
+export interface RecentResult {
+  match_id: string;
+  course_name: string;
+  outcome: Outcome;
+  final_delta: string | null;
+  completed_at: string | null;
+  opponent_name: string;
+}
+
+export interface MyRecord {
+  played: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  win_pct: number;
+  current_streak: { type: Outcome | 'none'; count: number };
+  recent: RecentResult[];
+}
+
+export interface LeaderboardEntry {
+  user_id: string;
+  name: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  played: number;
+  win_pct: number;
+  is_me: boolean;
+}
+
 // Holes a match type is played over (mirrors api/src/routes/scorecards.ts).
 export function holeRangeFor(matchType: MatchType): { min: number; max: number; count: number } {
   if (matchType === 'front_nine') return { min: 1, max: 9, count: 9 };
