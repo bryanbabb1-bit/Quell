@@ -15,7 +15,9 @@ and a working Clerk auth shell (sign-in → `/me` upsert). `matches`,
 `scorecards`, and `messages` routes are wired with documented contracts and
 `501` stubs — their logic is the next phases (discovery, hidden-card lock,
 match determination). See [`docs/MATCH_PLAY_ARCHITECTURE.md`](docs/MATCH_PLAY_ARCHITECTURE.md)
-for the full plan and [`docs/SETUP.md`](docs/SETUP.md) to run it locally.
+for the full plan, [`docs/V1_REVISION.md`](docs/V1_REVISION.md) for the current
+V1 direction (manual score entry, national course model, leaderboards), and
+[`docs/SETUP.md`](docs/SETUP.md) to run it locally.
 
 ## Stack
 Reuses the proven [TrueForecasting](https://trueforecasting.app) architecture
