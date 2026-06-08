@@ -1,0 +1,23 @@
+{
+  "name": "match-play-api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:create": "wrangler d1 create match-play",
+    "db:migrate:local": "wrangler d1 migrations apply match-play --local",
+    "db:migrate:remote": "wrangler d1 migrations apply match-play"
+  },
+  "dependencies": {
+    "@clerk/backend": "^1.26.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250510.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9",
+    "wrangler": "^4.90.0"
+  }
+}

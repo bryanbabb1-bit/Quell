@@ -1,16 +1,30 @@
 # deps
 node_modules/
+
 # env / secrets
 .env
 .env.*
 !.env.example
-# build / native
-mobile/.expo/
-mobile/ios/
-mobile/android/
+api/.dev.vars
+api/.dev.vars.*
+!api/.dev.vars.example
+api/.cloudflare-token
+
+# expo / native (app/)
+app/.expo/
+app/ios/
+app/android/
+app/expo-env.d.ts
+
+# cloudflare / wrangler (api/)
+api/.wrangler/
+.wrangler/
+
+# build
 dist/
 build/
 *.log
+
 # os
 .DS_Store
 Thumbs.db

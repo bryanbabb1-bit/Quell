@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Match Play",
+    "slug": "match-play",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "matchplay",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bryanbabb.matchplay"
+    },
+    "android": {
+      "package": "com.bryanbabb.matchplay"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

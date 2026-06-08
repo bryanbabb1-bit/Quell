@@ -1,0 +1,26 @@
+name = "match-play-api"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+workers_dev = true
+
+# D1 binding. Run `npm run db:create` once, then paste the returned
+# database_id here before the first deploy / remote migration.
+[[d1_databases]]
+binding = "DB"
+database_name = "match-play"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Per-user rate limit (mirrors TrueForecast). 300 req / 60s.
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "2001"
+simple = { limit = 300, period = 60 }
+
+[vars]
+ENVIRONMENT = "development"
+
+[observability]
+enabled = true
