@@ -6,6 +6,7 @@ export interface User {
   email: string;
   first_name: string | null;
   last_name: string | null;
+  ghin_number: string | null;
   handicap: number | null;
   profile_photo_url: string | null;
   created_at: string;

@@ -50,7 +50,7 @@ function AuthGate() {
           return;
         }
         loadUser(t);
-        if (inAuthGroup) router.replace('/(app)/discovery');
+        if (inAuthGroup) router.replace('/(app)/(tabs)');
       })
       .catch(() => router.replace('/(auth)/sign-in'));
     // Intentionally NOT depending on getToken (see note above).

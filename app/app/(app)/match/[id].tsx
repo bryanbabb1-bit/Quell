@@ -1,0 +1,148 @@
+import { useCallback, useState } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView,
+} from 'react-native';
+import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
+import { Ionicons } from '@expo/vector-icons';
+import { useApi } from '@/lib/useApi';
+import type { Match } from '@/types';
+import { MATCH_TYPE_LABELS } from '@/types';
+import { colors, spacing, radius, typography } from '@/constants/theme';
+import { formatHandicap, formatPlayWhen, STATUS_LABELS } from '@/lib/format';
+
+export default function MatchDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { userId } = useAuth();
+  const api = useApi();
+  const [match, setMatch] = useState<Match | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [acting, setActing] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    try {
+      setError(null);
+      setMatch(await api.getMatch(id));
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not load this match.');
+    } finally {
+      setLoading(false);
+    }
+  }, [api, id]);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const act = async (fn: () => Promise<Match>, confirmLabel: string) => {
+    Alert.alert(confirmLabel, 'Are you sure?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes', style: 'destructive', onPress: async () => {
+          setActing(true);
+          try { setMatch(await fn()); } catch (e: any) { Alert.alert('Failed', e?.message ?? 'Try again.'); }
+          finally { setActing(false); }
+        },
+      },
+    ]);
+  };
+
+  if (loading) return <View style={styles.center}><ActivityIndicator color={colors.fairway} size="large" /></View>;
+  if (error || !match) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errText}>{error ?? 'Match not found.'}</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.link}>Go back</Text></TouchableOpacity>
+      </View>
+    );
+  }
+
+  const isCreator = match.creator_id === userId;
+  const isOpponent = match.opponent_id === userId;
+  const isParticipant = isCreator || isOpponent;
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.headerRow}>
+        <Text style={styles.course}>{match.course_name}</Text>
+        <View style={styles.badge}><Text style={styles.badgeText}>{STATUS_LABELS[match.status]}</Text></View>
+      </View>
+      <Text style={styles.sub}>{match.tee_color} tees · {MATCH_TYPE_LABELS[match.match_type]}</Text>
+
+      <View style={styles.card}>
+        <Row icon="calendar-outline" label="When" value={formatPlayWhen(match.play_date, match.play_time)} />
+        <Row icon="people-outline" label="Wants handicap" value={`${match.hcp_range_min}–${match.hcp_range_max}`} />
+        {match.stakes != null && <Row icon="cash-outline" label="Stakes (context only)" value={`$${match.stakes}`} />}
+      </View>
+
+      {match.opponent_id && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Players</Text>
+          <Row icon="person-outline" label={isCreator ? 'You (creator)' : 'Creator'} value={formatHandicap(match.creator_handicap)} />
+          <Row icon="person-outline" label={isOpponent ? 'You (opponent)' : 'Opponent'} value={formatHandicap(match.opponent_handicap)} />
+        </View>
+      )}
+
+      {(match.status === 'in_progress' || match.status === 'completed') && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Scores</Text>
+          <Text style={styles.note}>
+            Score entry, the hidden-until-both-submit reveal, and the hole-by-hole
+            result land in the next build.
+          </Text>
+        </View>
+      )}
+
+      <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
+        {isParticipant && (match.status === 'accepted' || match.status === 'in_progress') && (
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/messages`)}>
+            <Ionicons name="chatbubble-outline" size={18} color={colors.surface} />
+            <Text style={styles.primaryText}>Message {isCreator ? 'opponent' : 'creator'}</Text>
+          </TouchableOpacity>
+        )}
+        {isCreator && (match.status === 'open' || match.status === 'accepted') && (
+          <TouchableOpacity style={styles.dangerBtn} disabled={acting} onPress={() => act(() => api.cancelMatch(match.id), 'Cancel match')}>
+            <Text style={styles.dangerText}>Cancel match</Text>
+          </TouchableOpacity>
+        )}
+        {isOpponent && match.status === 'accepted' && (
+          <TouchableOpacity style={styles.dangerBtn} disabled={acting} onPress={() => act(() => api.declineMatch(match.id), 'Back out of match')}>
+            <Text style={styles.dangerText}>Back out</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
+function Row({ icon, label, value }: { icon: any; label: string; value: string }) {
+  return (
+    <View style={styles.row}>
+      <Ionicons name={icon} size={18} color={colors.muted} />
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue}>{value}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.paper },
+  container: { padding: spacing.lg, gap: spacing.sm, backgroundColor: colors.paper },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  course: { ...typography.title, fontSize: 24, flexShrink: 1 },
+  sub: { ...typography.caption, marginBottom: spacing.sm },
+  badge: { borderWidth: 1, borderColor: colors.fairway, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  badgeText: { fontSize: 12, fontWeight: '700', color: colors.fairway },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm, marginTop: spacing.sm },
+  cardTitle: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rowLabel: { ...typography.body, color: colors.muted, flex: 1 },
+  rowValue: { ...typography.bodySemiBold },
+  note: { ...typography.caption, color: colors.muted },
+  primaryBtn: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
+  primaryText: { ...typography.bodySemiBold, color: colors.surface },
+  dangerBtn: { borderWidth: 1, borderColor: colors.flagRed, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+  dangerText: { ...typography.bodySemiBold, color: colors.flagRed },
+  errText: { ...typography.body, color: colors.muted },
+  link: { ...typography.bodySemiBold, color: colors.fairway },
+});
