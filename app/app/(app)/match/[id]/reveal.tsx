@@ -8,9 +8,10 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useResultsStore } from '@/store/useResultsStore';
+import { useColors } from '@/store/useThemeStore';
 import type { RevealResponse, HoleResult } from '@/types';
 import { deltaLabel } from '@/lib/format';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const STEP_MS = 1600; // slow, deliberate pace between holes
 
@@ -20,6 +21,8 @@ export default function RevealScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId } = useAuth();
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const markSeen = useResultsStore((s) => s.markSeen);
 
   const [data, setData] = useState<RevealResponse | null>(null);
@@ -108,7 +111,7 @@ export default function RevealScreen() {
         {/* Climbing scoreline */}
         <View style={styles.statusWrap}>
           <Text style={styles.statusCaption}>{finished ? 'Final' : `Through ${step} of ${holes.length}`}</Text>
-          <Animated.Text key={`status-${step}`} entering={FadeIn.duration(350)} style={[styles.statusBig, deltaColor(myDelta)]}>
+          <Animated.Text key={`status-${step}`} entering={FadeIn.duration(350)} style={[styles.statusBig, deltaColor(myDelta, colors)]}>
             {deltaLabel(myDelta)}
           </Animated.Text>
         </View>
@@ -170,8 +173,8 @@ export default function RevealScreen() {
 
         {/* Final banner */}
         {finished && outcome && (
-          <Animated.View entering={FadeIn.duration(500)} style={[styles.banner, bannerStyle(outcome)]}>
-            <Text style={[styles.bannerTitle, bannerTextColor(outcome)]}>{bannerTitle(outcome)}</Text>
+          <Animated.View entering={FadeIn.duration(500)} style={[styles.banner, bannerStyle(outcome, colors)]}>
+            <Text style={[styles.bannerTitle, bannerTextColor(outcome, colors)]}>{bannerTitle(outcome)}</Text>
             {outcome !== 'tie' && <Text style={styles.bannerScore}>{data.progression.final_delta}</Text>}
             {data.progression.decided_on_hole != null && (
               <Text style={styles.bannerSub}>Closed out on hole {data.progression.decided_on_hole}</Text>
@@ -213,6 +216,8 @@ export default function RevealScreen() {
 function HoleSide({ label, gross, net, strokes, won }: {
   label: string; gross: number; net: number; strokes: number; won: boolean;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.side}>
       <Text style={styles.sideLabel} numberOfLines={1}>{label}</Text>
@@ -231,7 +236,7 @@ function HoleSide({ label, gross, net, strokes, won }: {
   );
 }
 
-function deltaColor(delta: number) {
+function deltaColor(delta: number, colors: Palette) {
   if (delta > 0) return { color: colors.fairway };
   if (delta < 0) return { color: colors.flagRed };
   return { color: colors.muted };
@@ -239,18 +244,19 @@ function deltaColor(delta: number) {
 function bannerTitle(o: Outcome): string {
   return o === 'win' ? 'You win' : o === 'loss' ? 'You lost' : 'All Square';
 }
-function bannerTextColor(o: Outcome) {
+function bannerTextColor(o: Outcome, colors: Palette) {
   if (o === 'win') return { color: colors.fairway };
   if (o === 'loss') return { color: colors.flagRed };
   return { color: colors.ink };
 }
-function bannerStyle(o: Outcome) {
+function bannerStyle(o: Outcome, colors: Palette) {
   if (o === 'win') return { borderColor: colors.fairway, backgroundColor: '#EAF5EE' };
   if (o === 'loss') return { borderColor: colors.flagRed, backgroundColor: '#FBEAEA' };
   return { borderColor: colors.border, backgroundColor: colors.sand };
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.lg, backgroundColor: colors.paper },
   container: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
@@ -311,4 +317,5 @@ const styles = StyleSheet.create({
   lockedText: { ...typography.body, color: colors.muted, textAlign: 'center' },
   link: { ...typography.bodySemiBold, color: colors.fairway },
   linkMuted: { ...typography.body, color: colors.muted },
-});
+  });
+}

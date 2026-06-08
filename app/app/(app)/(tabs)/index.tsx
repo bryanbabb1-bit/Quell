@@ -1,18 +1,21 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
+import { useColors } from '@/store/useThemeStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { MatchDeck } from '@/components/MatchDeck';
 import type { DiscoveryMatch } from '@/types';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 import { isIndexStale } from '@/lib/format';
 
 export default function DiscoveryScreen() {
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [matches, setMatches] = useState<DiscoveryMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +112,8 @@ export default function DiscoveryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.paper },
   errTitle: { ...typography.heading, color: colors.muted, textAlign: 'center', paddingHorizontal: spacing.lg },
@@ -124,4 +128,5 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4,
   },
-});
+  });
+}

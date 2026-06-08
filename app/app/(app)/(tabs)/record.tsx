@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity,
 } from 'react-native';
@@ -7,12 +7,15 @@ import { useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
+import { useColors } from '@/store/useThemeStore';
 import type { MyRecord, LeaderboardEntry, Outcome } from '@/types';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 export default function RecordScreen() {
   const api = useApi();
   const { userId } = useAuth();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [record, setRecord] = useState<MyRecord | null>(null);
   const [board, setBoard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +131,8 @@ export default function RecordScreen() {
 }
 
 function Stat({ label, value, accent }: { label: string; value: number; accent: string }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.stat}>
       <Text style={[styles.statValue, { color: accent }]}>{value}</Text>
@@ -137,6 +142,8 @@ function Stat({ label, value, accent }: { label: string; value: number; accent: 
 }
 
 function OutcomeChip({ outcome }: { outcome: Outcome }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const map = {
     win: { t: 'W', bg: colors.fairway, fg: colors.surface },
     loss: { t: 'L', bg: colors.flagRed, fg: colors.surface },
@@ -145,7 +152,8 @@ function OutcomeChip({ outcome }: { outcome: Outcome }) {
   return <View style={[styles.chip, { backgroundColor: map.bg }]}><Text style={[styles.chipText, { color: map.fg }]}>{map.t}</Text></View>;
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper },
   container: { padding: spacing.lg, gap: spacing.md },
@@ -183,4 +191,5 @@ const styles = StyleSheet.create({
   lbName: { flex: 1, ...typography.body },
   lbWl: { width: 72, textAlign: 'center', ...typography.body },
   lbPct: { width: 48, textAlign: 'right', ...typography.bodySemiBold },
-});
+  });
+}

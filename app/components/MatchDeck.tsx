@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -7,8 +7,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import type { DiscoveryMatch } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
+import { useColors } from '@/store/useThemeStore';
 import { formatHandicap, formatPlayWhen } from '@/lib/format';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 const THRESHOLD = width * 0.25;
@@ -23,6 +24,8 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   onPass: (m: DiscoveryMatch) => void;
   onReload: () => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [index, setIndex] = useState(0);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
@@ -137,6 +140,8 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
 }
 
 function CardBody({ m }: { m: DiscoveryMatch }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const name = [m.creator_first_name, m.creator_last_name].filter(Boolean).join(' ') || 'A golfer';
   return (
     <View style={styles.body}>
@@ -161,6 +166,8 @@ function CardBody({ m }: { m: DiscoveryMatch }) {
 }
 
 function Fact({ icon, text }: { icon: any; text: string }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.fact}>
       <Ionicons name={icon} size={18} color={colors.muted} />
@@ -169,7 +176,8 @@ function Fact({ icon, text }: { icon: any; text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   deck: { flex: 1 },
   cardArea: { flex: 1, margin: spacing.lg, position: 'relative' },
   card: {
@@ -219,4 +227,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.fairway, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
   },
   reloadText: { ...typography.bodySemiBold, color: colors.fairway },
-});
+  });
+}

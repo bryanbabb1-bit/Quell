@@ -3,9 +3,10 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useResultsStore, selectUnseenCount } from '@/store/useResultsStore';
-import { colors } from '@/constants/theme';
+import { useColors } from '@/store/useThemeStore';
 
 export default function TabsLayout() {
+  const colors = useColors();
   const api = useApi();
   const hydrate = useResultsStore((s) => s.hydrate);
   const setCompleted = useResultsStore((s) => s.setCompleted);
@@ -67,6 +68,13 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" color={color} size={size} />,
         }}
       />
     </Tabs>

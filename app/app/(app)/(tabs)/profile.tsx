@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
@@ -7,12 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/clerk-expo';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
+import { useColors } from '@/store/useThemeStore';
 import { indexAgeLabel } from '@/lib/format';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 export default function ProfileScreen() {
   const { signOut } = useAuth();
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useUserStore((s) => s.user);
   const setUser = useUserStore.setState;
 
@@ -102,6 +105,8 @@ function Field(props: {
   label: string; value: string; onChangeText: (s: string) => void;
   placeholder?: string; keyboardType?: any;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{props.label}</Text>
@@ -118,7 +123,8 @@ function Field(props: {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   container: { padding: spacing.lg, gap: spacing.md },
   field: { gap: spacing.xs },
@@ -134,4 +140,5 @@ const styles = StyleSheet.create({
   saveText: { ...typography.bodySemiBold, color: colors.surface },
   signOut: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.sm },
   signOutText: { ...typography.body, color: colors.flagRed },
-});
+  });
+}

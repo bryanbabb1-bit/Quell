@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
@@ -6,10 +6,11 @@ import {
 import { router } from 'expo-router';
 import { useApi, type CreateMatchInput } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
+import { useColors } from '@/store/useThemeStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import type { MatchType } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 import { isIndexStale } from '@/lib/format';
 
 const TYPES: MatchType[] = ['front_nine', 'back_nine', 'eighteen'];
@@ -21,6 +22,8 @@ function isoToday(): string {
 
 export default function CreateMatchScreen() {
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [courseName, setCourseName] = useState('');
   const [teeColor, setTeeColor] = useState('');
   const [playDate, setPlayDate] = useState(isoToday());
@@ -166,6 +169,8 @@ function Field(props: {
   label: string; value: string; onChangeText: (s: string) => void;
   placeholder?: string; keyboardType?: any;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{props.label}</Text>
@@ -181,7 +186,8 @@ function Field(props: {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   flex: { flex: 1 },
   container: { padding: spacing.lg, gap: spacing.md, backgroundColor: colors.paper },
   field: { gap: spacing.xs },
@@ -200,4 +206,5 @@ const styles = StyleSheet.create({
   note: { ...typography.caption, color: colors.muted },
   submit: { backgroundColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
   submitText: { ...typography.bodySemiBold, color: colors.surface },
-});
+  });
+}

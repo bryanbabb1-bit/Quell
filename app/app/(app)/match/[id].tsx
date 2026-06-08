@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
@@ -6,15 +6,18 @@ import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
+import { useColors } from '@/store/useThemeStore';
 import type { Match } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 import { formatHandicap, formatPlayWhen, STATUS_LABELS } from '@/lib/format';
 
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId } = useAuth();
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +161,8 @@ export default function MatchDetailScreen() {
 }
 
 function Row({ icon, label, value }: { icon: any; label: string; value: string }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.row}>
       <Ionicons name={icon} size={18} color={colors.muted} />
@@ -167,7 +172,8 @@ function Row({ icon, label, value }: { icon: any; label: string; value: string }
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.paper },
   container: { padding: spacing.lg, gap: spacing.sm, backgroundColor: colors.paper },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -191,4 +197,5 @@ const styles = StyleSheet.create({
   dangerText: { ...typography.bodySemiBold, color: colors.flagRed },
   errText: { ...typography.body, color: colors.muted },
   link: { ...typography.bodySemiBold, color: colors.fairway },
-});
+  });
+}

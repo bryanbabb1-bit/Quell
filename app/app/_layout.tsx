@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { tokenCache } from '@/lib/tokenCache';
 import { setTokenRefresher } from '@/lib/api';
 import { useUserStore } from '@/store/useUserStore';
+import { useThemeStore } from '@/store/useThemeStore';
 import { colors } from '@/constants/theme';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
@@ -64,6 +65,9 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  const hydrateTheme = useThemeStore((s) => s.hydrate);
+  useEffect(() => { hydrateTheme(); }, [hydrateTheme]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

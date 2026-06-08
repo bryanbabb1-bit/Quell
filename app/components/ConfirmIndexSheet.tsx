@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatHandicap, indexAgeLabel } from '@/lib/format';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { useColors } from '@/store/useThemeStore';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 // Pre-round index confirmation. Rendered as an absolute-fill overlay (NOT a
 // React Native <Modal> — stacked Modals misbehave on iOS; see the RN overlay
@@ -24,6 +25,8 @@ export function ConfirmIndexSheet({
   onCancel: () => void;
   onConfirm: (index: number) => void;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [text, setText] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
@@ -97,7 +100,8 @@ export function ConfirmIndexSheet({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, zIndex: 100 },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
   sheetWrap: { flex: 1, justifyContent: 'flex-end' },
@@ -121,4 +125,5 @@ const styles = StyleSheet.create({
   confirmText: { ...typography.bodySemiBold, color: colors.surface },
   cancelBtn: { alignItems: 'center', paddingVertical: spacing.sm },
   cancelText: { ...typography.body, color: colors.muted },
-});
+  });
+}

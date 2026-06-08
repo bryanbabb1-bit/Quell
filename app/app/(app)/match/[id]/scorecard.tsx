@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity,
 } from 'react-native';
@@ -7,8 +7,9 @@ import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
+import { useColors } from '@/store/useThemeStore';
 import type { RevealResponse, HoleResult, HoleInfo } from '@/types';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const CELL = 40;
 const LABEL_W = 104;
@@ -20,6 +21,8 @@ export default function ScorecardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId } = useAuth();
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [data, setData] = useState<RevealResponse | null>(null);
   const [parByHole, setParByHole] = useState<Record<number, number | null>>({});
@@ -170,6 +173,8 @@ export default function ScorecardScreen() {
 function Cell({ text, head, accent, dim, bold, label }: {
   text: string; head?: boolean; accent?: boolean; dim?: boolean; bold?: boolean; label?: boolean;
 }) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={[styles.cell, label && styles.labelCell, head && styles.headCell, accent && styles.accentCell]}>
       <Text
@@ -188,7 +193,8 @@ function Cell({ text, head, accent, dim, bold, label }: {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.paper },
   topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.md },
@@ -218,4 +224,5 @@ const styles = StyleSheet.create({
   legend: { ...typography.caption, paddingHorizontal: spacing.md, paddingTop: spacing.sm },
   errText: { ...typography.body, color: colors.muted },
   link: { ...typography.bodySemiBold, color: colors.fairway },
-});
+  });
+}

@@ -6,9 +6,10 @@ import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
+import { useColors } from '@/store/useThemeStore';
 import type { Match, HoleEntry, HoleInfo } from '@/types';
 import { holeRangeFor, MATCH_TYPE_LABELS } from '@/types';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const MIN_SCORE = 1;
 const MAX_SCORE = 15;
@@ -18,6 +19,8 @@ export default function ScoreEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId } = useAuth();
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [match, setMatch] = useState<Match | null>(null);
   const [holesInfo, setHolesInfo] = useState<HoleInfo[]>([]);
@@ -121,7 +124,7 @@ export default function ScoreEntryScreen() {
         {toPar != null && (
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>To par</Text>
-            <Text style={[styles.summaryValue, toParColor(toPar)]}>{toParText(toPar)}</Text>
+            <Text style={[styles.summaryValue, toParColor(toPar, colors)]}>{toParText(toPar)}</Text>
           </View>
         )}
         {strokesTotal > 0 && (
@@ -184,7 +187,7 @@ export default function ScoreEntryScreen() {
 
                     <View style={styles.toParWrap}>
                       {diff != null && (
-                        <Text style={[styles.toParChip, toParColor(diff)]}>{toParText(diff)}</Text>
+                        <Text style={[styles.toParChip, toParColor(diff, colors)]}>{toParText(diff)}</Text>
                       )}
                     </View>
                   </View>
@@ -217,13 +220,14 @@ function toParText(diff: number): string {
   if (diff === 0) return 'E';
   return diff > 0 ? `+${diff}` : `${diff}`;
 }
-function toParColor(diff: number) {
+function toParColor(diff: number, colors: Palette) {
   if (diff < 0) return { color: colors.fairway };   // under par
   if (diff === 0) return { color: colors.muted };    // even
   return { color: colors.flagRed };                  // over par
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.paper },
   summary: {
@@ -279,4 +283,5 @@ const styles = StyleSheet.create({
   footNote: { ...typography.caption, textAlign: 'center' },
   errText: { ...typography.body, color: colors.muted },
   link: { ...typography.bodySemiBold, color: colors.fairway },
-});
+  });
+}
