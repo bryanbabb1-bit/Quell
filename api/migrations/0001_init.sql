@@ -13,7 +13,10 @@ CREATE TABLE users (
   email             TEXT NOT NULL,
   first_name        TEXT,
   last_name         TEXT,
-  handicap          REAL,               -- manual GHIN entry in V1
+  ghin_number       TEXT,               -- GHIN id; the key for authoritative
+                                        -- Handicap Index once GPA access lands
+  handicap          REAL,               -- Handicap Index (manual entry until
+                                        -- the GHIN/GPA integration auto-fills it)
   profile_photo_url TEXT,
   created_at        TEXT NOT NULL,
   updated_at        TEXT NOT NULL

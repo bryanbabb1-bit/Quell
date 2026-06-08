@@ -9,15 +9,19 @@ both cards, applies handicaps, and reveals the winner hole-by-hole.
 > **Not a betting app.** The app never touches money. Stakes are displayed for
 > context only; all settlement happens off-platform.
 
-## Status — Phase 1 complete
-Monorepo scaffold, full D1 schema (users / matches / scorecards / messages),
-and a working Clerk auth shell (sign-in → `/me` upsert). `matches`,
-`scorecards`, and `messages` routes are wired with documented contracts and
-`501` stubs — their logic is the next phases (discovery, hidden-card lock,
-match determination). See [`docs/MATCH_PLAY_ARCHITECTURE.md`](docs/MATCH_PLAY_ARCHITECTURE.md)
-for the full plan, [`docs/V1_REVISION.md`](docs/V1_REVISION.md) for the current
-V1 direction (manual score entry, national course model, leaderboards), and
-[`docs/SETUP.md`](docs/SETUP.md) to run it locally.
+## Status — Phase 2 backend complete
+- **Phase 1 ✅** — monorepo scaffold, D1 schema, Clerk auth shell (sign-in → `/me` upsert).
+- **Phase 2 (backend) ✅** — `matches` CRUD + discovery feed (handicap-range
+  filter) + accept/cancel/decline state machine (handicaps snapshot on accept)
+  + durable in-app messaging; `ghin_number` added to the profile (GHIN-ready).
+- **Next** — Phase 2 mobile screens (discovery swipe, create, match detail,
+  messaging, profile), then Phase 3 (course model + manual score entry +
+  hidden-entry lock + determination engine + reveal).
+
+`scorecards` / `reveal` remain `501` stubs until Phase 3. See
+[`docs/MATCH_PLAY_ARCHITECTURE.md`](docs/MATCH_PLAY_ARCHITECTURE.md) for the full
+plan, [`docs/V1_REVISION.md`](docs/V1_REVISION.md) for the current V1 direction,
+and [`docs/SETUP.md`](docs/SETUP.md) to run it locally.
 
 ## Stack
 Reuses the proven [TrueForecasting](https://trueforecasting.app) architecture
