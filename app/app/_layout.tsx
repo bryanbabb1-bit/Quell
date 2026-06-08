@@ -35,6 +35,7 @@ function AuthGate() {
   useEffect(() => {
     if (!isLoaded) return;
     const inAuthGroup = segments[0] === '(auth)';
+    const inAppGroup = segments[0] === '(app)';
 
     if (!isSignedIn) {
       resetUser();
@@ -42,7 +43,9 @@ function AuthGate() {
       return;
     }
 
-    // Signed in: load profile and make sure we're inside the app group.
+    // Signed in: load profile and make sure we're inside the app group. On a
+    // cold boot we land on the index route ('/'), which is neither group — so
+    // redirect whenever we're not already in (app), not just from (auth).
     getToken()
       .then((t) => {
         if (!t) {
@@ -50,7 +53,7 @@ function AuthGate() {
           return;
         }
         loadUser(t);
-        if (inAuthGroup) router.replace('/(app)/(tabs)');
+        if (!inAppGroup) router.replace('/(app)/(tabs)');
       })
       .catch(() => router.replace('/(auth)/sign-in'));
     // Intentionally NOT depending on getToken (see note above).
