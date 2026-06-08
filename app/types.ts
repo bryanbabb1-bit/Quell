@@ -50,3 +50,59 @@ export const MATCH_TYPE_LABELS: Record<MatchType, string> = {
   back_nine: 'Back 9',
   eighteen: '18 Holes',
 };
+
+// ── Scorecards + reveal ─────────────────────────────────────────────────────
+// These mirror the API's scoring engine (api/src/lib/scoring.ts). Keep in sync.
+
+export interface HoleEntry {
+  hole: number;
+  gross: number;
+}
+
+export interface Scorecard {
+  id: string;
+  match_id: string;
+  player_id: string;
+  hole_scores: string; // JSON-encoded HoleEntry[]
+  total_gross: number;
+  submitted_at: string;
+}
+
+export interface HoleResult {
+  hole: number;
+  creator_gross: number;
+  creator_strokes: number;
+  creator_net: number;
+  opponent_gross: number;
+  opponent_strokes: number;
+  opponent_net: number;
+  winner: 'creator' | 'opponent' | 'tie';
+  creator_delta: number; // running holes-up, creator perspective
+  cumulative: string;
+}
+
+export interface MatchProgression {
+  holes: HoleResult[];
+  final_result: 'creator_wins' | 'opponent_wins' | 'tie';
+  final_delta: string; // "3 & 2", "2 Up", "All Square"
+  decided_on_hole: number | null;
+}
+
+export interface RevealResponse {
+  match: Match;
+  creator_scorecard: Scorecard;
+  opponent_scorecard: Scorecard;
+  progression: MatchProgression | null;
+}
+
+export interface SubmitScoresResponse {
+  status: 'waiting_on_opponent' | 'completed';
+  match?: Match;
+}
+
+// Holes a match type is played over (mirrors api/src/routes/scorecards.ts).
+export function holeRangeFor(matchType: MatchType): { min: number; max: number; count: number } {
+  if (matchType === 'front_nine') return { min: 1, max: 9, count: 9 };
+  if (matchType === 'back_nine') return { min: 10, max: 18, count: 9 };
+  return { min: 1, max: 18, count: 18 };
+}

@@ -60,6 +60,10 @@ export default function MatchDetailScreen() {
   const isCreator = match.creator_id === userId;
   const isOpponent = match.opponent_id === userId;
   const isParticipant = isCreator || isOpponent;
+  const mySubmitted = isCreator ? !!match.creator_scorecard_id : !!match.opponent_scorecard_id;
+  const oppSubmitted = isCreator ? !!match.opponent_scorecard_id : !!match.creator_scorecard_id;
+  const scoringStage =
+    match.status === 'accepted' || match.status === 'in_progress' || match.status === 'completed';
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -83,13 +87,39 @@ export default function MatchDetailScreen() {
         </View>
       )}
 
-      {(match.status === 'in_progress' || match.status === 'completed') && (
+      {isParticipant && scoringStage && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Scores</Text>
-          <Text style={styles.note}>
-            Score entry, the hidden-until-both-submit reveal, and the hole-by-hole
-            result land in the next build.
-          </Text>
+
+          {match.status === 'completed' ? (
+            <>
+              <Text style={styles.note}>Both cards are in. See how it played out hole by hole.</Text>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/reveal`)}>
+                <Ionicons name="trophy-outline" size={18} color={colors.surface} />
+                <Text style={styles.primaryText}>View the reveal</Text>
+              </TouchableOpacity>
+            </>
+          ) : !mySubmitted ? (
+            <>
+              <Text style={styles.note}>Enter your hole-by-hole gross scores. They stay hidden until your opponent submits too.</Text>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/score`)}>
+                <Ionicons name="create-outline" size={18} color={colors.surface} />
+                <Text style={styles.primaryText}>Enter your scores</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.statusRow}>
+                <Ionicons name="checkmark-circle" size={18} color={colors.fairway} />
+                <Text style={styles.statusText}>
+                  Submitted ✓ {oppSubmitted ? '' : `— waiting on the ${isCreator ? 'opponent' : 'creator'} to finish.`}
+                </Text>
+              </View>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/score`)}>
+                <Text style={styles.secondaryText}>Edit my scores</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       )}
 
@@ -141,6 +171,10 @@ const styles = StyleSheet.create({
   note: { ...typography.caption, color: colors.muted },
   primaryBtn: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
   primaryText: { ...typography.bodySemiBold, color: colors.surface },
+  secondaryBtn: { borderWidth: 1, borderColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+  secondaryText: { ...typography.bodySemiBold, color: colors.fairway },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  statusText: { ...typography.body, color: colors.ink, flex: 1 },
   dangerBtn: { borderWidth: 1, borderColor: colors.flagRed, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
   dangerText: { ...typography.bodySemiBold, color: colors.flagRed },
   errText: { ...typography.body, color: colors.muted },

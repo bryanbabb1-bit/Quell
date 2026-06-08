@@ -18,6 +18,8 @@ export default function AppLayout() {
       <Stack.Screen name="create" options={{ title: 'Post a Match', presentation: 'modal' }} />
       <Stack.Screen name="match/[id]" options={{ title: 'Match' }} />
       <Stack.Screen name="match/[id]/messages" options={{ title: 'Messages' }} />
+      <Stack.Screen name="match/[id]/score" options={{ title: 'Enter Scores' }} />
+      <Stack.Screen name="match/[id]/reveal" options={{ title: 'The Reveal' }} />
     </Stack>
   );
 }

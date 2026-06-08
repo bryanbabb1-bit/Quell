@@ -1,7 +1,9 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { useCallback, useMemo } from 'react';
 import { apiJson } from '@/lib/api';
-import type { DiscoveryMatch, Match, Message } from '@/types';
+import type {
+  DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse,
+} from '@/types';
 
 export interface CreateMatchInput {
   course_name: string;
@@ -48,6 +50,15 @@ export function useApi() {
         call<Match>(`/matches/${id}/cancel`, { method: 'POST' }),
       declineMatch: (id: string) =>
         call<Match>(`/matches/${id}/decline`, { method: 'POST' }),
+
+      // Scorecards
+      submitScorecard: (matchId: string, holeScores: HoleEntry[]) =>
+        call<SubmitScoresResponse>(`/matches/${matchId}/scorecard`, {
+          method: 'POST',
+          body: JSON.stringify({ hole_scores: holeScores }),
+        }),
+      getReveal: (matchId: string) =>
+        call<RevealResponse>(`/matches/${matchId}/reveal`),
 
       // Messages
       messages: (matchId: string) =>

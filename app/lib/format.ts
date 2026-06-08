@@ -17,6 +17,12 @@ export function formatPlayWhen(date: string, time: string | null | undefined): s
   return `${day} · ${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
+// Match-play scoreline from a signed holes-up delta (viewer's perspective).
+export function deltaLabel(delta: number): string {
+  if (delta === 0) return 'All Square';
+  return delta > 0 ? `${delta} Up` : `${Math.abs(delta)} Down`;
+}
+
 export const STATUS_LABELS: Record<MatchStatus, string> = {
   open: 'Open',
   accepted: 'Accepted',
