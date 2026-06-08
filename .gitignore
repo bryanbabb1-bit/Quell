@@ -1,0 +1,16 @@
+# deps
+node_modules/
+# env / secrets
+.env
+.env.*
+!.env.example
+# build / native
+mobile/.expo/
+mobile/ios/
+mobile/android/
+dist/
+build/
+*.log
+# os
+.DS_Store
+Thumbs.db
