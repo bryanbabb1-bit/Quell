@@ -10,7 +10,7 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "match-play"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "26a94ebb-1db5-4565-8711-35c82f2bbac0"
 
 # Per-user rate limit (mirrors TrueForecast). 300 req / 60s.
 [[unsafe.bindings]]
