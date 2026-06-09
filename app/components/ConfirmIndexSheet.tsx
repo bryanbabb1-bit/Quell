@@ -89,7 +89,7 @@ export function ConfirmIndexSheet({
           <TouchableOpacity style={[styles.confirmBtn, busy && styles.disabled]} onPress={submit} disabled={busy}>
             {busy
               ? <ActivityIndicator color={colors.surface} size="small" />
-              : <Text style={styles.confirmText}>Confirm &amp; {actionLabel}</Text>}
+              : <Text style={styles.confirmText}>Confirm & {actionLabel}</Text>}
           </TouchableOpacity>
           <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} disabled={busy}>
             <Text style={styles.cancelText}>Cancel</Text>

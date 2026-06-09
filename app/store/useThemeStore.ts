@@ -14,11 +14,12 @@ interface ThemeState {
   setPalette: (id: string) => void;
 }
 
-export const useThemeStore = create<ThemeState>((set) => ({
+export const useThemeStore = create<ThemeState>((set, get) => ({
   paletteId: DEFAULT_PALETTE_ID,
   colors: getPalette(DEFAULT_PALETTE_ID),
   hydrated: false,
   hydrate: async () => {
+    if (get().hydrated) return;
     try {
       const id = await SecureStore.getItemAsync(KEY);
       if (id) set({ paletteId: id, colors: getPalette(id) });

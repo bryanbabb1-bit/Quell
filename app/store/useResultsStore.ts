@@ -31,7 +31,7 @@ export const useResultsStore = create<ResultsState>((set, get) => ({
   markSeen: (id) => {
     const { seen } = get();
     if (seen.includes(id)) return;
-    const next = [...seen, id];
+    const next = [...seen, id].slice(-200); // cap growth (SecureStore size limits)
     set({ seen: next });
     SecureStore.setItemAsync(KEY, JSON.stringify(next)).catch(() => {});
   },

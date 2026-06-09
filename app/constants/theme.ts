@@ -7,7 +7,9 @@
 export interface Palette {
   fairway: string;       // primary / brand
   fairwayDark: string;   // primary pressed / dark
+  fairwaySoft: string;   // tinted win/positive background
   flagRed: string;       // danger / loss / decline
+  flagRedSoft: string;   // tinted loss background
   sand: string;          // soft accent surface
   paper: string;         // app background
   surface: string;       // cards
@@ -26,19 +28,19 @@ const FLAG = '#D64545';
 export const PALETTES: { id: string; name: string; colors: Palette }[] = [
   {
     id: 'fairway', name: 'Fairway Green',
-    colors: { fairway: '#2E7D4F', fairwayDark: '#1F5A38', flagRed: FLAG, sand: '#E8E2D0', paper: '#FAFAF7', surface: SURFACE, ink: INK, muted: MUTED, border: BORDER },
+    colors: { fairway: '#2E7D4F', fairwayDark: '#1F5A38', fairwaySoft: '#EAF5EE', flagRed: FLAG, flagRedSoft: '#FBEAEA', sand: '#E8E2D0', paper: '#FAFAF7', surface: SURFACE, ink: INK, muted: MUTED, border: BORDER },
   },
   {
     id: 'twilight', name: 'Twilight Indigo',
-    colors: { fairway: '#4F46E5', fairwayDark: '#3730A3', flagRed: FLAG, sand: '#E7E8F7', paper: '#F5F5FC', surface: SURFACE, ink: INK, muted: MUTED, border: '#E3E3F0' },
+    colors: { fairway: '#4F46E5', fairwayDark: '#3730A3', fairwaySoft: '#ECEBFB', flagRed: FLAG, flagRedSoft: '#FBEAEA', sand: '#E7E8F7', paper: '#F5F5FC', surface: SURFACE, ink: INK, muted: MUTED, border: '#E3E3F0' },
   },
   {
     id: 'sunset', name: 'Sunset Clay',
-    colors: { fairway: '#DD6B3D', fairwayDark: '#B2491F', flagRed: '#C2403B', sand: '#F5E5D8', paper: '#FCF8F4', surface: SURFACE, ink: INK, muted: MUTED, border: '#EEE3D8' },
+    colors: { fairway: '#DD6B3D', fairwayDark: '#B2491F', fairwaySoft: '#FBEDE4', flagRed: '#C2403B', flagRedSoft: '#FAE8E7', sand: '#F5E5D8', paper: '#FCF8F4', surface: SURFACE, ink: INK, muted: MUTED, border: '#EEE3D8' },
   },
   {
     id: 'ocean', name: 'Ocean Teal',
-    colors: { fairway: '#0E7C86', fairwayDark: '#095962', flagRed: FLAG, sand: '#DCECEE', paper: '#F2F9FA', surface: SURFACE, ink: INK, muted: MUTED, border: '#DCE8EA' },
+    colors: { fairway: '#0E7C86', fairwayDark: '#095962', fairwaySoft: '#E3F1F2', flagRed: FLAG, flagRedSoft: '#FBEAEA', sand: '#DCECEE', paper: '#F2F9FA', surface: SURFACE, ink: INK, muted: MUTED, border: '#DCE8EA' },
   },
 ];
 

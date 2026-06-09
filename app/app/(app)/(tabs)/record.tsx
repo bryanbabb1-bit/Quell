@@ -185,7 +185,7 @@ function makeStyles(colors: Palette) {
   lbRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, gap: spacing.sm },
   lbHead: { backgroundColor: colors.paper },
   lbHeadText: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5 },
-  lbMine: { backgroundColor: '#EAF5EE' },
+  lbMine: { backgroundColor: colors.fairwaySoft },
   lbMineText: { color: colors.fairway, fontWeight: '700' },
   lbRank: { width: 22, ...typography.bodySemiBold, color: colors.muted },
   lbName: { flex: 1, ...typography.body },

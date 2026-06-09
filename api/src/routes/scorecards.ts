@@ -71,16 +71,22 @@ async function submit(auth: AuthContext, env: Env, matchId: string, request: Req
   // Point the match at this player's card + flip to in_progress on first entry.
   const col = isCreator ? 'creator_scorecard_id' : 'opponent_scorecard_id';
   const cardId = await currentCardId(env, matchId, auth.userId);
+  // Only advance accepted -> in_progress; never regress a later state (e.g. a
+  // re-submit racing the settle of the other player's card).
   await env.DB.prepare(
-    `UPDATE matches SET ${col} = ?, status = 'in_progress', updated_at = ? WHERE id = ?`
+    `UPDATE matches SET ${col} = ?,
+        status = CASE WHEN status = 'accepted' THEN 'in_progress' ELSE status END,
+        updated_at = ? WHERE id = ?`
   ).bind(cardId, ts, matchId).run();
 
   // If BOTH cards are now in, settle the match.
   const fresh = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
   if (fresh?.creator_scorecard_id && fresh?.opponent_scorecard_id) {
     await settle(env, fresh);
-    const settled = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
-    return json({ status: 'completed', match: settled });
+    const settled = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
+    // Only claim completion if the engine actually settled it (course data present).
+    if (settled?.status === 'completed') return json({ status: 'completed', match: settled });
+    return json({ status: 'waiting_on_opponent', match: settled });
   }
 
   return json({ status: 'waiting_on_opponent' });

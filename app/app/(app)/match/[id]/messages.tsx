@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -8,8 +8,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
+import { useColors } from '@/store/useThemeStore';
 import type { Message } from '@/types';
-import { colors, spacing, radius, typography } from '@/constants/theme';
+import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const POLL_MS = 5000;
 
@@ -17,6 +18,8 @@ export default function MessagesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId } = useAuth();
   const api = useApi();
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
@@ -98,7 +101,8 @@ export default function MessagesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Palette) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper },
   list: { padding: spacing.md, gap: spacing.sm, flexGrow: 1 },
@@ -111,4 +115,5 @@ const styles = StyleSheet.create({
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.paper },
   input: { flex: 1, maxHeight: 120, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: 16, color: colors.ink },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.fairway, alignItems: 'center', justifyContent: 'center' },
-});
+  });
+}

@@ -213,7 +213,7 @@ function makeStyles(colors: Palette) {
   labelCell: { width: LABEL_W, alignItems: 'flex-start', paddingHorizontal: spacing.sm },
   headCell: { backgroundColor: colors.fairway },
   accentCell: { backgroundColor: colors.sand },
-  cellWon: { backgroundColor: '#EAF5EE' },
+  cellWon: { backgroundColor: colors.fairwaySoft },
   cellText: { ...typography.body, fontSize: 15, color: colors.ink },
   headText: { color: colors.surface, fontWeight: '700' },
   dimText: { color: colors.muted, fontSize: 12 },

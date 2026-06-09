@@ -37,6 +37,7 @@ export default function RevealScreen() {
       setError(null);
       const [reveal, holes] = await Promise.all([api.getReveal(id), api.getMatchHoles(id).catch(() => null)]);
       setData(reveal);
+      setStep(0); // always start the animation from the top on (re)focus
       if (holes) {
         const map: Record<number, number | null> = {};
         for (const h of holes.holes) map[h.hole] = h.par;
@@ -250,8 +251,8 @@ function bannerTextColor(o: Outcome, colors: Palette) {
   return { color: colors.ink };
 }
 function bannerStyle(o: Outcome, colors: Palette) {
-  if (o === 'win') return { borderColor: colors.fairway, backgroundColor: '#EAF5EE' };
-  if (o === 'loss') return { borderColor: colors.flagRed, backgroundColor: '#FBEAEA' };
+  if (o === 'win') return { borderColor: colors.fairway, backgroundColor: colors.fairwaySoft };
+  if (o === 'loss') return { borderColor: colors.flagRed, backgroundColor: colors.flagRedSoft };
   return { borderColor: colors.border, backgroundColor: colors.sand };
 }
 
