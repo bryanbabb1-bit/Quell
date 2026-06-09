@@ -160,8 +160,8 @@ export default function MatchDetailScreen() {
       <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
         {isParticipant && (match.status === 'accepted' || match.status === 'in_progress') && (
           <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/messages`)}>
-            <Ionicons name="chatbubble-outline" size={18} color={colors.surface} />
-            <Text style={styles.primaryText}>Message {isCreator ? 'opponent' : 'creator'}</Text>
+            <Ionicons name="chatbubble-outline" size={18} color={colors.onAccent} />
+            <Text style={styles.primaryText}>Message {(isCreator ? match.opponent_name : match.creator_name) ?? (isCreator ? 'opponent' : 'creator')}</Text>
           </TouchableOpacity>
         )}
         {isCreator && (match.status === 'open' || match.status === 'accepted') && (

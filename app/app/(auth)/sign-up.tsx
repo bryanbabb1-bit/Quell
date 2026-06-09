@@ -13,7 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSignUp } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
-import { colors, typography, spacing, radius } from '@/constants/theme';
+import { colors, typography, spacing, radius, fonts } from '@/constants/theme';
 
 // Pull the most descriptive text out of whatever Clerk (or JS) threw, so a
 // swallowed sign-up failure is never invisible.
@@ -108,10 +108,7 @@ export default function SignUpScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <Text style={styles.brand}>
-            <Text style={styles.brandMatch}>Match </Text>
-            <Text style={styles.brandPlay}>Play</Text>
-          </Text>
+          <Text style={styles.brand}>Quell</Text>
           <Text style={styles.stepTitle}>Check your email</Text>
           <Text style={styles.stepSubtitle}>We sent a code to {email.trim()}</Text>
 
@@ -166,10 +163,7 @@ export default function SignUpScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <Text style={styles.brand}>
-          <Text style={styles.brandMatch}>Match </Text>
-          <Text style={styles.brandPlay}>Play</Text>
-        </Text>
+        <Text style={styles.brand}>Quell</Text>
         <Text style={styles.tagline}>Create your account.</Text>
 
         <TextInput
@@ -222,8 +216,8 @@ export default function SignUpScreen() {
         </TouchableOpacity>
 
         <Text style={styles.disclaimer}>
-          Quell is a scorecard and match-discovery tool, not a wagering service. Any stakes are
-          for display only — settle off-platform. Play by your club's rules and post honest scores.
+          Quell is a scorecard and match-discovery tool, not a wagering service. Play by your
+          club's rules and post honest scores.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -249,9 +243,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  brand: { marginBottom: spacing.xs },
-  brandMatch: { fontSize: 36, fontWeight: '600', fontStyle: 'italic', color: colors.fairway },
-  brandPlay: { fontSize: 36, fontWeight: '700', color: colors.ink },
+  brand: { fontFamily: fonts.displayXBold, fontSize: 44, letterSpacing: -1.5, color: colors.accent, marginBottom: spacing.xs },
   tagline: { ...typography.body, fontSize: 16, color: colors.muted, marginBottom: spacing.lg },
   stepTitle: { ...typography.heading, fontSize: 24, color: colors.ink, alignSelf: 'flex-start', marginTop: spacing.sm },
   stepSubtitle: { ...typography.body, fontSize: 14, color: colors.muted, alignSelf: 'flex-start', marginBottom: spacing.sm },

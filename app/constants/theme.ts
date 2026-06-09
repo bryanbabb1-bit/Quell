@@ -40,13 +40,15 @@ export interface Palette {
   ink: string;           // → text
 }
 
-// Shared dark canvas — identical across every palette.
-const BG = '#0E1116';
-const SURFACE = '#171B22';
-const SURFACE_RAISED = '#1F242D';
-const TEXT = '#F5F7FA';
-const MUTED = '#8A94A6';
-const BORDER = '#232A33';
+// Shared dark canvas — identical across every palette. Lifted off pure-black
+// (a subtle cool-blue tint keeps it from reading flat/too-dark) and secondary
+// text brightened toward white for readability on the dark surfaces.
+const BG = '#12161E';
+const SURFACE = '#1B212B';
+const SURFACE_RAISED = '#272F3B';
+const TEXT = '#F7F9FC';
+const MUTED = '#AAB4C3';
+const BORDER = '#2D3543';
 const LOSS = '#FF5A5F';
 const LOSS_GLOW = 'rgba(255,90,95,0.14)';
 // Halved-result tone reads as a light neutral/silver on the dark canvas (the

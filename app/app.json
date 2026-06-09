@@ -6,7 +6,7 @@
     "orientation": "default",
     "scheme": "quell",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0E1116",
+    "backgroundColor": "#12161E",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
@@ -26,7 +26,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0E1116",
+          "backgroundColor": "#12161E",
           "resizeMode": "contain"
         }
       ],

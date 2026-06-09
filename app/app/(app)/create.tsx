@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useApi, type CreateMatchInput } from '@/lib/useApi';
@@ -101,8 +101,13 @@ export default function CreateMatchScreen() {
 
   return (
     <View style={styles.flex}>
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        showsVerticalScrollIndicator={false}
+      >
         <Field label="Course" value={courseName} onChangeText={setCourseName} placeholder="Prairie Highlands" />
         <Field label="Tees" value={teeColor} onChangeText={setTeeColor} placeholder="Blue / White / Black…" />
 
@@ -142,7 +147,6 @@ export default function CreateMatchScreen() {
           {submitting ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.submitText}>Post Match</Text>}
         </TouchableOpacity>
       </ScrollView>
-    </KeyboardAvoidingView>
 
     <ConfirmIndexSheet
       visible={!!pendingCreate}

@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { colors } from '@/constants/theme';
+import { colors, fonts } from '@/constants/theme';
 
 // Authenticated stack: the tab bar is the root, with detail screens pushed
 // over it (create match, match detail, message thread).
@@ -7,11 +7,14 @@ export default function AppLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.paper },
-        headerTintColor: colors.fairway,
-        headerTitleStyle: { color: colors.ink },
+        headerStyle: { backgroundColor: colors.bg },
+        headerTintColor: colors.accent,
+        headerTitleStyle: { color: colors.text, fontFamily: fonts.display, fontSize: 18 },
         headerShadowVisible: false,
-        contentStyle: { backgroundColor: colors.paper },
+        // Just a chevron — no "(tabs)"/previous-screen text next to the back arrow.
+        headerBackButtonDisplayMode: 'minimal',
+        headerBackTitle: '',
+        contentStyle: { backgroundColor: colors.bg },
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
