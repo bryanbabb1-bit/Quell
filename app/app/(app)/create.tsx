@@ -9,6 +9,8 @@ import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
 import { haptics } from '@/lib/haptics';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
+import { CoursePicker, type CourseSelection } from '@/components/CoursePicker';
+import { Ionicons } from '@expo/vector-icons';
 import type { MatchType } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
@@ -42,6 +44,9 @@ export default function CreateMatchScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [courseName, setCourseName] = useState('');
   const [teeColor, setTeeColor] = useState('');
+  const [teeId, setTeeId] = useState<string | null>(null);
+  const [mode, setMode] = useState<'catalog' | 'custom'>('catalog');
+  const [showCourse, setShowCourse] = useState(false);
   const [playDate, setPlayDate] = useState(isoToday());
   const days = useMemo(() => nextDays(14), []);
   const [matchType, setMatchType] = useState<MatchType>('eighteen');
@@ -52,9 +57,20 @@ export default function CreateMatchScreen() {
   const [pendingCreate, setPendingCreate] = useState<CreateMatchInput | null>(null);
   const [sheetBusy, setSheetBusy] = useState(false);
 
+  const selectCourse = (sel: CourseSelection) => {
+    setCourseName(sel.course_name);
+    setTeeColor(sel.tee_color);
+    setTeeId(sel.tee_id);
+    setShowCourse(false);
+  };
+
   // Validate the form and return the create payload, or null (after alerting).
   const buildPayload = (): CreateMatchInput | null => {
-    if (!courseName.trim() || !teeColor.trim()) {
+    if (mode === 'catalog') {
+      if (!teeId || !courseName) {
+        Alert.alert('Pick a course', 'Choose a course and tee, or switch to Custom.'); return null;
+      }
+    } else if (!courseName.trim() || !teeColor.trim()) {
       Alert.alert('Missing info', 'Course and tees are required.'); return null;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(playDate)) {
@@ -70,6 +86,7 @@ export default function CreateMatchScreen() {
     return {
       course_name: courseName.trim(),
       tee_color: teeColor.trim(),
+      tee_id: mode === 'catalog' ? teeId : null,
       play_date: playDate,
       play_time: null,
       match_type: matchType,
@@ -124,8 +141,38 @@ export default function CreateMatchScreen() {
         automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
       >
-        <Field label="Course" value={courseName} onChangeText={setCourseName} placeholder="Prairie Highlands" />
-        <Field label="Tees" value={teeColor} onChangeText={setTeeColor} placeholder="Blue / White / Black…" />
+        <View style={styles.modeRow}>
+          <TouchableOpacity style={[styles.modeBtn, mode === 'catalog' && styles.modeActive]} onPress={() => setMode('catalog')}>
+            <Text style={[styles.modeText, mode === 'catalog' && styles.modeTextActive]}>From catalog</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.modeBtn, mode === 'custom' && styles.modeActive]} onPress={() => { setMode('custom'); setTeeId(null); }}>
+            <Text style={[styles.modeText, mode === 'custom' && styles.modeTextActive]}>Custom</Text>
+          </TouchableOpacity>
+        </View>
+
+        {mode === 'catalog' ? (
+          <View style={styles.field}>
+            <Text style={styles.label}>Course & tees</Text>
+            <TouchableOpacity style={styles.coursePick} onPress={() => setShowCourse(true)}>
+              <View style={{ flex: 1 }}>
+                {teeId ? (
+                  <>
+                    <Text style={styles.coursePicked}>{courseName}</Text>
+                    <Text style={styles.courseSub}>{teeColor} tees</Text>
+                  </>
+                ) : (
+                  <Text style={styles.coursePlaceholder}>Choose a course…</Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <Field label="Course" value={courseName} onChangeText={setCourseName} placeholder="Prairie Highlands" />
+            <Field label="Tees" value={teeColor} onChangeText={setTeeColor} placeholder="Blue / White / Black…" />
+          </>
+        )}
 
         <View style={styles.field}>
           <Text style={styles.label}>Date</Text>
@@ -176,6 +223,8 @@ export default function CreateMatchScreen() {
           {submitting ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.submitText}>Post Match</Text>}
         </TouchableOpacity>
       </ScrollView>
+
+    <CoursePicker visible={showCourse} onClose={() => setShowCourse(false)} onSelect={selectCourse} />
 
     <ConfirmIndexSheet
       visible={!!pendingCreate}
@@ -228,6 +277,15 @@ function makeStyles(colors: Palette) {
   dateDay: { ...typography.heading, fontSize: 20, color: colors.text },
   dateMonth: { ...typography.caption, fontSize: 11, color: colors.muted },
   dateTextActive: { color: colors.accent },
+  modeRow: { flexDirection: 'row', gap: spacing.sm },
+  modeBtn: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  modeActive: { backgroundColor: colors.accentGlow, borderColor: colors.accent },
+  modeText: { ...typography.bodySemiBold, color: colors.ink },
+  modeTextActive: { color: colors.accent },
+  coursePick: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  coursePicked: { ...typography.bodySemiBold, color: colors.ink },
+  courseSub: { ...typography.caption, color: colors.muted },
+  coursePlaceholder: { ...typography.body, color: colors.muted },
   input: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md,

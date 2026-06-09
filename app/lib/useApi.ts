@@ -3,12 +3,13 @@ import { useCallback, useMemo, useRef } from 'react';
 import { apiJson } from '@/lib/api';
 import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
-  MyRecord, LeaderboardEntry,
+  MyRecord, LeaderboardEntry, CourseSummary, TeeSummary,
 } from '@/types';
 
 export interface CreateMatchInput {
   course_name: string;
   tee_color: string;
+  tee_id?: string | null;
   play_date: string;
   play_time?: string | null;
   match_type: string;
@@ -41,6 +42,10 @@ export function useApi() {
 
   return useMemo(
     () => ({
+      // Course catalog
+      getCourses: () => call<{ courses: CourseSummary[] }>('/courses'),
+      getCourse: (id: string) => call<{ course: CourseSummary; tees: TeeSummary[] }>(`/courses/${id}`),
+
       // Profile
       getMe: () => call<any>('/me'),
       updateMe: (patch: Record<string, unknown>) =>

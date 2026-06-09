@@ -157,6 +157,23 @@ export interface LeaderboardEntry {
   is_me: boolean;
 }
 
+// ── Course catalog ──────────────────────────────────────────────────────────
+export interface CourseSummary {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+}
+
+export interface TeeSummary {
+  id: string;
+  name: string;
+  gender: string | null;
+  course_rating: number | null;
+  slope_rating: number | null;
+  par: number | null;
+}
+
 // Holes a match type is played over (mirrors api/src/routes/scorecards.ts).
 export function holeRangeFor(matchType: MatchType): { min: number; max: number; count: number } {
   if (matchType === 'front_nine') return { min: 1, max: 9, count: 9 };
