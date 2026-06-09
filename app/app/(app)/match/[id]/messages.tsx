@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
+  FlatList, ActivityIndicator,
 } from 'react-native';
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
@@ -25,6 +26,11 @@ export default function MessagesScreen() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList<Message>>(null);
+
+  // Lift the composer by the exact keyboard height (UI-thread tracked) so the
+  // text box is never covered — reliable regardless of header/safe-area.
+  const keyboard = useAnimatedKeyboard();
+  const kbStyle = useAnimatedStyle(() => ({ paddingBottom: keyboard.height.value }));
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -66,7 +72,7 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <Animated.View style={[{ flex: 1 }, kbStyle]}>
         <FlatList
           ref={listRef}
           data={messages}
@@ -93,10 +99,10 @@ export default function MessagesScreen() {
             multiline
           />
           <TouchableOpacity style={styles.sendBtn} onPress={send} disabled={sending || !draft.trim()}>
-            <Ionicons name="send" size={18} color={colors.surface} />
+            <Ionicons name="send" size={18} color={colors.onAccent} />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
@@ -108,10 +114,10 @@ function makeStyles(colors: Palette) {
   list: { padding: spacing.md, gap: spacing.sm, flexGrow: 1 },
   empty: { ...typography.caption, textAlign: 'center', marginTop: spacing.xl },
   bubble: { maxWidth: '80%', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.fairway },
+  mine: { alignSelf: 'flex-end', backgroundColor: colors.accent },
   theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   bubbleText: { ...typography.body },
-  mineText: { color: colors.surface },
+  mineText: { color: colors.onAccent },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.paper },
   input: { flex: 1, maxHeight: 120, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: 16, color: colors.ink },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.fairway, alignItems: 'center', justifyContent: 'center' },
