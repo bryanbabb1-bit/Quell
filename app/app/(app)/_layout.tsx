@@ -22,7 +22,7 @@ export default function AppLayout() {
       <Stack.Screen name="match/[id]" options={{ title: 'Match' }} />
       <Stack.Screen name="match/[id]/messages" options={{ title: 'Messages' }} />
       <Stack.Screen name="match/[id]/score" options={{ title: 'Enter Scores' }} />
-      <Stack.Screen name="match/[id]/reveal" options={{ title: 'The Reveal' }} />
+      <Stack.Screen name="match/[id]/reveal" options={{ headerShown: false }} />
       <Stack.Screen name="match/[id]/scorecard" options={{ headerShown: false }} />
     </Stack>
   );

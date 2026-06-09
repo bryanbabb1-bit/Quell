@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, Pressable, StyleSheet, ActivityIndicator,
 } from 'react-native';
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { formatHandicap, indexAgeLabel } from '@/lib/format';
 import { useColors } from '@/store/useThemeStore';
@@ -30,6 +30,12 @@ export function ConfirmIndexSheet({
   const [text, setText] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
+  // Lift the sheet by the exact keyboard height (UI-thread tracked) so the input
+  // and buttons are never covered — more reliable than KeyboardAvoidingView for
+  // a bottom-anchored overlay.
+  const keyboard = useAnimatedKeyboard();
+  const liftStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -keyboard.height.value }] }));
+
   // Seed the field from the current index whenever the sheet opens.
   useEffect(() => {
     if (visible) {
@@ -55,11 +61,7 @@ export function ConfirmIndexSheet({
   return (
     <View style={styles.overlay}>
       <Pressable style={styles.backdrop} onPress={busy ? undefined : onCancel} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.sheetWrap}
-        pointerEvents="box-none"
-      >
+      <Animated.View style={[styles.sheetWrap, liftStyle]} pointerEvents="box-none">
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <Text style={styles.title}>Confirm your Handicap Index</Text>
@@ -95,7 +97,7 @@ export function ConfirmIndexSheet({
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </Animated.View>
     </View>
   );
 }
