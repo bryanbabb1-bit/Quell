@@ -6,11 +6,28 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
+import {
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import { tokenCache } from '@/lib/tokenCache';
 import { setTokenRefresher } from '@/lib/api';
 import { useUserStore } from '@/store/useUserStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { colors } from '@/constants/theme';
+
+// Hold the native splash until fonts + theme are ready so the first frame is
+// already the dark Tournament look (no light flash, no fallback-font reflow).
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
@@ -67,7 +84,18 @@ function AuthGate() {
 
 export default function RootLayout() {
   const hydrateTheme = useThemeStore((s) => s.hydrate);
+  const hydrated = useThemeStore((s) => s.hydrated);
   useEffect(() => { hydrateTheme(); }, [hydrateTheme]);
+
+  const [fontsLoaded, fontError] = useFonts({
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
   // App is portrait everywhere; only the landscape scorecard unlocks (and
   // restores) rotation. app.json orientation is "default" so the dev build can
@@ -76,12 +104,21 @@ export default function RootLayout() {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
   }, []);
 
+  // Reveal the UI once fonts (loaded or failed — never block on a font error)
+  // and the persisted palette are ready.
+  const ready = (fontsLoaded || !!fontError) && hydrated;
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  if (!ready) return null; // splash still showing
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
-          <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(app)" />

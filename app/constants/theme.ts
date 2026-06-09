@@ -1,47 +1,78 @@
-// Quell design tokens. Spacing/radius/typography are fixed; COLORS are
-// themeable — several palettes the user can toggle in Settings. Palettes share
-// the text/border neutrals (so type stays readable everywhere) and vary the
-// brand + background hues. The default palette equals the original look, so any
-// screen still reading the static `colors` export renders unchanged.
+// Quell design tokens — "Modern Tournament" (dark, broadcast) language.
+//
+// The base is a single dark canvas (bg/surface/text/border neutrals) shared by
+// every palette; the user-selectable palettes swap ONLY the accent family
+// (Green / Indigo / Sunset / Teal). Win = accent, Loss = a fixed red, Halve =
+// a warm neutral, so result coloring reads consistently across accents.
+//
+// Migration note: the original light theme named colors after golf
+// (fairway/paper/ink/sand/flagRed). Those names are KEPT as aliases on every
+// palette, mapped onto the new dark tokens, so existing `makeStyles(c)` screens
+// render dark with zero edits while we migrate them to the semantic tokens and
+// the `components/ui` primitives. New code should prefer the semantic names
+// (bg/surface/text/accent/loss/…) and `makeType(c)` over the static `typography`.
 
 export interface Palette {
-  fairway: string;       // primary / brand
-  fairwayDark: string;   // primary pressed / dark
-  fairwaySoft: string;   // tinted win/positive background
-  flagRed: string;       // danger / loss / decline
-  flagRedSoft: string;   // tinted loss background
-  sand: string;          // soft accent surface
-  paper: string;         // app background
-  surface: string;       // cards
-  ink: string;           // primary text
+  // ── Semantic dark tokens (prefer these going forward) ──
+  bg: string;            // app background (deepest)
+  surface: string;       // cards / sheets
+  surfaceRaised: string; // raised cards / inputs / pressed rows
+  text: string;          // primary text
   muted: string;         // secondary text
-  border: string;
+  border: string;        // hairlines / dividers
+  accent: string;        // brand / primary action / win
+  accentDark: string;    // accent pressed
+  accentGlow: string;    // translucent accent wash (win backgrounds, halos)
+  loss: string;          // loss / danger / decline
+  lossGlow: string;      // translucent loss wash
+  halve: string;         // halved hole / neutral result
+  halveGlow: string;     // translucent halve wash
+  onAccent: string;      // text/icon on top of an accent fill
+
+  // ── Legacy golf aliases (back-compat — point at the dark tokens above) ──
+  fairway: string;       // → accent
+  fairwayDark: string;   // → accentDark
+  fairwaySoft: string;   // → accentGlow
+  flagRed: string;       // → loss
+  flagRedSoft: string;   // → lossGlow
+  sand: string;          // → halve
+  paper: string;         // → bg
+  ink: string;           // → text
 }
 
-// Shared neutrals across every palette.
-const INK = '#1A1A1A';
-const MUTED = '#6B7280';
-const BORDER = '#E5E7EB';
-const SURFACE = '#FFFFFF';
-const FLAG = '#D64545';
+// Shared dark canvas — identical across every palette.
+const BG = '#0E1116';
+const SURFACE = '#171B22';
+const SURFACE_RAISED = '#1F242D';
+const TEXT = '#F5F7FA';
+const MUTED = '#8A94A6';
+const BORDER = '#232A33';
+const LOSS = '#FF5A5F';
+const LOSS_GLOW = 'rgba(255,90,95,0.14)';
+const HALVE = '#C2A878';
+const HALVE_GLOW = 'rgba(194,168,120,0.14)';
+
+// Build a full palette from just its accent family — the only thing that varies.
+function makePalette(accent: string, accentDark: string, accentGlow: string, onAccent: string): Palette {
+  return {
+    bg: BG, surface: SURFACE, surfaceRaised: SURFACE_RAISED,
+    text: TEXT, muted: MUTED, border: BORDER,
+    accent, accentDark, accentGlow,
+    loss: LOSS, lossGlow: LOSS_GLOW,
+    halve: HALVE, halveGlow: HALVE_GLOW,
+    onAccent,
+    // legacy aliases
+    fairway: accent, fairwayDark: accentDark, fairwaySoft: accentGlow,
+    flagRed: LOSS, flagRedSoft: LOSS_GLOW, sand: HALVE,
+    paper: BG, ink: TEXT,
+  };
+}
 
 export const PALETTES: { id: string; name: string; colors: Palette }[] = [
-  {
-    id: 'fairway', name: 'Fairway Green',
-    colors: { fairway: '#2E7D4F', fairwayDark: '#1F5A38', fairwaySoft: '#EAF5EE', flagRed: FLAG, flagRedSoft: '#FBEAEA', sand: '#E8E2D0', paper: '#FAFAF7', surface: SURFACE, ink: INK, muted: MUTED, border: BORDER },
-  },
-  {
-    id: 'twilight', name: 'Twilight Indigo',
-    colors: { fairway: '#4F46E5', fairwayDark: '#3730A3', fairwaySoft: '#ECEBFB', flagRed: FLAG, flagRedSoft: '#FBEAEA', sand: '#E7E8F7', paper: '#F5F5FC', surface: SURFACE, ink: INK, muted: MUTED, border: '#E3E3F0' },
-  },
-  {
-    id: 'sunset', name: 'Sunset Clay',
-    colors: { fairway: '#DD6B3D', fairwayDark: '#B2491F', fairwaySoft: '#FBEDE4', flagRed: '#C2403B', flagRedSoft: '#FAE8E7', sand: '#F5E5D8', paper: '#FCF8F4', surface: SURFACE, ink: INK, muted: MUTED, border: '#EEE3D8' },
-  },
-  {
-    id: 'ocean', name: 'Ocean Teal',
-    colors: { fairway: '#0E7C86', fairwayDark: '#095962', fairwaySoft: '#E3F1F2', flagRed: FLAG, flagRedSoft: '#FBEAEA', sand: '#DCECEE', paper: '#F2F9FA', surface: SURFACE, ink: INK, muted: MUTED, border: '#DCE8EA' },
-  },
+  { id: 'fairway',  name: 'Tournament Green', colors: makePalette('#36E27D', '#1FB85F', 'rgba(54,226,125,0.14)', '#06231A') },
+  { id: 'twilight', name: 'Twilight Indigo',  colors: makePalette('#7C83FF', '#5A60E0', 'rgba(124,131,255,0.16)', '#0B0E2A') },
+  { id: 'sunset',   name: 'Sunset Clay',      colors: makePalette('#FF9A5A', '#E0743A', 'rgba(255,154,90,0.16)', '#2A1206') },
+  { id: 'ocean',    name: 'Ocean Teal',       colors: makePalette('#2DD4D4', '#16AAAA', 'rgba(45,212,212,0.16)', '#04221F') },
 ];
 
 export const DEFAULT_PALETTE_ID = 'fairway';
@@ -50,16 +81,69 @@ export function getPalette(id: string | null | undefined): Palette {
   return (PALETTES.find((p) => p.id === id)?.colors) ?? PALETTES[0].colors;
 }
 
-// Back-compat static export (default palette). Screens not yet themed still work.
+// Back-compat static export (default palette). Screens not yet migrated still work.
 export const colors = getPalette(DEFAULT_PALETTE_ID);
 
-export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
-export const radius = { sm: 8, md: 12, lg: 20, pill: 999 } as const;
+export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
+export const radius = { sm: 8, md: 12, lg: 20, xl: 28, pill: 999 } as const;
 
+// Font family keys — must match what `useFonts` loads in app/_layout.tsx.
+export const fonts = {
+  display: 'SpaceGrotesk_700Bold',
+  displaySemi: 'SpaceGrotesk_600SemiBold',
+  displayMed: 'SpaceGrotesk_500Medium',
+  body: 'Inter_400Regular',
+  bodyMed: 'Inter_500Medium',
+  bodySemi: 'Inter_600SemiBold',
+  bodyBold: 'Inter_700Bold',
+} as const;
+
+// Subtle dark-mode elevation. On dark surfaces shadows read faintly; we pair a
+// soft shadow with the border hairline that cards already carry.
+export const elevation = {
+  card: { shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 5 },
+  sheet: { shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 24, shadowOffset: { width: 0, height: -4 }, elevation: 12 },
+  floating: { shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+} as const;
+
+// Full-bleed gradient stops keyed to match state, for the reveal backdrop and
+// hero surfaces. Each returns [top, bottom] over the dark canvas.
+export function gradients(c: Palette) {
+  return {
+    ahead:   [c.accentGlow, c.bg] as const,
+    behind:  [c.lossGlow, c.bg] as const,
+    neutral: [c.surface, c.bg] as const,
+    hero:    [c.surfaceRaised, c.bg] as const,
+  };
+}
+
+// Typography ramp with palette colors DECOUPLED from the font definitions.
+// Screens call `const t = makeType(c)` inside makeStyles and spread `...t.heading`.
+// Numerals use tabular-nums so scorecards/scores stay column-aligned.
+export function makeType(c: Palette) {
+  return {
+    hero:         { fontFamily: fonts.display,     fontSize: 40, lineHeight: 44, letterSpacing: -0.8, color: c.text },
+    title:        { fontFamily: fonts.display,     fontSize: 28, lineHeight: 34, letterSpacing: -0.5, color: c.text },
+    heading:      { fontFamily: fonts.displaySemi, fontSize: 20, lineHeight: 26, letterSpacing: -0.3, color: c.text },
+    subheading:   { fontFamily: fonts.bodySemi,    fontSize: 17, lineHeight: 23, color: c.text },
+    body:         { fontFamily: fonts.body,        fontSize: 16, lineHeight: 23, color: c.text },
+    bodySemiBold: { fontFamily: fonts.bodySemi,    fontSize: 16, lineHeight: 23, color: c.text },
+    label:        { fontFamily: fonts.bodyMed,     fontSize: 14, lineHeight: 19, color: c.text },
+    caption:      { fontFamily: fonts.body,        fontSize: 13, lineHeight: 18, color: c.muted },
+    overline:     { fontFamily: fonts.bodySemi,    fontSize: 12, lineHeight: 16, letterSpacing: 0.8, textTransform: 'uppercase' as const, color: c.muted },
+    score:        { fontFamily: fonts.bodyBold,    fontSize: 22, fontVariant: ['tabular-nums'] as const, color: c.text },
+    scoreBig:     { fontFamily: fonts.display,     fontSize: 56, lineHeight: 60, letterSpacing: -1, fontVariant: ['tabular-nums'] as const, color: c.text },
+  };
+}
+
+// Back-compat static typography (default palette, now dark). Existing screens
+// spread these then override color with `c.ink`/`c.text`; keeps them compiling
+// until migrated to makeType. Weight-based (no fontFamily) so they render even
+// before fonts load.
 export const typography = {
-  title: { fontSize: 28, fontWeight: '700' as const, color: colors.ink },
-  heading: { fontSize: 20, fontWeight: '700' as const, color: colors.ink },
-  body: { fontSize: 16, fontWeight: '400' as const, color: colors.ink },
-  bodySemiBold: { fontSize: 16, fontWeight: '600' as const, color: colors.ink },
+  title: { fontSize: 28, fontWeight: '700' as const, color: colors.text },
+  heading: { fontSize: 20, fontWeight: '700' as const, color: colors.text },
+  body: { fontSize: 16, fontWeight: '400' as const, color: colors.text },
+  bodySemiBold: { fontSize: 16, fontWeight: '600' as const, color: colors.text },
   caption: { fontSize: 13, fontWeight: '400' as const, color: colors.muted },
 } as const;

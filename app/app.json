@@ -5,7 +5,8 @@
     "version": "0.1.0",
     "orientation": "default",
     "scheme": "quell",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0E1116",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
@@ -22,6 +23,13 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0E1116",
+          "resizeMode": "contain"
+        }
+      ],
       [
         "expo-screen-orientation",
         {
