@@ -1,17 +1,23 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  RefreshControl, ActivityIndicator,
+  RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { useArchiveStore } from '@/store/useArchiveStore';
 import { SkeletonCard, EmptyState, ErrorState } from '@/components/ui';
+import { haptics } from '@/lib/haptics';
 import type { Match } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 import { formatPlayWhen, STATUS_LABELS } from '@/lib/format';
+
+// Matches that can be archived out of the list (the record keeps them).
+const TERMINAL = ['completed', 'cancelled', 'declined'];
 
 const statusTint = (c: Palette): Record<string, string> => ({
   open: c.muted,
@@ -31,6 +37,12 @@ export default function MyMatchesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const archived = useArchiveStore((s) => s.archived);
+  const toggleArchive = useArchiveStore((s) => s.toggle);
+  const hydrateArchive = useArchiveStore((s) => s.hydrate);
+  useEffect(() => { hydrateArchive(); }, [hydrateArchive]);
 
   const load = useCallback(async () => {
     try {
@@ -47,6 +59,34 @@ export default function MyMatchesScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const archivedSet = useMemo(() => new Set(archived), [archived]);
+  const visible = useMemo(
+    () => matches.filter((m) => (showArchived ? archivedSet.has(m.id) : !archivedSet.has(m.id))),
+    [matches, archivedSet, showArchived],
+  );
+  const archivedCount = useMemo(
+    () => matches.filter((m) => archivedSet.has(m.id)).length,
+    [matches, archivedSet],
+  );
+
+  // Long-press to archive a finished match (or restore an archived one).
+  const onLongPress = (m: Match) => {
+    const isArchived = archivedSet.has(m.id);
+    if (isArchived) {
+      Alert.alert('Restore match', 'Move this back into My Matches?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Restore', onPress: () => { haptics.medium(); toggleArchive(m.id); } },
+      ]);
+    } else if (TERMINAL.includes(m.status)) {
+      Alert.alert('Archive match', 'Hide this from My Matches? It stays in your record.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Archive', style: 'destructive', onPress: () => { haptics.medium(); toggleArchive(m.id); } },
+      ]);
+    } else {
+      Alert.alert('Still active', 'Only finished matches can be archived.');
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -58,17 +98,33 @@ export default function MyMatchesScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <FlatList
-        data={matches}
+        data={visible}
         keyExtractor={(m) => m.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.accent} />}
+        ListHeaderComponent={
+          archivedCount > 0 ? (
+            <TouchableOpacity style={styles.archiveToggle} onPress={() => { haptics.select(); setShowArchived((v) => !v); }}>
+              <Ionicons name={showArchived ? 'arrow-back' : 'archive-outline'} size={15} color={colors.muted} />
+              <Text style={styles.archiveToggleText}>{showArchived ? 'Back to active matches' : `View archived (${archivedCount})`}</Text>
+            </TouchableOpacity>
+          ) : null
+        }
         ListEmptyComponent={
           error
             ? <ErrorState message={error} onRetry={() => { setLoading(true); load(); }} />
-            : <EmptyState icon="list-outline" title="No matches yet" message="Post a match or accept one from Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
+            : showArchived
+              ? <EmptyState icon="archive-outline" title="Nothing archived" message="Long-press a finished match to archive it." />
+              : <EmptyState icon="list-outline" title="No matches yet" message="Post a match or accept one from Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
         }
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.row} onPress={() => router.push(`/(app)/match/${item.id}`)} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => router.push(`/(app)/match/${item.id}`)}
+            onLongPress={() => onLongPress(item)}
+            delayLongPress={350}
+            activeOpacity={0.8}
+          >
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.course}>{item.course_name}</Text>
               <Text style={styles.sub}>
@@ -101,6 +157,8 @@ function makeStyles(colors: Palette) {
     sub: { ...typography.caption },
     badge: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
     badgeText: { fontSize: 12, fontWeight: '700' },
+    archiveToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, marginBottom: spacing.xs },
+    archiveToggleText: { ...typography.caption, color: colors.muted },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingTop: spacing.xl * 2 },
     emptyTitle: { ...typography.heading, color: colors.muted },
     emptyHint: { ...typography.caption, textAlign: 'center', maxWidth: 260 },
