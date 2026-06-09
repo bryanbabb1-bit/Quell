@@ -5,6 +5,7 @@ import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { tokenCache } from '@/lib/tokenCache';
 import { setTokenRefresher } from '@/lib/api';
 import { useUserStore } from '@/store/useUserStore';
@@ -67,6 +68,13 @@ function AuthGate() {
 export default function RootLayout() {
   const hydrateTheme = useThemeStore((s) => s.hydrate);
   useEffect(() => { hydrateTheme(); }, [hydrateTheme]);
+
+  // App is portrait everywhere; only the landscape scorecard unlocks (and
+  // restores) rotation. app.json orientation is "default" so the dev build can
+  // rotate at all — this lock keeps every other screen upright.
+  useEffect(() => {
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
