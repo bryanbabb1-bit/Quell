@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { SkeletonCard, EmptyState, ErrorState } from '@/components/ui';
 import type { Match } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
@@ -14,11 +15,11 @@ import { formatPlayWhen, STATUS_LABELS } from '@/lib/format';
 
 const statusTint = (c: Palette): Record<string, string> => ({
   open: c.muted,
-  accepted: c.fairway,
-  in_progress: c.fairway,
-  completed: c.ink,
-  declined: c.flagRed,
-  cancelled: c.flagRed,
+  accepted: c.accent,
+  in_progress: c.accent,
+  completed: c.text,
+  declined: c.loss,
+  cancelled: c.loss,
 });
 
 export default function MyMatchesScreen() {
@@ -47,7 +48,11 @@ export default function MyMatchesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator color={colors.fairway} size="large" /></View>;
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <View style={styles.list}><SkeletonCard /><SkeletonCard /><SkeletonCard /></View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -56,19 +61,18 @@ export default function MyMatchesScreen() {
         data={matches}
         keyExtractor={(m) => m.id}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.fairway} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.accent} />}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{error ?? 'No matches yet'}</Text>
-            <Text style={styles.emptyHint}>{error ? 'Pull to retry.' : 'Post a match or accept one from Discovery.'}</Text>
-          </View>
+          error
+            ? <ErrorState message={error} onRetry={() => { setLoading(true); load(); }} />
+            : <EmptyState icon="list-outline" title="No matches yet" message="Post a match or accept one from Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
         }
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.row} onPress={() => router.push(`/(app)/match/${item.id}`)} activeOpacity={0.8}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.course}>{item.course_name}</Text>
               <Text style={styles.sub}>
-                {formatPlayWhen(item.play_date, item.play_time)} · {MATCH_TYPE_LABELS[item.match_type]}
+                {formatPlayWhen(item.play_date)} · {MATCH_TYPE_LABELS[item.match_type]}
               </Text>
             </View>
             <View style={[styles.badge, { borderColor: tint[item.status] ?? colors.muted }]}>

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/clerk-expo';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
+import { haptics } from '@/lib/haptics';
 import { indexAgeLabel } from '@/lib/format';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
@@ -51,6 +52,7 @@ export default function ProfileScreen() {
       }
       const updated = await api.updateMe(patch);
       setUser({ user: updated });
+      haptics.success();
       Alert.alert('Saved', 'Your profile is updated.');
     } catch (e: any) {
       Alert.alert('Could not save', e?.message ?? 'Please try again.');
@@ -61,8 +63,12 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          showsVerticalScrollIndicator={false}
+        >
           <Field label="First name" value={firstName} onChangeText={setFirstName} placeholder="First" />
           <Field label="Last name" value={lastName} onChangeText={setLastName} placeholder="Last" />
           <Field
@@ -96,7 +102,6 @@ export default function ProfileScreen() {
             <Text style={styles.signOutText}>Sign out</Text>
           </TouchableOpacity>
         </ScrollView>
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

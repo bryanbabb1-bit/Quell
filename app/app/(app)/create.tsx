@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useApi, type CreateMatchInput } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
+import { haptics } from '@/lib/haptics';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import type { MatchType } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
@@ -15,9 +16,24 @@ import { isIndexStale } from '@/lib/format';
 
 const TYPES: MatchType[] = ['front_nine', 'back_nine', 'eighteen'];
 
-// ISO date N days from today, for the quick date input default.
+type Day = { iso: string; weekday: string; day: number; month: string };
+
+// Next N days as pickable chips — no raw date typing.
+function nextDays(n: number): Day[] {
+  const base = new Date(); base.setHours(0, 0, 0, 0);
+  const out: Day[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const weekday = i === 0 ? 'Today' : i === 1 ? 'Tmrw' : d.toLocaleDateString(undefined, { weekday: 'short' });
+    out.push({ iso, weekday, day: d.getDate(), month: d.toLocaleDateString(undefined, { month: 'short' }) });
+  }
+  return out;
+}
+
 function isoToday(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export default function CreateMatchScreen() {
@@ -27,7 +43,7 @@ export default function CreateMatchScreen() {
   const [courseName, setCourseName] = useState('');
   const [teeColor, setTeeColor] = useState('');
   const [playDate, setPlayDate] = useState(isoToday());
-  const [playTime, setPlayTime] = useState('');
+  const days = useMemo(() => nextDays(14), []);
   const [matchType, setMatchType] = useState<MatchType>('eighteen');
   const [hcpMin, setHcpMin] = useState('');
   const [hcpMax, setHcpMax] = useState('');
@@ -55,7 +71,7 @@ export default function CreateMatchScreen() {
       course_name: courseName.trim(),
       tee_color: teeColor.trim(),
       play_date: playDate,
-      play_time: playTime.trim() || null,
+      play_time: null,
       match_type: matchType,
       stakes: null,
       hcp_range_min: min,
@@ -111,13 +127,26 @@ export default function CreateMatchScreen() {
         <Field label="Course" value={courseName} onChangeText={setCourseName} placeholder="Prairie Highlands" />
         <Field label="Tees" value={teeColor} onChangeText={setTeeColor} placeholder="Blue / White / Black…" />
 
-        <View style={styles.rowFields}>
-          <View style={styles.flex}>
-            <Field label="Date" value={playDate} onChangeText={setPlayDate} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
-          </View>
-          <View style={styles.flex}>
-            <Field label="Time (optional)" value={playTime} onChangeText={setPlayTime} placeholder="HH:MM" keyboardType="numbers-and-punctuation" />
-          </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Date</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow} keyboardShouldPersistTaps="handled">
+            {days.map((d) => {
+              const active = d.iso === playDate;
+              return (
+                <TouchableOpacity
+                  key={d.iso}
+                  onPress={() => { haptics.select(); setPlayDate(d.iso); }}
+                  style={[styles.dateChip, active && styles.dateChipActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.dateWeekday, active && styles.dateTextActive]}>{d.weekday}</Text>
+                  <Text style={[styles.dateDay, active && styles.dateTextActive]}>{d.day}</Text>
+                  <Text style={[styles.dateMonth, active && styles.dateTextActive]}>{d.month}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
         <Text style={styles.label}>Match type</Text>
@@ -189,6 +218,16 @@ function makeStyles(colors: Palette) {
   field: { gap: spacing.xs },
   rowFields: { flexDirection: 'row', gap: spacing.md },
   label: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5 },
+  dateRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.md },
+  dateChip: {
+    width: 58, alignItems: 'center', paddingVertical: spacing.sm, gap: 2,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+  },
+  dateChipActive: { backgroundColor: colors.accentGlow, borderColor: colors.accent },
+  dateWeekday: { ...typography.caption, fontSize: 11, color: colors.muted, textTransform: 'uppercase' },
+  dateDay: { ...typography.heading, fontSize: 20, color: colors.text },
+  dateMonth: { ...typography.caption, fontSize: 11, color: colors.muted },
+  dateTextActive: { color: colors.accent },
   input: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
