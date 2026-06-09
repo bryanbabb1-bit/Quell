@@ -7,6 +7,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { haptics } from '@/lib/haptics';
 import type { Match, HoleEntry, HoleInfo } from '@/types';
 import { holeRangeFor, MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
@@ -54,6 +55,7 @@ export default function ScoreEntryScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const bump = (hole: number, delta: number) => {
+    haptics.select();
     setScores((prev) => {
       const base = prev[hole] ?? FALLBACK_SCORE;
       return { ...prev, [hole]: Math.min(MAX_SCORE, Math.max(MIN_SCORE, base + delta)) };
@@ -70,10 +72,12 @@ export default function ScoreEntryScreen() {
   const submit = async () => {
     if (!match || submitting) return;
     const hole_scores: HoleEntry[] = holesInfo.map((h) => ({ hole: h.hole, gross: scores[h.hole] ?? FALLBACK_SCORE }));
+    haptics.medium();
     setSubmitting(true);
     try {
       const res = await api.submitScorecard(match.id, hole_scores);
       if (res.status === 'completed') {
+        haptics.success();
         router.replace(`/(app)/match/${match.id}/reveal`);
       } else {
         Alert.alert(

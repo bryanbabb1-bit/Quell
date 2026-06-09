@@ -136,14 +136,16 @@ export function makeType(c: Palette) {
   };
 }
 
-// Back-compat static typography (default palette, now dark). Existing screens
-// spread these then override color with `c.ink`/`c.text`; keeps them compiling
-// until migrated to makeType. Weight-based (no fontFamily) so they render even
-// before fonts load.
+// Static typography ramp (default-palette colors). Existing screens spread these
+// then override color with `c.ink`/`c.text`, so adding the Tournament font
+// families here upgrades EVERY legacy screen to Space Grotesk / Inter at once
+// without per-screen edits — the color override they already do makes the baked
+// color here irrelevant. New code should prefer makeType(palette). Families are
+// weight-specific (fontFamily wins over fontWeight on iOS), so no fontWeight.
 export const typography = {
-  title: { fontSize: 28, fontWeight: '700' as const, color: colors.text },
-  heading: { fontSize: 20, fontWeight: '700' as const, color: colors.text },
-  body: { fontSize: 16, fontWeight: '400' as const, color: colors.text },
-  bodySemiBold: { fontSize: 16, fontWeight: '600' as const, color: colors.text },
-  caption: { fontSize: 13, fontWeight: '400' as const, color: colors.muted },
+  title: { fontFamily: fonts.display, fontSize: 28, letterSpacing: -0.5, color: colors.text },
+  heading: { fontFamily: fonts.displaySemi, fontSize: 20, letterSpacing: -0.3, color: colors.text },
+  body: { fontFamily: fonts.body, fontSize: 16, color: colors.text },
+  bodySemiBold: { fontFamily: fonts.bodySemi, fontSize: 16, color: colors.text },
+  caption: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
 } as const;

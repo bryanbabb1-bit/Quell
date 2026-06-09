@@ -9,6 +9,7 @@ import type { DiscoveryMatch } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { useColors } from '@/store/useThemeStore';
 import { formatHandicap, formatPlayWhen } from '@/lib/format';
+import { haptics } from '@/lib/haptics';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -42,6 +43,7 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
 
   const advancePast = () => {
     const m = current;
+    haptics.light();
     tx.value = 0;
     ty.value = 0;
     setIndex((i) => i + 1);
@@ -49,6 +51,7 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   };
 
   const triggerAccept = () => {
+    haptics.medium();
     tx.value = withSpring(0);
     ty.value = withSpring(0);
     if (current) onAccept(current);
@@ -90,7 +93,7 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   const passBtn = () => {
     tx.value = withTiming(-OFF, { duration: 220 }, (fin) => { if (fin) runOnJS(advancePast)(); });
   };
-  const acceptBtn = () => { if (current) onAccept(current); };
+  const acceptBtn = () => { if (current) { haptics.medium(); onAccept(current); } };
 
   if (!current) {
     return (

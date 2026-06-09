@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
+import { StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useResultsStore, selectUnseenCount } from '@/store/useResultsStore';
 import { useColors } from '@/store/useThemeStore';
+import { fonts } from '@/constants/theme';
 
 export default function TabsLayout() {
   const colors = useColors();
@@ -31,13 +33,15 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.fairway,
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
-        headerStyle: { backgroundColor: colors.paper },
-        headerTitleStyle: { color: colors.ink },
+        headerStyle: { backgroundColor: colors.bg },
+        headerTitleStyle: { color: colors.text, fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.3 },
         headerShadowVisible: false,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-        sceneStyle: { backgroundColor: colors.paper },
+        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, height: 88, paddingTop: 6 },
+        tabBarLabelStyle: { fontFamily: fonts.bodyMed, fontSize: 11, letterSpacing: 0.2 },
+        tabBarItemStyle: { paddingTop: 4 },
+        sceneStyle: { backgroundColor: colors.bg },
       }}
     >
       <Tabs.Screen
@@ -52,7 +56,7 @@ export default function TabsLayout() {
         options={{
           title: 'My Matches',
           tabBarBadge: unseen > 0 ? unseen : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.flagRed, color: colors.surface },
+          tabBarBadgeStyle: { backgroundColor: colors.loss, color: colors.text, fontFamily: fonts.bodySemi, fontSize: 11 },
           tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" color={color} size={size} />,
         }}
       />

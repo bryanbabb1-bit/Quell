@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '@/store/useThemeStore';
+import { haptics } from '@/lib/haptics';
 import { PALETTES, type Palette, spacing, radius, typography } from '@/constants/theme';
 
 export default function SettingsScreen() {
@@ -24,7 +25,7 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 key={p.id}
                 style={[styles.row, i > 0 && styles.rowDivider]}
-                onPress={() => setPalette(p.id)}
+                onPress={() => { haptics.select(); setPalette(p.id); }}
                 activeOpacity={0.7}
               >
                 <View style={styles.swatches}>

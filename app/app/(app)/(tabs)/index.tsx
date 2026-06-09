@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,8 +8,10 @@ import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { MatchDeck } from '@/components/MatchDeck';
+import { ErrorState, SkeletonCard } from '@/components/ui';
+import { haptics } from '@/lib/haptics';
 import type { DiscoveryMatch } from '@/types';
-import { spacing, radius, typography, type Palette } from '@/constants/theme';
+import { spacing, elevation, type Palette } from '@/constants/theme';
 import { isIndexStale } from '@/lib/format';
 
 export default function DiscoveryScreen() {
@@ -68,20 +70,20 @@ export default function DiscoveryScreen() {
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator color={colors.fairway} size="large" /></View>;
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <View style={styles.loadingWrap}>
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   if (error) {
     return (
       <SafeAreaView style={styles.safe} edges={['bottom']}>
-        <View style={styles.center}>
-          <Ionicons name="cloud-offline-outline" size={48} color={colors.muted} />
-          <Text style={styles.errTitle}>{error}</Text>
-          <TouchableOpacity style={styles.reloadBtn} onPress={load}>
-            <Ionicons name="refresh" size={18} color={colors.fairway} />
-            <Text style={styles.reloadText}>Try again</Text>
-          </TouchableOpacity>
-        </View>
+        <ErrorState message={error} onRetry={load} />
       </SafeAreaView>
     );
   }
@@ -95,8 +97,8 @@ export default function DiscoveryScreen() {
         onReload={load}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(app)/create')} activeOpacity={0.9}>
-        <Ionicons name="add" size={28} color={colors.surface} />
+      <TouchableOpacity style={styles.fab} onPress={() => { haptics.light(); router.push('/(app)/create'); }} activeOpacity={0.9}>
+        <Ionicons name="add" size={28} color={colors.onAccent} />
       </TouchableOpacity>
 
       <ConfirmIndexSheet
@@ -114,19 +116,13 @@ export default function DiscoveryScreen() {
 
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.paper },
-  errTitle: { ...typography.heading, color: colors.muted, textAlign: 'center', paddingHorizontal: spacing.lg },
-  reloadBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md,
-    borderWidth: 1, borderColor: colors.fairway, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-  },
-  reloadText: { ...typography.bodySemiBold, color: colors.fairway },
+  safe: { flex: 1, backgroundColor: colors.bg },
+  loadingWrap: { flex: 1, padding: spacing.lg, gap: spacing.md, justifyContent: 'center' },
   fab: {
     position: 'absolute', right: spacing.lg, bottom: spacing.lg,
-    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.fairway,
+    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.accent,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4,
+    ...elevation.floating,
   },
   });
 }

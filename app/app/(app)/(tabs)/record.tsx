@@ -8,6 +8,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { SkeletonCard } from '@/components/ui';
 import type { MyRecord, LeaderboardEntry, Outcome } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
@@ -39,7 +40,15 @@ export default function RecordScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator color={colors.fairway} size="large" /></View>;
+    return (
+      <SafeAreaView style={styles.safe} edges={['bottom']}>
+        <View style={styles.container}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const streak = record?.current_streak;
