@@ -236,11 +236,14 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
   const range = holeRange(match.match_type);
   const holeNumbers = Array.from({ length: range.count }, (_, i) => range.min + i);
 
+  const zeros = holeNumbers.map(() => 0);
   const emptyCourse = {
     has_course_data: false,
     holes: holeNumbers.map((h) => ({ hole: h, par: null, stroke_index: null })),
     par_total: null,
-    my_strokes: holeNumbers.map(() => 0),
+    my_strokes: zeros,
+    creator_strokes: zeros,
+    opponent_strokes: zeros,
     creator_course_handicap: null as number | null,
     opponent_course_handicap: null as number | null,
   };
@@ -264,7 +267,8 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
   // the strokes the CALLER receives = the net difference allocated to the
   // higher-handicap side. Null until both handicaps are snapshotted.
   const seg = segmentFor(tee, match.match_type);
-  let my_strokes = holes.map(() => 0);
+  let creator_strokes = holes.map(() => 0);
+  let opponent_strokes = holes.map(() => 0);
   let creator_course_handicap: number | null = null;
   let opponent_course_handicap: number | null = null;
   if (match.creator_handicap != null && match.opponent_handicap != null) {
@@ -273,12 +277,18 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
     }));
     creator_course_handicap = segmentCourseHandicap(match.creator_handicap, seg);
     opponent_course_handicap = segmentCourseHandicap(match.opponent_handicap, seg);
+    // Match-play: only the higher course handicap receives strokes, allocated on
+    // the hardest holes by stroke index, on the difference.
     const diff = creator_course_handicap - opponent_course_handicap;
-    const viewerIsCreator = match.creator_id === auth.userId;
-    if (diff > 0 && viewerIsCreator) my_strokes = allocateStrokes(diff, specs);
-    else if (diff < 0 && !viewerIsCreator) my_strokes = allocateStrokes(-diff, specs);
+    if (diff > 0) creator_strokes = allocateStrokes(diff, specs);
+    else if (diff < 0) opponent_strokes = allocateStrokes(-diff, specs);
   }
+  const my_strokes = match.creator_id === auth.userId ? creator_strokes : opponent_strokes;
 
   const par_total = holes.reduce((s: number, h: any) => s + h.par, 0);
-  return json({ has_course_data: true, holes, par_total, my_strokes, creator_course_handicap, opponent_course_handicap });
+  return json({
+    has_course_data: true, holes, par_total,
+    my_strokes, creator_strokes, opponent_strokes,
+    creator_course_handicap, opponent_course_handicap,
+  });
 }

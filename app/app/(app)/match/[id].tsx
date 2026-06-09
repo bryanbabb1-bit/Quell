@@ -118,6 +118,14 @@ export default function MatchDetailScreen() {
         </View>
       )}
 
+      {isParticipant && hsetup?.has_course_data && (
+        <PopsPreview
+          hsetup={hsetup}
+          creatorName={`${match.creator_name ?? 'Creator'}${isCreator ? ' (You)' : ''}`}
+          opponentName={`${match.opponent_name ?? 'Opponent'}${isOpponent ? ' (You)' : ''}`}
+        />
+      )}
+
       {isParticipant && scoringStage && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Scores</Text>
@@ -185,6 +193,80 @@ function withCourseHcp(index: number | null, courseHcp: number | null | undefine
   return courseHcp != null ? `${idx}  ·  CH ${courseHcp}` : idx;
 }
 
+// Scorecard-style preview of where each player receives handicap strokes. Frozen
+// name column + horizontally-scrolling holes so it reads like a real card. Data
+// comes from getMatchHoles (no scores revealed — safe before play).
+const POP_ROW_H = 30;
+const POP_CELL_W = 30;
+
+function PopsPreview({ hsetup, creatorName, opponentName }: {
+  hsetup: HolesSetup; creatorName: string; opponentName: string;
+}) {
+  const colors = useColors();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { holes, creator_strokes, opponent_strokes } = hsetup;
+  const cSum = creator_strokes.reduce((a, b) => a + b, 0);
+  const oSum = opponent_strokes.reduce((a, b) => a + b, 0);
+
+  if (cSum === 0 && oSum === 0) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Pops — where strokes fall</Text>
+        <Text style={styles.note}>Even match — neither player gets a stroke.</Text>
+      </View>
+    );
+  }
+
+  const dotRow = (strokes: number[]) => (
+    <View style={styles.popRow}>
+      {holes.map((h, i) => (
+        <View key={h.hole} style={styles.popCell}>
+          {strokes[i] > 0
+            ? <Text style={styles.popDot}>{'●'.repeat(strokes[i])}</Text>
+            : <Text style={styles.popEmpty}>·</Text>}
+        </View>
+      ))}
+    </View>
+  );
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>Pops — where strokes fall</Text>
+      <Text style={styles.note}>● = a stroke received on that hole, given on the hardest holes by stroke index.</Text>
+
+      <View style={styles.popWrap}>
+        {/* Frozen name column */}
+        <View>
+          <View style={[styles.popRow, styles.popLabelCell]}><Text style={styles.popHeadLabel}>Hole</Text></View>
+          <View style={[styles.popRow, styles.popLabelCell]}><Text style={styles.popSiLabel}>SI</Text></View>
+          <View style={[styles.popRow, styles.popLabelCell]}>
+            <Text style={styles.popName} numberOfLines={1}>{creatorName}</Text>
+            <Text style={styles.popCount}>{cSum}</Text>
+          </View>
+          <View style={[styles.popRow, styles.popLabelCell]}>
+            <Text style={styles.popName} numberOfLines={1}>{opponentName}</Text>
+            <Text style={styles.popCount}>{oSum}</Text>
+          </View>
+        </View>
+
+        {/* Scrolling holes */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View>
+            <View style={styles.popRow}>
+              {holes.map((h) => <View key={h.hole} style={styles.popCell}><Text style={styles.popHead}>{h.hole}</Text></View>)}
+            </View>
+            <View style={styles.popRow}>
+              {holes.map((h) => <View key={h.hole} style={styles.popCell}><Text style={styles.popSi}>{h.stroke_index ?? '–'}</Text></View>)}
+            </View>
+            {dotRow(creator_strokes)}
+            {dotRow(opponent_strokes)}
+          </View>
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
 function Row({ icon, label, value }: { icon: any; label: string; value: string }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -222,5 +304,18 @@ function makeStyles(colors: Palette) {
   dangerText: { ...typography.bodySemiBold, color: colors.flagRed },
   errText: { ...typography.body, color: colors.muted },
   link: { ...typography.bodySemiBold, color: colors.fairway },
+  // Pops preview grid
+  popWrap: { flexDirection: 'row', marginTop: spacing.xs },
+  popRow: { flexDirection: 'row', height: POP_ROW_H, alignItems: 'center' },
+  popLabelCell: { width: 132, paddingRight: spacing.sm, gap: spacing.xs },
+  popCell: { width: POP_CELL_W, alignItems: 'center', justifyContent: 'center' },
+  popHeadLabel: { ...typography.caption, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  popSiLabel: { ...typography.caption, color: colors.muted, fontSize: 11 },
+  popHead: { ...typography.bodySemiBold, fontSize: 13, color: colors.muted },
+  popSi: { ...typography.caption, fontSize: 11, color: colors.muted },
+  popName: { ...typography.bodySemiBold, fontSize: 13, flex: 1 },
+  popCount: { ...typography.bodySemiBold, fontSize: 13, color: colors.accent },
+  popDot: { color: colors.accent, fontSize: 11, letterSpacing: -2 },
+  popEmpty: { color: colors.border },
   });
 }

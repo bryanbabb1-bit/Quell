@@ -117,7 +117,9 @@ export interface HolesSetup {
   has_course_data: boolean;
   holes: HoleInfo[];
   par_total: number | null;
-  my_strokes: number[]; // aligned positionally to `holes`
+  my_strokes: number[];       // aligned positionally to `holes`
+  creator_strokes: number[];  // strokes the creator receives, per hole
+  opponent_strokes: number[]; // strokes the opponent receives, per hole
   creator_course_handicap: number | null;
   opponent_course_handicap: number | null;
 }
