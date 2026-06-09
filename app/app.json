@@ -9,7 +9,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bryanbabb.quell"
+      "bundleIdentifier": "com.bryanbabb.quell",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.bryanbabb.quell"
@@ -19,7 +22,18 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-font",
-      ["expo-screen-orientation", { "initialOrientation": "PORTRAIT_UP" }]
-    ]
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "PORTRAIT_UP"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "89031ab0-a5d3-4a44-acab-134069bd0f1e"
+      }
+    }
   }
 }
