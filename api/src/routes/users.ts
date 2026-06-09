@@ -35,6 +35,7 @@ export async function handleUpdateMe(auth: AuthContext, request: Request, env: E
     fields.push('handicap_updated_at = ?'); values.push(now());
   }
   if ('profile_photo_url' in body) { fields.push('profile_photo_url = ?'); values.push(optionalString(body.profile_photo_url, 'profile_photo_url', 1024)); }
+  if ('expo_push_token' in body) { fields.push('expo_push_token = ?'); values.push(optionalString(body.expo_push_token, 'expo_push_token', 256)); }
 
   if (fields.length === 0) return error('No fields to update', 400);
 

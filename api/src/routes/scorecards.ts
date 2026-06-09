@@ -7,6 +7,7 @@ import {
   computeMatch, allocateStrokes, segmentCourseHandicap,
   type HoleSpec, type Segment,
 } from '../lib/scoring';
+import { sendPush } from '../lib/push';
 
 // Holes a match type is played over.
 function holeRange(matchType: string): { min: number; max: number; count: number } {
@@ -98,14 +99,25 @@ async function submit(auth: AuthContext, env: Env, matchId: string, request: Req
 
   // If BOTH cards are now in, settle the match.
   const fresh = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
+
+  // Notify the OTHER player (best-effort, doesn't block the response).
+  const otherId = (auth.userId === fresh?.creator_id ? fresh?.opponent_id : fresh?.creator_id) as string | null;
+  const submitter = await env.DB.prepare('SELECT first_name FROM users WHERE id = ?')
+    .bind(auth.userId).first<{ first_name: string | null }>();
+  const who = submitter?.first_name?.trim() || 'Your opponent';
+
   if (fresh?.creator_scorecard_id && fresh?.opponent_scorecard_id) {
     await settle(env, fresh);
     const settled = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
     // Only claim completion if the engine actually settled it (course data present).
-    if (settled?.status === 'completed') return json({ status: 'completed', match: settled });
+    if (settled?.status === 'completed') {
+      await sendPush(env, otherId, 'Match result is ready', `${who} finished — open Quell to see how it played out.`, { matchId });
+      return json({ status: 'completed', match: settled });
+    }
     return json({ status: 'waiting_on_opponent', match: settled });
   }
 
+  await sendPush(env, otherId, "It's your turn", `${who} entered their scores. Enter yours to reveal the result.`, { matchId });
   return json({ status: 'waiting_on_opponent' });
 }
 

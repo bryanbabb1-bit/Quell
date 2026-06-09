@@ -21,10 +21,13 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { tokenCache } from '@/lib/tokenCache';
-import { setTokenRefresher } from '@/lib/api';
+import { setTokenRefresher, apiJson } from '@/lib/api';
 import { useUserStore } from '@/store/useUserStore';
 import { useThemeStore } from '@/store/useThemeStore';
+import { configureNotifications, registerForPush } from '@/lib/notifications';
 import { colors } from '@/constants/theme';
+
+configureNotifications();
 
 // Hold the native splash until fonts + theme are ready so the first frame is
 // already the dark Tournament look (no light flash, no fallback-font reflow).
@@ -47,6 +50,7 @@ function AuthGate() {
   // Stable token refresher for apiFetch's transparent 401 retry.
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
+  const pushRegistered = useRef(false);
   useEffect(() => {
     setTokenRefresher(() => getTokenRef.current({ skipCache: true }));
     return () => setTokenRefresher(null);
@@ -73,6 +77,15 @@ function AuthGate() {
           return;
         }
         loadUser(t);
+        // Register for push once per session and save the token to the profile.
+        if (!pushRegistered.current) {
+          pushRegistered.current = true;
+          registerForPush()
+            .then((tok) => {
+              if (tok) apiJson('/me', t, { method: 'PATCH', body: JSON.stringify({ expo_push_token: tok }) }).catch(() => {});
+            })
+            .catch(() => {});
+        }
         if (!inAppGroup) router.replace('/(app)/(tabs)');
       })
       .catch(() => router.replace('/(auth)/sign-in'));
