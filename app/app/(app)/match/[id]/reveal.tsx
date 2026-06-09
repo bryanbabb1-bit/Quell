@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp, useSharedValue, useAnimatedStyle, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -35,6 +35,9 @@ export default function RevealScreen() {
   const [step, setStep] = useState(1);   // 1..holes.length = hole currently shown
   const [done, setDone] = useState(false); // past the last hole → final + stats
   const [paused, setPaused] = useState(false);
+
+  const { width: winW } = useWindowDimensions();
+  const railRef = useRef<ScrollView>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -122,6 +125,16 @@ export default function RevealScreen() {
     if (!done) celebrated.current = false;
   }, [done, outcome]);
 
+  // Auto-scroll the timeline so the active hole stays in view as it progresses.
+  useEffect(() => {
+    if (!holes.length) return;
+    const stride = 34 + spacing.xs; // chip width + rail gap
+    const idx = done ? holes.length - 1 : step - 1;
+    const x = Math.max(0, idx * stride - winW / 2 + stride / 2 + spacing.lg);
+    const r = requestAnimationFrame(() => railRef.current?.scrollTo({ x, animated: true }));
+    return () => cancelAnimationFrame(r);
+  }, [step, done, holes.length, winW]);
+
   const goTo = (s: number) => {
     haptics.select();
     setDone(false);
@@ -192,7 +205,7 @@ export default function RevealScreen() {
 
         {/* Timeline rail — tap a hole to scrub */}
         <View style={styles.railWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
+          <ScrollView ref={railRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rail}>
             {holes.map((h, i) => {
               const revealed = done || i < step;
               const isCurrent = !done && i === step - 1;

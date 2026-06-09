@@ -1,10 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import type { RevealResponse, HoleResult } from '@/types';
@@ -24,6 +22,7 @@ export default function ScorecardScreen() {
   const api = useApi();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { width: W, height: H } = useWindowDimensions();
 
   const [data, setData] = useState<RevealResponse | null>(null);
   const [parByHole, setParByHole] = useState<Record<number, number | null>>({});
@@ -51,14 +50,6 @@ export default function ScorecardScreen() {
   }, [api, id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  // Rotate to landscape for the full card; restore the global portrait lock on
-  // exit. Works because the dev build ships orientation:"default" (Expo Go,
-  // being portrait-locked, would brick this — hence the dev build).
-  useFocusEffect(useCallback(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
-    return () => { ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {}); };
-  }, []));
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.accent} size="large" /></View>;
   if (error || !data || !data.progression) {
@@ -149,7 +140,11 @@ export default function ScorecardScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.flex} edges={['top', 'bottom', 'left', 'right']}>
+    <View style={styles.root}>
+      {/* Software-rotated landscape canvas: the app stays portrait (so iOS never
+          has to rotate — that was bricking it); the card is rotated 90° and the
+          user turns the phone to read it. */}
+      <View style={[styles.landscape, { width: H, height: W, left: (W - H) / 2, top: (H - W) / 2 }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
           <Ionicons name="chevron-back" size={22} color={colors.accent} />
@@ -180,9 +175,10 @@ export default function ScorecardScreen() {
       </View>
 
       <Text style={styles.legend}>
-        ○ under par · □ over par · dot = stroke received · highlight = won the hole (net)
+        Turn your phone sideways ·  ○ under par · □ over par · dot = stroke received · highlight = won the hole
       </Text>
-    </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
@@ -218,6 +214,8 @@ function makeStyles(c: Palette) {
   const t = makeType(c);
   return StyleSheet.create({
     flex: { flex: 1, backgroundColor: c.bg },
+    root: { flex: 1, backgroundColor: c.bg },
+    landscape: { position: 'absolute', transform: [{ rotate: '90deg' }], paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: c.bg },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: c.bg },
     topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.md },
     backBtn: { flexDirection: 'row', alignItems: 'center' },
