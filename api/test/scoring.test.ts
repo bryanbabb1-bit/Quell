@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   courseHandicap, allocateStrokes, computeMatch, strokeDifferenceForHoles,
+  segmentCourseHandicap,
   type HoleSpec,
 } from '../src/lib/scoring';
 
@@ -100,5 +101,20 @@ describe('strokeDifferenceForHoles', () => {
   });
   it('halves (approx) for a 9-hole match', () => {
     expect(strokeDifferenceForHoles(10, 4, 9)).toBe(3);
+  });
+});
+
+describe('segmentCourseHandicap', () => {
+  it('uses the full index against 18-hole ratings', () => {
+    // round(10 * 130/113 + (71.5 - 72)) = round(11.504 - 0.5) = 11
+    expect(segmentCourseHandicap(10, { slope: 130, rating: 71.5, par: 72, isNine: false })).toBe(11);
+  });
+  it('uses the HALF index against a nine\'s own ratings', () => {
+    // round(5 * 128/113 + (35.7 - 36)) = round(5.664 - 0.3) = 5
+    expect(segmentCourseHandicap(10, { slope: 128, rating: 35.7, par: 36, isNine: true })).toBe(5);
+  });
+  it('handles plus handicaps on a nine', () => {
+    // index -4 -> half -2: round(-2 * 128/113 + (35.7-36)) = round(-2.265 - 0.3) = round(-2.565) = -3
+    expect(segmentCourseHandicap(-4, { slope: 128, rating: 35.7, par: 36, isNine: true })).toBe(-3);
   });
 });

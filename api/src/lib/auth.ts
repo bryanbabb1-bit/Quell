@@ -23,7 +23,7 @@ function emailFromPayload(payload: any): string | null {
 
 export async function requireAuth(
   request: Request,
-  env: { CLERK_SECRET_KEY: string; CLERK_PUBLISHABLE_KEY: string }
+  env: { CLERK_SECRET_KEY: string; CLERK_PUBLISHABLE_KEY: string; CLERK_AUTHORIZED_PARTIES?: string }
 ): Promise<AuthContext> {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
@@ -32,9 +32,17 @@ export async function requireAuth(
 
   const token = authHeader.slice(7);
 
+  // Token-substitution hardening: when CLERK_AUTHORIZED_PARTIES is configured,
+  // verifyToken rejects any token whose `azp` claim isn't in the allowlist.
+  // Unset = unchanged behavior (no lockout risk before the value is confirmed).
+  const authorizedParties = env.CLERK_AUTHORIZED_PARTIES
+    ? env.CLERK_AUTHORIZED_PARTIES.split(',').map((s) => s.trim()).filter(Boolean)
+    : undefined;
+
   try {
     const payload = await verifyToken(token, {
       secretKey: env.CLERK_SECRET_KEY,
+      ...(authorizedParties && authorizedParties.length ? { authorizedParties } : {}),
     });
 
     const userId = payload.sub;

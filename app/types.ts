@@ -115,6 +115,8 @@ export interface HolesSetup {
   holes: HoleInfo[];
   par_total: number | null;
   my_strokes: number[]; // aligned positionally to `holes`
+  creator_course_handicap: number | null;
+  opponent_course_handicap: number | null;
 }
 
 // ── Records / leaderboard ───────────────────────────────────────────────────

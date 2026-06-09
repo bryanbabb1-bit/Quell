@@ -39,6 +39,23 @@ export function courseHandicap(
   return Math.round(index * (slopeRating / 113) + (courseRating - par));
 }
 
+// A scoring segment: the rating/slope/par that apply to the holes being played.
+// For an 18-hole match that's the full tee; for a 9-hole match it's that nine's
+// own rating/slope/par (WHS 9-hole values), and the index is halved.
+export interface Segment {
+  slope: number;
+  rating: number;
+  par: number;
+  isNine: boolean;
+}
+
+// WHS course handicap for the segment actually being played. 9-hole matches use
+// the half (9-hole) Handicap Index against the nine's rating/slope/par — so the
+// front/back stroke difference is correct, not a rescale of the 18-hole number.
+export function segmentCourseHandicap(index: number, seg: Segment): number {
+  return courseHandicap(seg.isNine ? index / 2 : index, seg.slope, seg.rating, seg.par);
+}
+
 // Allocate `strokes` handicap strokes across the given holes by stroke index:
 // the lowest-index (hardest) holes get strokes first; when strokes exceed the
 // number of holes, everyone gets a base stroke and the remainder lands on the

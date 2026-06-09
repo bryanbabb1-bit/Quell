@@ -10,6 +10,10 @@ export interface Env {
   CLERK_PUBLISHABLE_KEY: string;
   ENVIRONMENT: string;
   RATE_LIMITER?: RateLimitBinding;
+  // Optional comma-separated allowlist of token `azp` (authorized party) values.
+  // When set, tokens whose azp isn't listed are rejected. Left unset = current
+  // behavior, so enabling it is a deliberate, non-breaking opt-in.
+  CLERK_AUTHORIZED_PARTIES?: string;
 }
 
 // Match domain enums — kept in one place so routes and validation agree.

@@ -7,7 +7,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
-import type { Match } from '@/types';
+import type { Match, HolesSetup } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 import { formatHandicap, formatPlayWhen, STATUS_LABELS } from '@/lib/format';
@@ -19,6 +19,7 @@ export default function MatchDetailScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [match, setMatch] = useState<Match | null>(null);
+  const [hsetup, setHsetup] = useState<HolesSetup | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
@@ -27,13 +28,18 @@ export default function MatchDetailScreen() {
     if (!id) return;
     try {
       setError(null);
-      setMatch(await api.getMatch(id));
+      const m = await api.getMatch(id);
+      setMatch(m);
+      // Pull the computed course handicaps for this tee/segment (participants only).
+      if (m.creator_id === userId || m.opponent_id === userId) {
+        api.getMatchHoles(id).then(setHsetup).catch(() => {});
+      }
     } catch (e: any) {
       setError(e?.message ?? 'Could not load this match.');
     } finally {
       setLoading(false);
     }
-  }, [api, id]);
+  }, [api, id, userId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -94,8 +100,22 @@ export default function MatchDetailScreen() {
       {match.opponent_id && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Players</Text>
-          <Row icon="person-outline" label={isCreator ? 'You (creator)' : 'Creator'} value={formatHandicap(match.creator_handicap)} />
-          <Row icon="person-outline" label={isOpponent ? 'You (opponent)' : 'Opponent'} value={formatHandicap(match.opponent_handicap)} />
+          <Row
+            icon="person-outline"
+            label={isCreator ? 'You (creator)' : 'Creator'}
+            value={withCourseHcp(match.creator_handicap, hsetup?.creator_course_handicap)}
+          />
+          <Row
+            icon="person-outline"
+            label={isOpponent ? 'You (opponent)' : 'Opponent'}
+            value={withCourseHcp(match.opponent_handicap, hsetup?.opponent_course_handicap)}
+          />
+          {hsetup?.creator_course_handicap != null && (
+            <Text style={styles.note}>
+              Index → Course Handicap for {match.tee_color} tees, {MATCH_TYPE_LABELS[match.match_type]}.
+              Strokes are given on the difference.
+            </Text>
+          )}
         </View>
       )}
 
@@ -158,6 +178,12 @@ export default function MatchDetailScreen() {
       </View>
     </ScrollView>
   );
+}
+
+// "8.4 · CH 9" — the player's Index and the computed Course Handicap for this match.
+function withCourseHcp(index: number | null, courseHcp: number | null | undefined): string {
+  const idx = formatHandicap(index);
+  return courseHcp != null ? `${idx}  ·  CH ${courseHcp}` : idx;
 }
 
 function Row({ icon, label, value }: { icon: any; label: string; value: string }) {

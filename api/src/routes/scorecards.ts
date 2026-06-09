@@ -4,8 +4,8 @@ import { json, error } from '../lib/response';
 import { newId, now } from '../lib/id';
 import { parseBody, ValidationError } from '../lib/validate';
 import {
-  courseHandicap, computeMatch, strokeDifferenceForHoles, allocateStrokes,
-  type HoleSpec,
+  computeMatch, allocateStrokes, segmentCourseHandicap,
+  type HoleSpec, type Segment,
 } from '../lib/scoring';
 
 // Holes a match type is played over.
@@ -13,6 +13,23 @@ function holeRange(matchType: string): { min: number; max: number; count: number
   if (matchType === 'front_nine') return { min: 1, max: 9, count: 9 };
   if (matchType === 'back_nine') return { min: 10, max: 18, count: 9 };
   return { min: 1, max: 18, count: 18 }; // eighteen
+}
+
+// The rating/slope/par that apply to the holes a match is played over. For a
+// nine, use that nine's WHS ratings (engine halves the index); fall back to a
+// derived nine (half the 18-hole tee) when nine ratings aren't loaded yet.
+function segmentFor(tee: any, matchType: string): Segment {
+  if (matchType === 'eighteen') {
+    return { slope: tee.slope_rating, rating: tee.course_rating, par: tee.par, isNine: false };
+  }
+  const front = matchType === 'front_nine';
+  const slope = front ? tee.front_slope_rating : tee.back_slope_rating;
+  const rating = front ? tee.front_course_rating : tee.back_course_rating;
+  const par = front ? tee.front_par : tee.back_par;
+  if (slope != null && rating != null && par != null) {
+    return { slope, rating, par, isNine: true };
+  }
+  return { slope: tee.slope_rating, rating: tee.course_rating / 2, par: tee.par / 2, isNine: true };
 }
 
 // POST /matches/:id/scorecard  — submit (or re-submit) your hole-by-hole scores.
@@ -150,9 +167,10 @@ async function settle(env: Env, match: Record<string, any>): Promise<void> {
     return holes.map((h) => map.get(h.hole) ?? 0);
   };
 
-  const creatorCH = courseHandicap(match.creator_handicap ?? 0, tee.slope_rating, tee.course_rating, tee.par);
-  const opponentCH = courseHandicap(match.opponent_handicap ?? 0, tee.slope_rating, tee.course_rating, tee.par);
-  const diff = strokeDifferenceForHoles(creatorCH, opponentCH, holes.length);
+  const seg = segmentFor(tee, match.match_type);
+  const creatorCH = segmentCourseHandicap(match.creator_handicap ?? 0, seg);
+  const opponentCH = segmentCourseHandicap(match.opponent_handicap ?? 0, seg);
+  const diff = creatorCH - opponentCH;
 
   const result = computeMatch(holes, grossByHole(creatorCard.hole_scores), grossByHole(opponentCard.hole_scores), diff);
 
@@ -218,14 +236,16 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
   const range = holeRange(match.match_type);
   const holeNumbers = Array.from({ length: range.count }, (_, i) => range.min + i);
 
-  if (!match.tee_id) {
-    return json({
-      has_course_data: false,
-      holes: holeNumbers.map((h) => ({ hole: h, par: null, stroke_index: null })),
-      par_total: null,
-      my_strokes: holeNumbers.map(() => 0),
-    });
-  }
+  const emptyCourse = {
+    has_course_data: false,
+    holes: holeNumbers.map((h) => ({ hole: h, par: null, stroke_index: null })),
+    par_total: null,
+    my_strokes: holeNumbers.map(() => 0),
+    creator_course_handicap: null as number | null,
+    opponent_course_handicap: null as number | null,
+  };
+
+  if (!match.tee_id) return json(emptyCourse);
 
   const [tee, holeRows] = await Promise.all([
     env.DB.prepare('SELECT * FROM tees WHERE id = ?').bind(match.tee_id).first<any>(),
@@ -234,34 +254,31 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
     ).bind(match.tee_id, range.min, range.max).all<any>(),
   ]);
 
-  if (!tee || !holeRows?.results?.length) {
-    return json({
-      has_course_data: false,
-      holes: holeNumbers.map((h) => ({ hole: h, par: null, stroke_index: null })),
-      par_total: null,
-      my_strokes: holeNumbers.map(() => 0),
-    });
-  }
+  if (!tee || !holeRows?.results?.length) return json(emptyCourse);
 
   const holes = holeRows.results.map((h: any) => ({
     hole: h.hole_number, par: h.par, stroke_index: h.stroke_index,
   }));
 
-  // Strokes the caller receives = the net stroke difference, allocated to the
-  // higher-handicap side. Zero for everyone until both handicaps are snapshotted.
+  // Course handicaps for the segment played (full 18 or the specific nine), plus
+  // the strokes the CALLER receives = the net difference allocated to the
+  // higher-handicap side. Null until both handicaps are snapshotted.
+  const seg = segmentFor(tee, match.match_type);
   let my_strokes = holes.map(() => 0);
+  let creator_course_handicap: number | null = null;
+  let opponent_course_handicap: number | null = null;
   if (match.creator_handicap != null && match.opponent_handicap != null) {
     const specs: HoleSpec[] = holes.map((h: any) => ({
       hole: h.hole, par: h.par, stroke_index: h.stroke_index,
     }));
-    const creatorCH = courseHandicap(match.creator_handicap, tee.slope_rating, tee.course_rating, tee.par);
-    const opponentCH = courseHandicap(match.opponent_handicap, tee.slope_rating, tee.course_rating, tee.par);
-    const diff = strokeDifferenceForHoles(creatorCH, opponentCH, specs.length);
+    creator_course_handicap = segmentCourseHandicap(match.creator_handicap, seg);
+    opponent_course_handicap = segmentCourseHandicap(match.opponent_handicap, seg);
+    const diff = creator_course_handicap - opponent_course_handicap;
     const viewerIsCreator = match.creator_id === auth.userId;
     if (diff > 0 && viewerIsCreator) my_strokes = allocateStrokes(diff, specs);
     else if (diff < 0 && !viewerIsCreator) my_strokes = allocateStrokes(-diff, specs);
   }
 
   const par_total = holes.reduce((s: number, h: any) => s + h.par, 0);
-  return json({ has_course_data: true, holes, par_total, my_strokes });
+  return json({ has_course_data: true, holes, par_total, my_strokes, creator_course_handicap, opponent_course_handicap });
 }

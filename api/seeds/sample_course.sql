@@ -6,8 +6,13 @@
 INSERT OR IGNORE INTO courses (id, name, city, state, created_at)
 VALUES ('course_sample', 'Sample Links (PLACEHOLDER)', 'Olathe', 'KS', '2026-06-08T00:00:00.000Z');
 
-INSERT OR IGNORE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par)
-VALUES ('tee_sample_blue', 'course_sample', 'Blue', 'M', 71.5, 130, 72);
+INSERT OR IGNORE INTO tees
+  (id, course_id, name, gender, course_rating, slope_rating, par,
+   front_course_rating, front_slope_rating, front_par,
+   back_course_rating, back_slope_rating, back_par)
+VALUES ('tee_sample_blue', 'course_sample', 'Blue', 'M', 71.5, 130, 72,
+   35.7, 128, 36,
+   35.8, 132, 36);
 
 -- 18 holes: pars sum to 72; stroke_index is a complete 1..18 (odds front, evens back).
 INSERT OR IGNORE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
