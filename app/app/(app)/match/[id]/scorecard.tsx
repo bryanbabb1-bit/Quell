@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity,
 } from 'react-native';
-import * as ScreenOrientation from 'expo-screen-orientation';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,12 +29,6 @@ export default function ScorecardScreen() {
   const [siByHole, setSiByHole] = useState<Record<number, number | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Lock to landscape for the head-to-head grid; restore portrait on exit.
-  useEffect(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
-    return () => { ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {}); };
-  }, []);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -131,7 +125,7 @@ export default function ScorecardScreen() {
   };
 
   return (
-    <View style={styles.flex}>
+    <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={colors.fairway} />
@@ -164,9 +158,10 @@ export default function ScorecardScreen() {
       </View>
 
       <Text style={styles.legend}>
-        Highlighted = won the hole (net).  Dot = a handicap stroke received on that hole.
+        Swipe the grid sideways to see all holes.  Highlighted = won the hole (net);
+        dot = a handicap stroke received on that hole.
       </Text>
-    </View>
+    </SafeAreaView>
   );
 }
 
