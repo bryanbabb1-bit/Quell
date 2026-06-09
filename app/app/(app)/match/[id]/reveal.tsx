@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp, useSharedValue, useAnimatedStyle, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -148,6 +148,15 @@ export default function RevealScreen() {
   const finish = () => { setStep(holes.length); setDone(true); };
   const replay = () => { setStep(1); setDone(false); setPaused(false); };
 
+  const shareResult = async () => {
+    const p = data?.progression;
+    if (!p) return;
+    const phrase = outcome === 'win' ? `beat ${theirName} ${p.final_delta}`
+      : outcome === 'loss' ? `lost to ${theirName} ${p.final_delta}`
+      : `halved my match with ${theirName}`;
+    try { await Share.share({ message: `I ${phrase} at ${data!.match.course_name} ⛳ — Quell` }); } catch { /* dismissed */ }
+  };
+
   // ── Loading / locked / no-course states ─────────────────────────────────────
   if (loading) {
     return <SafeAreaView style={styles.centerSafe}><ActivityIndicator color={colors.accent} size="large" /></SafeAreaView>;
@@ -190,7 +199,11 @@ export default function RevealScreen() {
             <Pressable hitSlop={12} onPress={() => setPaused((p) => !p)} style={styles.iconBtn}>
               <Ionicons name={paused ? 'play' : 'pause'} size={24} color={colors.text} />
             </Pressable>
-          ) : <View style={styles.iconBtn} />}
+          ) : (
+            <Pressable hitSlop={12} onPress={shareResult} style={styles.iconBtn}>
+              <Ionicons name="share-outline" size={24} color={colors.text} />
+            </Pressable>
+          )}
         </View>
 
         {/* Scoreline */}

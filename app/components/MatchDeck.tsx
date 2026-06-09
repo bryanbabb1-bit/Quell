@@ -10,6 +10,7 @@ import { MATCH_TYPE_LABELS } from '@/types';
 import { useColors } from '@/store/useThemeStore';
 import { formatHandicap, formatPlayWhen } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
+import { Avatar } from '@/components/ui';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -148,9 +149,7 @@ function CardBody({ m }: { m: DiscoveryMatch }) {
   const name = [m.creator_first_name, m.creator_last_name].filter(Boolean).join(' ') || 'A golfer';
   return (
     <View style={styles.body}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{(name[0] ?? '?').toUpperCase()}</Text>
-      </View>
+      <Avatar name={name} size={84} />
       <Text style={styles.name}>{name}</Text>
       <View style={styles.idxPill}>
         <Text style={styles.idxText}>Index {formatHandicap(m.creator_handicap_index)}</Text>

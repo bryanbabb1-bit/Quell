@@ -7,6 +7,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { haptics } from '@/lib/haptics';
 import type { Match, HolesSetup } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
@@ -23,6 +24,7 @@ export default function MatchDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
+  const [reposting, setReposting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -51,6 +53,27 @@ export default function MatchDetailScreen() {
     const t = setInterval(() => { load(); }, 5000);
     return () => clearInterval(t);
   }, [match?.status, load]);
+
+  // Re-post the same matchup as a fresh open match (today's date).
+  const rematch = async () => {
+    if (!match || reposting) return;
+    setReposting(true);
+    try {
+      const d = new Date(); d.setHours(0, 0, 0, 0);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const created = await api.createMatch({
+        course_name: match.course_name, tee_color: match.tee_color,
+        play_date: iso, play_time: null, match_type: match.match_type,
+        stakes: null, hcp_range_min: match.hcp_range_min, hcp_range_max: match.hcp_range_max,
+      });
+      haptics.success();
+      router.replace(`/(app)/match/${created.id}`);
+    } catch (e: any) {
+      Alert.alert('Could not repost', e?.message ?? 'Try again.');
+    } finally {
+      setReposting(false);
+    }
+  };
 
   const act = async (fn: () => Promise<Match>, confirmLabel: string) => {
     Alert.alert(confirmLabel, 'Are you sure?', [
@@ -171,6 +194,12 @@ export default function MatchDetailScreen() {
           <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/messages`)}>
             <Ionicons name="chatbubble-outline" size={18} color={colors.onAccent} />
             <Text style={styles.primaryText}>Message {(isCreator ? match.opponent_name : match.creator_name) ?? (isCreator ? 'opponent' : 'creator')}</Text>
+          </TouchableOpacity>
+        )}
+        {isParticipant && match.status === 'completed' && (
+          <TouchableOpacity style={styles.secondaryBtn} disabled={reposting} onPress={rematch}>
+            <Ionicons name="refresh" size={18} color={colors.fairway} />
+            <Text style={styles.secondaryText}>{reposting ? 'Posting…' : 'Rematch'}</Text>
           </TouchableOpacity>
         )}
         {isCreator && (match.status === 'open' || match.status === 'accepted') && (
@@ -297,7 +326,7 @@ function makeStyles(colors: Palette) {
   note: { ...typography.caption, color: colors.muted },
   primaryBtn: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
   primaryText: { ...typography.bodySemiBold, color: colors.surface },
-  secondaryBtn: { borderWidth: 1, borderColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center' },
+  secondaryBtn: { flexDirection: 'row', gap: spacing.sm, borderWidth: 1, borderColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { ...typography.bodySemiBold, color: colors.fairway },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   statusText: { ...typography.body, color: colors.ink, flex: 1 },

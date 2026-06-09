@@ -8,7 +8,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
-import { SkeletonCard } from '@/components/ui';
+import { SkeletonCard, Avatar } from '@/components/ui';
 import type { MyRecord, LeaderboardEntry, Outcome } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
@@ -98,6 +98,7 @@ export default function RecordScreen() {
                 onPress={() => router.push(`/(app)/match/${r.match_id}`)}
               >
                 <OutcomeChip outcome={r.outcome} />
+                <Avatar name={r.opponent_name} size={32} />
                 <View style={styles.resultMid}>
                   <Text style={styles.vsName}>vs {r.opponent_name}</Text>
                   <Text style={styles.resultCourse}>{r.course_name}</Text>
@@ -123,6 +124,7 @@ export default function RecordScreen() {
             {board.map((e, i) => (
               <View key={e.user_id} style={[styles.lbRow, styles.rowDivider, e.is_me && styles.lbMine]}>
                 <Text style={styles.lbRank}>{i + 1}</Text>
+                <Avatar name={e.name} size={26} />
                 <Text style={[styles.lbName, e.is_me && styles.lbMineText]} numberOfLines={1}>
                   {e.is_me ? 'You' : e.name}
                 </Text>

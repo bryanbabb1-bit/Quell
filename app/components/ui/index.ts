@@ -11,3 +11,4 @@ export { Skeleton, SkeletonCard } from './Skeleton';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { Confetti } from './Confetti';
+export { Avatar } from './Avatar';
