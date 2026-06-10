@@ -59,7 +59,8 @@ function pal(p: PalInput): Palette {
 
 export const PALETTES: { id: string; name: string; colors: Palette }[] = [
   {
-    id: 'fairway', name: 'Tournament Green',
+    // Tournament Green — DARK (default).
+    id: 'fairway', name: 'Dark',
     colors: pal({
       scheme: 'dark',
       bg: '#12161E', surface: '#1B212B', surfaceRaised: '#272F3B',
@@ -70,74 +71,15 @@ export const PALETTES: { id: string; name: string; colors: Palette }[] = [
     }),
   },
   {
-    id: 'augusta', name: 'Augusta Pine',
-    colors: pal({
-      scheme: 'dark',
-      bg: '#0C1A14', surface: '#13251C', surfaceRaised: '#1B3326',
-      text: '#F3F1E7', muted: '#A6B3A6', border: '#244033',
-      accent: '#E7C982', accentDark: '#C9A961', accentGlow: 'rgba(231,201,130,0.16)', onAccent: '#20180A',
-      win: '#5BD98C', winGlow: 'rgba(91,217,140,0.16)',
-      loss: '#E0653F', lossGlow: 'rgba(224,101,63,0.16)', halve: '#EDEBDD', halveGlow: 'rgba(237,235,221,0.10)',
-    }),
-  },
-  {
-    id: 'broadcast', name: 'Broadcast Electric',
-    colors: pal({
-      scheme: 'dark',
-      bg: '#0B1020', surface: '#141B33', surfaceRaised: '#1E2747',
-      text: '#F4F7FF', muted: '#9AA6C4', border: '#283154',
-      accent: '#4DE0C8', accentDark: '#2FB7A2', accentGlow: 'rgba(77,224,200,0.16)', onAccent: '#042420',
-      win: '#46E08A', winGlow: 'rgba(70,224,138,0.16)',
-      loss: '#FF5A6A', lossGlow: 'rgba(255,90,106,0.16)', halve: '#E6EAF5', halveGlow: 'rgba(230,234,245,0.10)',
-    }),
-  },
-  {
-    id: 'carbon', name: 'Carbon Luxe',
-    colors: pal({
-      scheme: 'dark',
-      bg: '#0A0A0C', surface: '#16161A', surfaceRaised: '#202026',
-      text: '#F5F5F7', muted: '#9C9CA6', border: '#2A2A31',
-      accent: '#D4AF37', accentDark: '#B5942C', accentGlow: 'rgba(212,175,55,0.16)', onAccent: '#1A1505',
-      win: '#38D87C', winGlow: 'rgba(56,216,124,0.16)',
-      loss: '#FF5A5F', lossGlow: 'rgba(255,90,95,0.16)', halve: '#ECECEF', halveGlow: 'rgba(236,236,239,0.10)',
-    }),
-  },
-
-  // ── Light themes (brighter, club-house feel). Win stays green / loss red. ──
-  {
-    // Blue + white + gold, with red. Crisp coastal/clubhouse look.
-    id: 'coastal', name: 'Coastal Club',
+    // Tournament Green — LIGHT. Same green brand on a clean, bright canvas.
+    id: 'fairway-light', name: 'Light',
     colors: pal({
       scheme: 'light',
-      bg: '#EDF2F8', surface: '#FFFFFF', surfaceRaised: '#DFE7F1',
-      text: '#15243B', muted: '#5C6B81', border: '#CFD9E7',
-      accent: '#2E6FE0', accentDark: '#2057BE', accentGlow: 'rgba(46,111,224,0.12)', onAccent: '#FFFFFF',
-      win: '#168A4B', winGlow: 'rgba(22,138,75,0.14)',
-      loss: '#DC4640', lossGlow: 'rgba(220,70,64,0.12)', halve: '#C79A3E', halveGlow: 'rgba(199,154,62,0.18)',
-    }),
-  },
-  {
-    // Warm cream + classic golf green + gold. Soft, premium daytime feel.
-    id: 'linen', name: 'Sunday Linen',
-    colors: pal({
-      scheme: 'light',
-      bg: '#F5F1E8', surface: '#FFFFFF', surfaceRaised: '#EBE4D5',
-      text: '#2A2620', muted: '#756C5C', border: '#E1D9C8',
-      accent: '#1F7A45', accentDark: '#165C33', accentGlow: 'rgba(31,122,69,0.12)', onAccent: '#FFFFFF',
-      win: '#1F7A45', winGlow: 'rgba(31,122,69,0.16)',
-      loss: '#C24A3C', lossGlow: 'rgba(194,74,60,0.12)', halve: '#B7942F', halveGlow: 'rgba(183,148,47,0.18)',
-    }),
-  },
-  {
-    // Bright white + gold accent with a green win / red loss. Airy and clean.
-    id: 'daybreak', name: 'Daybreak',
-    colors: pal({
-      scheme: 'light',
-      bg: '#F1F4F8', surface: '#FFFFFF', surfaceRaised: '#E4EAF1',
-      text: '#1B2330', muted: '#687486', border: '#D5DDE8',
-      accent: '#D99A2B', accentDark: '#BC811C', accentGlow: 'rgba(217,154,43,0.14)', onAccent: '#241803',
-      win: '#1A9E55', winGlow: 'rgba(26,158,85,0.14)',
-      loss: '#DB4A4A', lossGlow: 'rgba(219,74,74,0.12)', halve: '#C4CCD8', halveGlow: 'rgba(196,204,216,0.45)',
+      bg: '#F3F7F3', surface: '#FFFFFF', surfaceRaised: '#E6EEE7',
+      text: '#13231A', muted: '#5A6A60', border: '#D3DDD5',
+      accent: '#1FAE5E', accentDark: '#178A49', accentGlow: 'rgba(31,174,94,0.12)', onAccent: '#FFFFFF',
+      win: '#1B9E54', winGlow: 'rgba(27,158,84,0.14)',
+      loss: '#D8433D', lossGlow: 'rgba(216,67,61,0.12)', halve: '#C4CDD2', halveGlow: 'rgba(196,205,210,0.5)',
     }),
   },
 ];

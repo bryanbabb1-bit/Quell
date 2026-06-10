@@ -132,7 +132,7 @@ export default function ProfileScreen() {
           )}
           <Text style={styles.note}>
             Your home course pre-filters Discovery and the leaderboard. Your Handicap
-            Index is entered manually for now — you'll confirm it when you post or accept a match.
+            Index is entered manually — you'll confirm it when you post or accept a match.
           </Text>
 
           <TouchableOpacity style={styles.saveBtn} onPress={save} disabled={saving}>

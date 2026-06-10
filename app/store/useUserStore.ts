@@ -11,6 +11,7 @@ export interface User {
   handicap_updated_at: string | null;
   profile_photo_url: string | null;
   home_course_id: string | null;
+  expo_push_token: string | null;
   created_at: string;
   updated_at: string;
 }

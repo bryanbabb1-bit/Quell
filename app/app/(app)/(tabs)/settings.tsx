@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -20,22 +20,33 @@ export default function SettingsScreen() {
   const api = useApi();
   const user = useUserStore((s) => s.user);
   const [notifBusy, setNotifBusy] = useState(false);
+  const [notifOn, setNotifOn] = useState(!!user?.expo_push_token);
 
-  const enableNotifications = async () => {
+  const toggleNotifications = async (v: boolean) => {
     setNotifBusy(true);
-    try {
-      const token = await registerForPush();
-      if (token) {
-        await api.updateMe({ expo_push_token: token });
-        Alert.alert('Notifications on', 'You’ll get challenges and score reminders.');
-      } else {
-        Alert.alert('Not enabled', 'Allow notifications for Quell in iOS Settings, then try again. (Requires the notifications build.)');
+    if (v) {
+      try {
+        const token = await registerForPush();
+        if (token) {
+          const updated = await api.updateMe({ expo_push_token: token });
+          useUserStore.setState({ user: updated });
+          setNotifOn(true);
+        } else {
+          setNotifOn(false);
+          Alert.alert('Not enabled', 'Allow notifications for Quell in iOS Settings, then try again. (Requires the notifications build.)');
+        }
+      } catch {
+        setNotifOn(false);
+        Alert.alert('Could not enable', 'Try again in a moment.');
       }
-    } catch {
-      Alert.alert('Could not enable', 'Try again in a moment.');
-    } finally {
-      setNotifBusy(false);
+    } else {
+      try {
+        const updated = await api.updateMe({ expo_push_token: null });
+        useUserStore.setState({ user: updated });
+      } catch { /* best effort */ }
+      setNotifOn(false);
     }
+    setNotifBusy(false);
   };
 
   const confirmSignOut = () => {
@@ -52,7 +63,7 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         {/* Appearance */}
         <Text style={styles.sectionTitle}>Appearance</Text>
-        <Text style={styles.sectionHint}>Color theme — applies instantly.</Text>
+        <Text style={styles.sectionHint}>Light or dark — applies instantly.</Text>
         <View style={styles.card}>
           {PALETTES.map((p, i) => {
             const active = p.id === paletteId;
@@ -80,11 +91,17 @@ export default function SettingsScreen() {
         {/* Notifications */}
         <Text style={styles.sectionTitle}>Notifications</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.row} onPress={enableNotifications} disabled={notifBusy} activeOpacity={0.7}>
+          <View style={styles.row}>
             <Ionicons name="notifications-outline" size={20} color={c.muted} />
             <Text style={styles.rowLabel}>Challenges & score reminders</Text>
-            <Text style={styles.rowAction}>{notifBusy ? '…' : 'Enable'}</Text>
-          </TouchableOpacity>
+            <Switch
+              value={notifOn}
+              onValueChange={(v) => { haptics.select(); toggleNotifications(v); }}
+              disabled={notifBusy}
+              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
         </View>
 
         {/* Account */}

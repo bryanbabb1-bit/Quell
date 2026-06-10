@@ -18,6 +18,7 @@ import { spacing, radius, typography, type Palette } from '@/constants/theme';
 const { width } = Dimensions.get('window');
 const THRESHOLD = width * 0.25;
 const OFF = width * 1.4;
+const SAVE_YELLOW = '#F5C518'; // a saved/starred match fills yellow (not theme green)
 
 const creatorName = (m: DiscoveryMatch) =>
   [m.creator_first_name, m.creator_last_name].filter(Boolean).join(' ') || 'A golfer';
@@ -167,8 +168,8 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
             <Ionicons name="flag" size={34} color={colors.onAccent} />
           </LinearGradient>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.saveCtrl]} onPress={saveBtn} activeOpacity={0.85}>
-          <Ionicons name={saved ? 'star' : 'star-outline'} size={26} color={saved ? colors.accent : colors.muted} />
+        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.saveCtrl, saved && styles.saveCtrlOn]} onPress={saveBtn} activeOpacity={0.85}>
+          <Ionicons name={saved ? 'star' : 'star-outline'} size={26} color={saved ? SAVE_YELLOW : colors.muted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -263,10 +264,10 @@ function makeStyles(colors: Palette) {
   fallbackAvatar: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 120, opacity: 0.92 },
 
   topRow: { position: 'absolute', top: spacing.md, left: spacing.md, right: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  // Dark high-contrast chip + accent text so the handicap reads clearly over any
-  // photo OR the accent gradient fallback (a solid accent pill blended into it).
-  hcpPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(8,12,10,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  hcpText: { ...typography.caption, color: colors.accent, fontWeight: '800', letterSpacing: 0.5, fontSize: 12.5 },
+  // Near-solid dark chip + bright white text so the handicap is unmistakable over
+  // any photo OR the accent gradient fallback. The golf icon carries the accent.
+  hcpPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.86)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  hcpText: { ...typography.caption, color: '#FFFFFF', fontWeight: '800', letterSpacing: 0.4, fontSize: 13.5 },
   whenPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
   whenText: { ...typography.caption, color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
 
@@ -300,6 +301,7 @@ function makeStyles(colors: Palette) {
   ctrlFill: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   passCtrl: { borderColor: colors.loss },
   saveCtrl: { borderColor: colors.border },
+  saveCtrlOn: { borderColor: SAVE_YELLOW },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.lg },
   emptyTitle: { ...typography.heading, color: colors.muted, textAlign: 'center' },
