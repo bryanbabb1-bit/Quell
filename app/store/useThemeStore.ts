@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { PALETTES, DEFAULT_PALETTE_ID, getPalette, type Palette } from '@/constants/theme';
+import { PALETTES, DEFAULT_PALETTE_ID, getPalette, setTypographyPalette, type Palette } from '@/constants/theme';
 
 // Active color palette, persisted so the choice survives restarts. setPalette
 // updates instantly; any screen using useColors() restyles on the next render.
@@ -22,12 +22,13 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     if (get().hydrated) return;
     try {
       const id = await SecureStore.getItemAsync(KEY);
-      if (id) set({ paletteId: id, colors: getPalette(id) });
+      if (id) { setTypographyPalette(getPalette(id)); set({ paletteId: id, colors: getPalette(id) }); }
     } catch { /* first run — keep default */ }
     set({ hydrated: true });
   },
   setPalette: (id) => {
     if (!PALETTES.some((p) => p.id === id)) return;
+    setTypographyPalette(getPalette(id)); // before set(), so re-renders read the new color
     set({ paletteId: id, colors: getPalette(id) });
     SecureStore.setItemAsync(KEY, id).catch(() => {});
   },

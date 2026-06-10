@@ -19,7 +19,7 @@ export async function handleFavorites(
   if (!target) {
     if (method !== 'GET') return error('Method not allowed', 405);
     const { results } = await env.DB.prepare(
-      `SELECT f.favorite_user_id AS user_id, u.first_name, u.last_name, u.handicap
+      `SELECT f.favorite_user_id AS user_id, u.first_name, u.last_name, u.handicap, u.profile_photo_url
          FROM favorites f JOIN users u ON u.id = f.favorite_user_id
         WHERE f.user_id = ?
         ORDER BY u.first_name, u.last_name`
@@ -28,6 +28,7 @@ export async function handleFavorites(
       user_id: r.user_id,
       name: [r.first_name, r.last_name].filter(Boolean).join(' ').trim() || 'A golfer',
       handicap: r.handicap,
+      photo_url: r.profile_photo_url ?? null,
     }));
     return json({ favorites });
   }

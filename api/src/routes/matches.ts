@@ -205,8 +205,8 @@ async function listMine(auth: AuthContext, env: Env): Promise<Response> {
 async function getOne(auth: AuthContext, env: Env, matchId: string): Promise<Response> {
   const match = await env.DB.prepare(
     `SELECT m.*,
-            cu.first_name AS creator_first_name, cu.last_name AS creator_last_name,
-            ou.first_name AS opponent_first_name, ou.last_name AS opponent_last_name
+            cu.first_name AS creator_first_name, cu.last_name AS creator_last_name, cu.profile_photo_url AS creator_photo_url,
+            ou.first_name AS opponent_first_name, ou.last_name AS opponent_last_name, ou.profile_photo_url AS opponent_photo_url
        FROM matches m
        JOIN users cu ON cu.id = m.creator_id
        LEFT JOIN users ou ON ou.id = m.opponent_id

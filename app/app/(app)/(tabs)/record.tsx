@@ -119,7 +119,7 @@ export default function RecordScreen() {
                 onPress={() => router.push(`/(app)/match/${r.match_id}`)}
               >
                 <OutcomeChip outcome={r.outcome} />
-                <Avatar name={r.opponent_name} size={32} />
+                <Avatar name={r.opponent_name} size={32} photoUrl={r.opponent_photo_url} />
                 <View style={styles.resultMid}>
                   <Text style={styles.vsName}>vs {r.opponent_name}</Text>
                   <Text style={styles.resultCourse}>{r.course_name}</Text>
@@ -140,7 +140,7 @@ export default function RecordScreen() {
               {favorites.map((f, i) => (
                 <View key={f.user_id} style={[styles.favRow, i > 0 && styles.rowDivider]}>
                   <TouchableOpacity style={styles.favTap} activeOpacity={0.7} onPress={() => router.push(`/(app)/player/${f.user_id}`)}>
-                    <Avatar name={f.name} size={32} />
+                    <Avatar name={f.name} size={32} photoUrl={f.photo_url} />
                     <View style={styles.favMid}>
                       <Text style={styles.vsName}>{f.name}</Text>
                       <Text style={styles.resultCourse}>Index {formatHandicap(f.handicap)}</Text>
@@ -191,7 +191,7 @@ export default function RecordScreen() {
                 onPress={() => router.push(`/(app)/player/${e.user_id}`)}
               >
                 <Text style={styles.lbRank}>{i + 1}</Text>
-                <Avatar name={e.name} size={26} />
+                <Avatar name={e.name} size={26} photoUrl={e.photo_url} />
                 <Text style={[styles.lbName, e.is_me && styles.lbMineText]} numberOfLines={1}>
                   {e.is_me ? 'You' : e.name}
                 </Text>

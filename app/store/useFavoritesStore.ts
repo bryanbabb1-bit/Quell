@@ -23,7 +23,7 @@ export const useFavoritesStore = create<FavState>((set) => ({
       const ids = s.ids.includes(userId) ? s.ids : [...s.ids, userId];
       const list = s.list.some((f) => f.user_id === userId)
         ? s.list
-        : [...s.list, { user_id: userId, name: info?.name ?? 'A golfer', handicap: info?.handicap ?? null }];
+        : [...s.list, { user_id: userId, name: info?.name ?? 'A golfer', handicap: info?.handicap ?? null, photo_url: null }];
       return { ids, list };
     }
     return { ids: s.ids.filter((x) => x !== userId), list: s.list.filter((f) => f.user_id !== userId) };

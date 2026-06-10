@@ -8,6 +8,7 @@ export interface Favorite {
   user_id: string;
   name: string;
   handicap: number | null;
+  photo_url: string | null;
 }
 
 // Public player profile (GET /players/:id).
@@ -56,6 +57,8 @@ export interface Match {
   // Present on the get-one (match detail) response; derived server-side.
   creator_name?: string;
   opponent_name?: string | null;
+  creator_photo_url?: string | null;
+  opponent_photo_url?: string | null;
 }
 
 // Discovery rows join the creator's name + index onto the match.
@@ -163,6 +166,7 @@ export interface RecentResult {
   final_delta: string | null;
   completed_at: string | null;
   opponent_name: string;
+  opponent_photo_url: string | null;
 }
 
 export interface MyRecord {
@@ -178,6 +182,7 @@ export interface MyRecord {
 export interface LeaderboardEntry {
   user_id: string;
   name: string;
+  photo_url: string | null;
   wins: number;
   losses: number;
   ties: number;

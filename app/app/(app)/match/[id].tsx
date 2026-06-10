@@ -211,6 +211,7 @@ export default function MatchDetailScreen() {
           <PlayerLine
             userId={match.creator_id}
             name={match.creator_name ?? 'Creator'}
+            photoUrl={match.creator_photo_url}
             you={isCreator}
             index={match.creator_handicap}
             ch={hsetup?.creator_course_handicap}
@@ -220,6 +221,7 @@ export default function MatchDetailScreen() {
           <PlayerLine
             userId={match.opponent_id}
             name={match.opponent_name ?? 'Opponent'}
+            photoUrl={match.opponent_photo_url}
             you={isOpponent}
             index={match.opponent_handicap}
             ch={hsetup?.opponent_course_handicap}
@@ -454,8 +456,8 @@ function IconAction({ icon, label, onPress, disabled }: {
   );
 }
 
-function PlayerLine({ userId, name, you, index, ch, isFav, onStar }: {
-  userId: string; name: string; you: boolean; index: number | null;
+function PlayerLine({ userId, name, photoUrl, you, index, ch, isFav, onStar }: {
+  userId: string; name: string; photoUrl?: string | null; you: boolean; index: number | null;
   ch: number | null | undefined; isFav: boolean; onStar: () => void;
 }) {
   const colors = useColors();
@@ -463,7 +465,7 @@ function PlayerLine({ userId, name, you, index, ch, isFav, onStar }: {
   return (
     <View style={styles.playerLine}>
       <TouchableOpacity style={styles.playerTap} activeOpacity={0.7} disabled={you} onPress={() => router.push(`/(app)/player/${userId}`)}>
-        <Avatar name={name} size={38} />
+        <Avatar name={name} size={38} photoUrl={photoUrl} />
         <View style={styles.playerMid}>
           <Text style={styles.playerName} numberOfLines={1}>{name}{you ? ' (You)' : ''}</Text>
           <Text style={styles.playerSub}>Index {formatHandicap(index)}{ch != null ? `  ·  CH ${ch}` : ''}</Text>

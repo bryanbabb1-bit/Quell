@@ -154,10 +154,18 @@ export function makeType(c: Palette) {
 // without per-screen edits — the color override they already do makes the baked
 // color here irrelevant. New code should prefer makeType(palette). Families are
 // weight-specific (fontFamily wins over fontWeight on iOS), so no fontWeight.
+// Mutable active-palette reference so the static `typography` (spread by many
+// screens) resolves its color to the CURRENT theme — keeps light mode legible
+// without a per-screen color override on every style. The theme store calls
+// setTypographyPalette() whenever the palette changes; because makeStyles(colors)
+// re-runs on that change, the spread re-reads these getters with the new color.
+let activeColors: Palette = getPalette(DEFAULT_PALETTE_ID);
+export function setTypographyPalette(c: Palette) { activeColors = c; }
+
 export const typography = {
-  title: { fontFamily: fonts.display, fontSize: 28, letterSpacing: -0.5, color: colors.text },
-  heading: { fontFamily: fonts.displaySemi, fontSize: 20, letterSpacing: -0.3, color: colors.text },
-  body: { fontFamily: fonts.body, fontSize: 16, color: colors.text },
-  bodySemiBold: { fontFamily: fonts.bodySemi, fontSize: 16, color: colors.text },
-  caption: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
-} as const;
+  title: { fontFamily: fonts.display, fontSize: 28, letterSpacing: -0.5, get color() { return activeColors.text; } },
+  heading: { fontFamily: fonts.displaySemi, fontSize: 20, letterSpacing: -0.3, get color() { return activeColors.text; } },
+  body: { fontFamily: fonts.body, fontSize: 16, get color() { return activeColors.text; } },
+  bodySemiBold: { fontFamily: fonts.bodySemi, fontSize: 16, get color() { return activeColors.text; } },
+  caption: { fontFamily: fonts.body, fontSize: 13, get color() { return activeColors.muted; } },
+};

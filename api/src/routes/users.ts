@@ -63,8 +63,8 @@ export async function handleGetMyRecord(auth: AuthContext, env: Env): Promise<Re
   const { results } = await env.DB.prepare(
     `SELECT m.id, m.course_name, m.result, m.match_progression, m.completed_at,
             m.creator_id, m.opponent_id,
-            cu.first_name AS creator_first, cu.last_name AS creator_last,
-            ou.first_name AS opp_first, ou.last_name AS opp_last
+            cu.first_name AS creator_first, cu.last_name AS creator_last, cu.profile_photo_url AS creator_photo,
+            ou.first_name AS opp_first, ou.last_name AS opp_last, ou.profile_photo_url AS opp_photo
        FROM matches m
        LEFT JOIN users cu ON cu.id = m.creator_id
        LEFT JOIN users ou ON ou.id = m.opponent_id
@@ -87,8 +87,9 @@ export async function handleGetMyRecord(auth: AuthContext, env: Env): Promise<Re
     const opponent_name = amCreator
       ? fullName(m.opp_first, m.opp_last)
       : fullName(m.creator_first, m.creator_last);
+    const opponent_photo_url = (amCreator ? m.opp_photo : m.creator_photo) ?? null;
 
-    return { match_id: m.id, course_name: m.course_name, outcome, final_delta, completed_at: m.completed_at, opponent_name };
+    return { match_id: m.id, course_name: m.course_name, outcome, final_delta, completed_at: m.completed_at, opponent_name, opponent_photo_url };
   });
 
   const played = recent.length;

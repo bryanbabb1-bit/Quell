@@ -39,9 +39,10 @@ export async function handleLeaderboard(auth: AuthContext, env: Env, request: Re
   const ids = [...tally.keys()];
   const placeholders = ids.map(() => '?').join(',');
   const { results: users } = await env.DB.prepare(
-    `SELECT id, first_name, last_name FROM users WHERE id IN (${placeholders})`
-  ).bind(...ids).all<{ id: string; first_name: string | null; last_name: string | null }>();
+    `SELECT id, first_name, last_name, profile_photo_url FROM users WHERE id IN (${placeholders})`
+  ).bind(...ids).all<{ id: string; first_name: string | null; last_name: string | null; profile_photo_url: string | null }>();
   const nameById = new Map((users ?? []).map((u) => [u.id, [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || 'A golfer']));
+  const photoById = new Map((users ?? []).map((u) => [u.id, u.profile_photo_url ?? null]));
 
   const entries = ids.map((id) => {
     const t = tally.get(id)!;
@@ -50,6 +51,7 @@ export async function handleLeaderboard(auth: AuthContext, env: Env, request: Re
     return {
       user_id: id,
       name: nameById.get(id) ?? 'A golfer',
+      photo_url: photoById.get(id) ?? null,
       wins: t.wins, losses: t.losses, ties: t.ties, played,
       win_pct: decided > 0 ? Math.round((t.wins / decided) * 100) : 0,
       is_me: id === auth.userId,
