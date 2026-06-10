@@ -1,4 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/store/useThemeStore';
@@ -60,6 +61,9 @@ export function Button({
       style={[styles.base, v, s, fullWidth && styles.fullWidth, isDisabled && styles.disabled, style, animStyle]}
       {...rest}
     >
+      {variant === 'primary' ? (
+        <LinearGradient colors={[c.accent, c.accentDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+      ) : null}
       {loading ? (
         <ActivityIndicator color={labelColor} />
       ) : (
@@ -77,7 +81,7 @@ export function Button({
 function makeStyles(c: Palette) {
   const t = makeType(c);
   return StyleSheet.create({
-    base: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
+    base: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', overflow: 'hidden' },
     fullWidth: { alignSelf: 'stretch' },
     disabled: { opacity: 0.45 },
     content: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

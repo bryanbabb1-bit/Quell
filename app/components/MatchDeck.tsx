@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Dimensions, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, runOnJS, Extrapolation,
@@ -133,10 +134,12 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
 
       <View style={styles.controls}>
         <TouchableOpacity style={[styles.ctrlBtn, styles.passCtrl]} onPress={passBtn} activeOpacity={0.85}>
-          <Ionicons name="close" size={30} color={colors.flagRed} />
+          <Ionicons name="close" size={32} color={colors.loss} />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.ctrlBtn, styles.acceptCtrl]} onPress={acceptBtn} activeOpacity={0.85}>
-          <Ionicons name="golf" size={26} color={colors.surface} />
+        <TouchableOpacity style={styles.ctrlBtn} onPress={acceptBtn} activeOpacity={0.85}>
+          <LinearGradient colors={[colors.accent, colors.accentDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ctrlFill}>
+            <Ionicons name="checkmark" size={34} color={colors.onAccent} />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
@@ -149,18 +152,28 @@ function CardBody({ m }: { m: DiscoveryMatch }) {
   const name = [m.creator_first_name, m.creator_last_name].filter(Boolean).join(' ') || 'A golfer';
   return (
     <View style={styles.body}>
-      <Avatar name={name} size={84} photoUrl={m.creator_photo_url} />
-      <Text style={styles.name}>{name}</Text>
-      <View style={styles.idxPill}>
-        <Text style={styles.idxText}>Index {formatHandicap(m.creator_handicap_index)}</Text>
+      <LinearGradient
+        colors={[colors.accent, colors.accentDark]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={styles.cardHeader}
+      />
+      <View style={styles.avatarRing}>
+        <Avatar name={name} size={104} photoUrl={m.creator_photo_url} />
       </View>
 
-      <Text style={styles.course}>{m.course_name}</Text>
-      <Text style={styles.tees}>{m.tee_color} tees · {MATCH_TYPE_LABELS[m.match_type]}</Text>
+      <View style={styles.cardContent}>
+        <Text style={styles.name}>{name}</Text>
+        <View style={styles.idxPill}>
+          <Text style={styles.idxText}>INDEX {formatHandicap(m.creator_handicap_index)}</Text>
+        </View>
 
-      <View style={styles.facts}>
-        <Fact icon="calendar-outline" text={formatPlayWhen(m.play_date)} />
-        <Fact icon="people-outline" text={`Wants handicap ${m.hcp_range_min}–${m.hcp_range_max}`} />
+        <Text style={styles.course}>{m.course_name}</Text>
+        <Text style={styles.tees}>{m.tee_color} · {MATCH_TYPE_LABELS[m.match_type]}</Text>
+
+        <View style={styles.facts}>
+          <Fact icon="calendar-outline" text={formatPlayWhen(m.play_date)} />
+          <Fact icon="people-outline" text={`Handicap range ${m.hcp_range_min}–${m.hcp_range_max}`} />
+        </View>
       </View>
     </View>
   );
@@ -184,27 +197,25 @@ function makeStyles(colors: Palette) {
   card: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 20, shadowOffset: { width: 0, height: 12 }, elevation: 10,
   },
-  cardBehind: { transform: [{ scale: 0.95 }, { translateY: 14 }], opacity: 0.7 },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  avatar: {
-    width: 84, height: 84, borderRadius: 42, backgroundColor: colors.fairway,
-    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs,
-  },
-  avatarText: { ...typography.title, fontSize: 36, color: colors.surface },
-  name: { ...typography.title, fontSize: 26, textAlign: 'center' },
-  idxPill: { backgroundColor: colors.accentGlow, borderWidth: 1, borderColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 4 },
-  idxText: { ...typography.bodySemiBold, color: colors.accent },
-  course: { ...typography.heading, fontSize: 20, textAlign: 'center', marginTop: spacing.md },
+  cardBehind: { transform: [{ scale: 0.94 }, { translateY: 16 }], opacity: 0.6 },
+  body: { flex: 1 },
+  cardHeader: { position: 'absolute', top: 0, left: 0, right: 0, height: 168 },
+  avatarRing: { alignSelf: 'center', marginTop: 108, padding: 5, borderRadius: 64, backgroundColor: colors.surface },
+  cardContent: { flex: 1, alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.xs },
+  name: { ...typography.title, fontSize: 28, textAlign: 'center', marginTop: spacing.xs },
+  idxPill: { backgroundColor: colors.accentGlow, borderWidth: 1, borderColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 3, marginTop: 2 },
+  idxText: { ...typography.caption, color: colors.accent, fontWeight: '800', letterSpacing: 1, fontSize: 11 },
+  course: { ...typography.title, fontSize: 22, textAlign: 'center', marginTop: spacing.md },
   tees: { ...typography.body, color: colors.muted, textAlign: 'center' },
-  facts: { gap: spacing.sm, marginTop: spacing.lg, alignSelf: 'stretch', paddingHorizontal: spacing.md },
+  facts: { gap: spacing.sm, marginTop: 'auto', marginBottom: spacing.lg, alignSelf: 'stretch', backgroundColor: colors.surfaceRaised, borderRadius: radius.md, padding: spacing.md },
   fact: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  factText: { ...typography.body, color: colors.ink },
+  factText: { ...typography.body, color: colors.ink, flex: 1 },
   stamp: {
     position: 'absolute', top: spacing.lg, zIndex: 10, borderWidth: 3, borderRadius: radius.md,
     paddingHorizontal: spacing.sm, paddingVertical: 4,
@@ -213,13 +224,13 @@ function makeStyles(colors: Palette) {
   acceptStampText: { ...typography.title, fontSize: 22, color: colors.fairway },
   passStamp: { right: spacing.lg, borderColor: colors.flagRed, transform: [{ rotate: '12deg' }] },
   passStampText: { ...typography.title, fontSize: 22, color: colors.flagRed },
-  controls: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, paddingBottom: spacing.lg },
+  controls: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, paddingBottom: spacing.lg, paddingTop: spacing.sm },
   ctrlBtn: {
-    width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4,
+    width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 6,
   },
-  passCtrl: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.flagRed },
-  acceptCtrl: { backgroundColor: colors.fairway },
+  ctrlFill: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  passCtrl: { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.loss },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.lg },
   emptyTitle: { ...typography.heading, color: colors.muted, textAlign: 'center' },
   emptyHint: { ...typography.caption, textAlign: 'center', maxWidth: 260 },
