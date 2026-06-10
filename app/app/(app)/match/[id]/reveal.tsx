@@ -149,7 +149,7 @@ export default function RevealScreen() {
     else setDone(true);
   };
   const finish = () => { setStep(holes.length); setDone(true); };
-  const replay = () => { setStep(1); setDone(false); setPaused(false); };
+  const replay = () => { setStep(1); setDone(false); setPaused(false); setSmashSeen(false); };
 
   const shareResult = async () => {
     const p = data?.progression;

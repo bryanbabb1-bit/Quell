@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, Easing, interpolate, Extrapolation } from 'react-native-reanimated';
 
 // Lightweight confetti burst built on Reanimated (no native dependency, so it
 // streams over the dev server). Mount it to fire once — e.g. on a match win.
@@ -28,7 +28,9 @@ function Piece({ index }: { index: number }) {
       { translateY: p.value * (height * 0.95) },
       { rotate: `${rot * p.value}deg` },
     ],
-    opacity: 1 - p.value * 0.9,
+    // Stay visible through the fall, then fully fade out by the end so no pieces
+    // linger as a row at the bottom of the screen.
+    opacity: interpolate(p.value, [0, 0.8, 1], [1, 1, 0], Extrapolation.CLAMP),
   }));
 
   return (

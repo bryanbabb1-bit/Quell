@@ -9,8 +9,8 @@ import { haptics } from '@/lib/haptics';
 import { makeType, spacing, radius, type Palette } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
-const DURATION = 2800;
-const IMPACT_T = 0.4; // fraction of the timeline where the hit lands
+const DURATION = 4400;
+const IMPACT_T = 0.46; // fraction of the timeline where the hit lands
 
 // Celebratory result overlay: the two players sit side by side, the WINNER winds
 // up, lunges, and smashes the loser off-screen, then a banner declares the win.
@@ -34,43 +34,45 @@ export function WinSmash({ winnerName, winnerPhoto, loserName, loserPhoto, delta
       if (fin) runOnJS(onDone)();
     });
     const hit = setTimeout(() => haptics.medium(), DURATION * IMPACT_T);
-    const cheer = setTimeout(() => haptics.success(), DURATION * 0.56);
+    const cheer = setTimeout(() => haptics.success(), DURATION * 0.6);
     return () => { clearTimeout(hit); clearTimeout(cheer); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Winner: enters from the left to its slot (left of center), winds up, lunges
-  // through the loser, then settles dead center, scaled up.
+  // Winner: enters to its slot (left of center), HOLDS beside the loser for a
+  // beat, winds up, lunges through the loser, then settles dead center, scaled
+  // up, and HOLDS there before the screen hands off to the summary.
   const winnerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(t.value, [0, 0.12], [0, 1], Extrapolation.CLAMP),
+    opacity: interpolate(t.value, [0, 0.1], [0, 1], Extrapolation.CLAMP),
     transform: [
-      { translateX: interpolate(t.value, [0, 0.18, 0.32, IMPACT_T, 0.55, 1], [-width * 0.55, 0, -24, 96, 70, 70], Extrapolation.CLAMP) },
-      { scale: interpolate(t.value, [0, 0.18, 0.32, IMPACT_T, 0.55, 1], [0.6, 1, 1.06, 1.22, 1.16, 1.16], Extrapolation.CLAMP) },
-      { rotate: `${interpolate(t.value, [0.18, 0.32, IMPACT_T], [0, -8, 4], Extrapolation.CLAMP)}deg` },
+      { translateX: interpolate(t.value, [0, 0.12, 0.32, 0.42, IMPACT_T, 0.58, 1], [-width * 0.55, 0, 0, -24, 96, 70, 70], Extrapolation.CLAMP) },
+      { scale: interpolate(t.value, [0, 0.12, 0.32, 0.42, IMPACT_T, 0.58, 1], [0.6, 1, 1, 1.06, 1.22, 1.16, 1.16], Extrapolation.CLAMP) },
+      { rotate: `${interpolate(t.value, [0.32, 0.42, IMPACT_T], [0, -8, 4], Extrapolation.CLAMP)}deg` },
     ],
   }));
 
-  // Loser: present (right of center), then knocked off to the right with spin + fade.
+  // Loser: present beside the winner, then knocked off to the right (spin + fade)
+  // at impact.
   const loserStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(t.value, [0, 0.12, IMPACT_T, 0.56], [0, 1, 1, 0], Extrapolation.CLAMP),
+    opacity: interpolate(t.value, [0, 0.1, IMPACT_T, 0.58], [0, 1, 1, 0], Extrapolation.CLAMP),
     transform: [
-      { translateX: interpolate(t.value, [0, IMPACT_T, 0.6], [0, 0, width], Extrapolation.CLAMP) },
-      { translateY: interpolate(t.value, [IMPACT_T, 0.6], [0, 90], Extrapolation.CLAMP) },
-      { rotate: `${interpolate(t.value, [IMPACT_T, 0.6], [0, 65], Extrapolation.CLAMP)}deg` },
-      { scale: interpolate(t.value, [0, 0.12], [0.6, 1], Extrapolation.CLAMP) },
+      { translateX: interpolate(t.value, [0, IMPACT_T, 0.62], [0, 0, width], Extrapolation.CLAMP) },
+      { translateY: interpolate(t.value, [IMPACT_T, 0.62], [0, 90], Extrapolation.CLAMP) },
+      { rotate: `${interpolate(t.value, [IMPACT_T, 0.62], [0, 65], Extrapolation.CLAMP)}deg` },
+      { scale: interpolate(t.value, [0, 0.1], [0.6, 1], Extrapolation.CLAMP) },
     ],
   }));
 
   // A quick white flash at the moment of impact.
   const flashStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(t.value, [0.36, IMPACT_T, 0.46], [0, 0.85, 0], Extrapolation.CLAMP),
+    opacity: interpolate(t.value, [0.42, IMPACT_T, 0.52], [0, 0.85, 0], Extrapolation.CLAMP),
   }));
 
-  // Banner rises in after the hit.
+  // Banner rises in after the hit and holds.
   const bannerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(t.value, [0.56, 0.72], [0, 1], Extrapolation.CLAMP),
+    opacity: interpolate(t.value, [0.58, 0.72], [0, 1], Extrapolation.CLAMP),
     transform: [
-      { translateY: interpolate(t.value, [0.56, 0.74], [24, 0], Extrapolation.CLAMP) },
-      { scale: interpolate(t.value, [0.56, 0.74], [0.9, 1], Extrapolation.CLAMP) },
+      { translateY: interpolate(t.value, [0.58, 0.74], [24, 0], Extrapolation.CLAMP) },
+      { scale: interpolate(t.value, [0.58, 0.74], [0.9, 1], Extrapolation.CLAMP) },
     ],
   }));
 

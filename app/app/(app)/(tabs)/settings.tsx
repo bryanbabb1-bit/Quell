@@ -98,7 +98,8 @@ export default function SettingsScreen() {
               value={notifOn}
               onValueChange={(v) => { haptics.select(); toggleNotifications(v); }}
               disabled={notifBusy}
-              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              trackColor={{ true: c.accent, false: c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised }}
+              ios_backgroundColor={c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised}
               thumbColor="#FFFFFF"
             />
           </View>

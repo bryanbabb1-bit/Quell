@@ -48,12 +48,11 @@ export default function DiscoveryScreen() {
     try {
       setError(null);
       const eff = f ?? filtersRef.current;
-      // Date range: floor on the chosen start (or local today), ceiling on the end.
-      const from = eff.fromDate || localTodayISO();
-      const until = eff.toDate || undefined;
+      const from = localTodayISO();          // floor: never show past matches
+      const days = eff.dates;                // specific days the player can play
       // "Saved only": pull the broader feed (ignore home-course/handicap defaults)
       // then keep just the matches the player has starred locally.
-      const { matches } = await api.discover(eff.starred ? { ...eff, until, from, all: true } : { ...eff, until, from });
+      const { matches } = await api.discover(eff.starred ? { ...eff, from, days, all: true } : { ...eff, from, days });
       setMatches(eff.starred ? matches.filter((m) => savedRef.current.includes(m.id)) : matches);
     } catch (e: any) {
       setError(e?.message ?? 'Could not load matches.');

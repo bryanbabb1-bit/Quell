@@ -102,6 +102,12 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
     sql += ' AND m.play_date <= ?';
     binds.push(untilDate);
   }
+  // Specific days the player can play (the "When" multi-select). Validated dates.
+  const qpDays = (url.searchParams.get('days') ?? '').split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+  if (qpDays.length) {
+    sql += ` AND m.play_date IN (${qpDays.map(() => '?').join(',')})`;
+    binds.push(...qpDays);
+  }
   // Course: an explicit search wins; otherwise default to the home course
   // (unless the user asked to browse everything).
   if (qpCourse) {

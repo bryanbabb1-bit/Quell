@@ -6,10 +6,10 @@ import { CourseSelect } from '@/components/CourseSelect';
 import { haptics } from '@/lib/haptics';
 import { makeType, spacing, radius, type Palette } from '@/constants/theme';
 
-export type DiscoveryFilterState = { match_type: string; course: string; all: boolean; starred: boolean; fromDate: string; toDate: string };
-export const DEFAULT_FILTERS: DiscoveryFilterState = { match_type: 'any', course: '', all: false, starred: false, fromDate: '', toDate: '' };
+export type DiscoveryFilterState = { match_type: string; course: string; all: boolean; starred: boolean; dates: string[] };
+export const DEFAULT_FILTERS: DiscoveryFilterState = { match_type: 'any', course: '', all: false, starred: false, dates: [] };
 export const isFiltered = (f: DiscoveryFilterState) =>
-  f.match_type !== 'any' || f.course.trim() !== '' || f.all || f.starred || f.fromDate !== '' || f.toDate !== '';
+  f.match_type !== 'any' || f.course.trim() !== '' || f.all || f.starred || f.dates.length > 0;
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 const isoDate = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
@@ -40,10 +40,10 @@ function rangeDays(n: number): Day[] {
 }
 
 const shortLabel = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-function rangeSummary(from: string, to: string): string {
-  if (!from && !to) return 'Any date';
-  if (from && (!to || from === to)) return shortLabel(from);
-  return `${shortLabel(from)} – ${shortLabel(to)}`;
+function datesSummary(dates: string[]): string {
+  if (dates.length === 0) return 'Any date';
+  if (dates.length === 1) return shortLabel(dates[0]);
+  return `${dates.length} days`;
 }
 
 const TYPE_OPTIONS = [
@@ -64,26 +64,19 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [local, setLocal] = useState<DiscoveryFilterState>(value);
-  const days = useMemo(() => rangeDays(21), []);
+  const days = useMemo(() => rangeDays(14), []); // ~2 weeks out — the usual booking window
 
   useEffect(() => { if (visible) setLocal(value); }, [visible, value]);
 
-  // Tap a day → that single date. Tap a second day → a range (earlier becomes the
-  // start). Tap the lone selected day again → clear. Matches are typically a
-  // single day, so first-tap = single-day is the common case.
-  const onDayPress = (iso: string) => {
+  // Tap days to toggle them in/out of the set — pick whichever days you can play.
+  const toggleDay = (iso: string) => {
     haptics.select();
-    setLocal((s) => {
-      const { fromDate, toDate } = s;
-      const hasRange = !!fromDate && !!toDate && fromDate !== toDate;
-      if (!fromDate || hasRange) return { ...s, fromDate: iso, toDate: iso };
-      if (iso === fromDate) return { ...s, fromDate: '', toDate: '' };
-      if (iso > fromDate) return { ...s, toDate: iso };
-      return { ...s, fromDate: iso, toDate: fromDate };
-    });
+    setLocal((s) => ({
+      ...s,
+      dates: s.dates.includes(iso) ? s.dates.filter((d) => d !== iso) : [...s.dates, iso],
+    }));
   };
-  const isEnd = (iso: string) => iso === local.fromDate || iso === local.toDate;
-  const inMid = (iso: string) => !!local.fromDate && !!local.toDate && iso > local.fromDate && iso < local.toDate;
+  const isSelected = (iso: string) => local.dates.includes(iso);
 
   if (!visible) return null;
 
@@ -122,19 +115,18 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
 
           <View style={styles.whenHead}>
             <Text style={styles.label}>When</Text>
-            <Text style={styles.whenSummary}>{rangeSummary(local.fromDate, local.toDate)}</Text>
-            {(local.fromDate || local.toDate) ? (
-              <Pressable onPress={() => { haptics.select(); setLocal((s) => ({ ...s, fromDate: '', toDate: '' })); }} hitSlop={8}>
+            <Text style={styles.whenSummary}>{datesSummary(local.dates)}</Text>
+            {local.dates.length > 0 ? (
+              <Pressable onPress={() => { haptics.select(); setLocal((s) => ({ ...s, dates: [] })); }} hitSlop={8}>
                 <Text style={styles.clearDates}>Clear</Text>
               </Pressable>
             ) : null}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow} keyboardShouldPersistTaps="handled">
             {days.map((d) => {
-              const sel = isEnd(d.iso);
-              const mid = inMid(d.iso);
+              const sel = isSelected(d.iso);
               return (
-                <Pressable key={d.iso} onPress={() => onDayPress(d.iso)} style={[styles.dateChip, mid && styles.dateChipMid, sel && styles.dateChipSel]}>
+                <Pressable key={d.iso} onPress={() => toggleDay(d.iso)} style={[styles.dateChip, sel && styles.dateChipSel]}>
                   <Text style={[styles.dateWeekday, sel && styles.dateTextSel]}>{d.weekday}</Text>
                   <Text style={[styles.dateDay, sel && styles.dateTextSel]}>{d.day}</Text>
                   <Text style={[styles.dateMonth, sel && styles.dateTextSel]}>{d.month}</Text>
@@ -142,7 +134,7 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
               );
             })}
           </ScrollView>
-          <Text style={styles.whenHint}>Tap a day for that date; tap a second for a range.</Text>
+          <Text style={styles.whenHint}>Tap the days you can play.</Text>
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
@@ -152,7 +144,8 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
             <Switch
               value={local.starred}
               onValueChange={(v) => { haptics.select(); setLocal((s) => ({ ...s, starred: v })); }}
-              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              trackColor={{ true: c.accent, false: c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised }}
+              ios_backgroundColor={c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -165,7 +158,8 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
             <Switch
               value={local.all}
               onValueChange={(v) => { haptics.select(); setLocal((s) => ({ ...s, all: v })); }}
-              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              trackColor={{ true: c.accent, false: c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised }}
+              ios_backgroundColor={c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised}
               thumbColor="#FFFFFF"
             />
           </View>
