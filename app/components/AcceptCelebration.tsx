@@ -49,20 +49,25 @@ export function AcceptCelebration({ onDone }: { onDone: () => void }) {
 }
 
 function makeStyles(c: Palette, ink: string) {
+  // A light wash on light themes / dark wash on dark themes keeps the monochrome
+  // stamp legible while the matched card's PHOTO still shows through behind it.
+  const scrim = c.scheme === 'light' ? 'rgba(255,255,255,0.34)' : 'rgba(0,0,0,0.40)';
   return StyleSheet.create({
-    overlay: { ...StyleSheet.absoluteFillObject, zIndex: 300, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg },
+    overlay: { ...StyleSheet.absoluteFillObject, zIndex: 300, alignItems: 'center', justifyContent: 'center', backgroundColor: scrim },
     stamp: {
       borderWidth: 5,
       borderColor: ink,
       borderRadius: 10,
       paddingHorizontal: spacing.xl,
       paddingVertical: spacing.md,
+      shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 12,
     },
     stampText: {
       fontFamily: fonts.displayXBold,
       fontSize: 52,
       letterSpacing: 4,
       color: ink,
+      textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 },
     },
   });
 }

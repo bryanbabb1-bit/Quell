@@ -81,7 +81,6 @@ export function ConfirmIndexSheet({
             placeholder="e.g. 8.4 (use + for plus, e.g. +1.2)"
             placeholderTextColor={colors.muted}
             keyboardType="numbers-and-punctuation"
-            autoFocus
             returnKeyType="done"
             onSubmitEditing={submit}
           />
