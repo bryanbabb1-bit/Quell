@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
   View,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSignIn, useAuth } from '@clerk/clerk-expo';
@@ -268,6 +269,7 @@ export default function SignInScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
+        <Image source={require('../../assets/icon.png')} style={styles.logo} />
         <Text style={styles.brand}>Foretera</Text>
         <Text style={styles.tagline}>Post a match. Settle the score.</Text>
 
@@ -359,7 +361,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  brand: { fontFamily: fonts.displayXBold, fontSize: 44, letterSpacing: -1.5, color: colors.accent, marginBottom: spacing.xs },
+  logo: { width: 88, height: 88, borderRadius: 20, marginBottom: spacing.md },
+  brand: { fontFamily: fonts.displayXBold, fontSize: 40, letterSpacing: -1, color: colors.text, marginBottom: spacing.xs },
   tagline: { ...typography.body, fontSize: 16, color: colors.muted, marginBottom: spacing.lg },
   stepTitle: { ...typography.heading, fontSize: 22, color: colors.ink, alignSelf: 'flex-start', marginTop: spacing.sm },
   stepSubtitle: { ...typography.body, fontSize: 14, color: colors.muted, alignSelf: 'flex-start', marginBottom: spacing.sm },
