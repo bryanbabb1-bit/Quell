@@ -8,6 +8,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
+import { useSavedMatchesStore } from '@/store/useSavedMatchesStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { MatchDeck } from '@/components/MatchDeck';
 import { AcceptCelebration } from '@/components/AcceptCelebration';
@@ -36,12 +37,21 @@ export default function DiscoveryScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
+  const hydrateSaved = useSavedMatchesStore((s) => s.hydrate);
+  const savedIds = useSavedMatchesStore((s) => s.saved);
+  const savedRef = useRef(savedIds);
+  savedRef.current = savedIds;
+
+  useEffect(() => { hydrateSaved(); }, [hydrateSaved]);
 
   const load = useCallback(async (f?: DiscoveryFilterState) => {
     try {
       setError(null);
-      const { matches } = await api.discover(f ?? filtersRef.current);
-      setMatches(matches);
+      const eff = f ?? filtersRef.current;
+      // "Saved only": pull the broader feed (ignore home-course/handicap defaults)
+      // then keep just the matches the player has starred locally.
+      const { matches } = await api.discover(eff.starred ? { ...eff, all: true } : eff);
+      setMatches(eff.starred ? matches.filter((m) => savedRef.current.includes(m.id)) : matches);
     } catch (e: any) {
       setError(e?.message ?? 'Could not load matches.');
     } finally {
@@ -193,12 +203,12 @@ function makeStyles(colors: Palette) {
     ...elevation.floating,
   },
   filterBtn: {
-    position: 'absolute', right: spacing.lg, top: spacing.md,
-    width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface,
+    position: 'absolute', left: spacing.lg, bottom: spacing.lg,
+    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center',
-    ...elevation.card,
+    ...elevation.floating,
   },
-  filterDot: { position: 'absolute', top: 8, right: 8, width: 9, height: 9, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.surface },
+  filterDot: { position: 'absolute', top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 1.5, borderColor: colors.surface },
   coach: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   coachCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, alignItems: 'center', alignSelf: 'stretch', ...elevation.sheet },
   coachTitle: { ...t.heading, textAlign: 'center' },

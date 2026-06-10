@@ -6,10 +6,10 @@ import { CourseSelect } from '@/components/CourseSelect';
 import { haptics } from '@/lib/haptics';
 import { makeType, spacing, radius, type Palette } from '@/constants/theme';
 
-export type DiscoveryFilterState = { match_type: string; course: string; all: boolean };
-export const DEFAULT_FILTERS: DiscoveryFilterState = { match_type: 'any', course: '', all: false };
+export type DiscoveryFilterState = { match_type: string; course: string; all: boolean; starred: boolean };
+export const DEFAULT_FILTERS: DiscoveryFilterState = { match_type: 'any', course: '', all: false, starred: false };
 export const isFiltered = (f: DiscoveryFilterState) =>
-  f.match_type !== 'any' || f.course.trim() !== '' || f.all;
+  f.match_type !== 'any' || f.course.trim() !== '' || f.all || f.starred;
 
 const TYPE_OPTIONS = [
   { k: 'any', label: 'Any' },
@@ -65,6 +65,19 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
                 </Pressable>
               );
             })}
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.switchLabel}>Saved only</Text>
+              <Text style={styles.switchHint}>Just the matches you've starred to revisit</Text>
+            </View>
+            <Switch
+              value={local.starred}
+              onValueChange={(v) => { haptics.select(); setLocal((s) => ({ ...s, starred: v })); }}
+              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              thumbColor="#FFFFFF"
+            />
           </View>
 
           <View style={styles.switchRow}>

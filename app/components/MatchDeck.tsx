@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { DiscoveryMatch } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { useColors } from '@/store/useThemeStore';
-import { useFavorites } from '@/store/useFavoritesStore';
+import { useSavedMatchesStore } from '@/store/useSavedMatchesStore';
 import { formatHandicap, formatPlayWhen } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
 import { Avatar } from '@/components/ui';
@@ -34,7 +34,9 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
 }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { isFavorite, toggle } = useFavorites();
+  const isSaved = useSavedMatchesStore((s) => s.isSaved);
+  const toggleSaved = useSavedMatchesStore((s) => s.toggle);
+  const savedIds = useSavedMatchesStore((s) => s.saved);
   const [index, setIndex] = useState(0);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
@@ -108,12 +110,12 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
     tx.value = withTiming(-OFF, { duration: 220 }, (fin) => { if (fin) runOnJS(advancePast)(); });
   };
   const acceptBtn = () => { if (current) { haptics.medium(); onAccept(current); } };
-  const favBtn = () => {
+  const saveBtn = () => {
     if (!current) return;
     haptics.light();
-    toggle(current.creator_id, { name: creatorName(current), handicap: current.creator_handicap_index });
+    toggleSaved(current.id);
   };
-  const faved = current ? isFavorite(current.creator_id) : false;
+  const saved = current ? (savedIds.includes(current.id) || isSaved(current.id)) : false;
 
   if (!current) {
     return (
@@ -132,10 +134,10 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   return (
     <View style={styles.deck}>
       <Animated.View style={[styles.glow, glowAcceptStyle]} pointerEvents="none">
-        <LinearGradient colors={['transparent', colors.accentGlow]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['transparent', colors.accent]} start={{ x: 0.35, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <Animated.View style={[styles.glow, glowPassStyle]} pointerEvents="none">
-        <LinearGradient colors={[colors.lossGlow, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[colors.loss, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 0.65, y: 0 }} style={StyleSheet.absoluteFill} />
       </Animated.View>
       <View style={styles.cardArea}>
         {next && (
@@ -165,8 +167,8 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
             <Ionicons name="flag" size={34} color={colors.onAccent} />
           </LinearGradient>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.heartCtrl]} onPress={favBtn} activeOpacity={0.85}>
-          <Ionicons name={faved ? 'heart' : 'heart-outline'} size={28} color={colors.accent} />
+        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.saveCtrl]} onPress={saveBtn} activeOpacity={0.85}>
+          <Ionicons name={saved ? 'star' : 'star-outline'} size={26} color={saved ? colors.accent : colors.muted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -207,7 +209,7 @@ function CardBody({ m }: { m: DiscoveryMatch }) {
       {/* Top pills: handicap (left), when (right). */}
       <View style={styles.topRow}>
         <View style={styles.hcpPill}>
-          <Ionicons name="golf" size={12} color={colors.onAccent} />
+          <Ionicons name="golf" size={13} color={colors.accent} />
           <Text style={styles.hcpText}>{formatHandicap(m.creator_handicap_index)} HCP</Text>
         </View>
         <View style={styles.whenPill}>
@@ -261,8 +263,10 @@ function makeStyles(colors: Palette) {
   fallbackAvatar: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 120, opacity: 0.92 },
 
   topRow: { position: 'absolute', top: spacing.md, left: spacing.md, right: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  hcpPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  hcpText: { ...typography.caption, color: colors.onAccent, fontWeight: '800', letterSpacing: 0.5, fontSize: 12 },
+  // Dark high-contrast chip + accent text so the handicap reads clearly over any
+  // photo OR the accent gradient fallback (a solid accent pill blended into it).
+  hcpPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(8,12,10,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  hcpText: { ...typography.caption, color: colors.accent, fontWeight: '800', letterSpacing: 0.5, fontSize: 12.5 },
   whenPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
   whenText: { ...typography.caption, color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
 
@@ -274,14 +278,17 @@ function makeStyles(colors: Palette) {
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 5 },
   chipText: { ...typography.caption, color: '#FFFFFF', fontWeight: '600', fontSize: 12.5 },
 
+  // Solid FILLED badges (not outlines) so ACCEPT/PASS read instantly over a
+  // photo while swiping.
   stamp: {
-    position: 'absolute', top: 64, zIndex: 20, borderRadius: radius.md, borderWidth: 3,
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.xs,
+    position: 'absolute', top: 64, zIndex: 20, borderRadius: radius.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 10,
   },
-  acceptStamp: { left: spacing.lg, borderColor: colors.accent, transform: [{ rotate: '-12deg' }] },
-  acceptStampText: { ...typography.title, fontSize: 32, color: colors.accent, letterSpacing: 2 },
-  passStamp: { right: spacing.lg, borderColor: colors.loss, transform: [{ rotate: '12deg' }] },
-  passStampText: { ...typography.title, fontSize: 32, color: colors.loss, letterSpacing: 2 },
+  acceptStamp: { left: spacing.lg, backgroundColor: colors.accent, transform: [{ rotate: '-12deg' }] },
+  acceptStampText: { ...typography.title, fontSize: 32, color: colors.onAccent, letterSpacing: 2 },
+  passStamp: { right: spacing.lg, backgroundColor: colors.loss, transform: [{ rotate: '12deg' }] },
+  passStampText: { ...typography.title, fontSize: 32, color: '#FFFFFF', letterSpacing: 2 },
 
   controls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.xl, paddingBottom: spacing.lg, paddingTop: spacing.sm },
   ctrlBtn: {
@@ -292,7 +299,7 @@ function makeStyles(colors: Palette) {
   ctrlMain: { width: 78, height: 78, borderRadius: 39 },
   ctrlFill: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   passCtrl: { borderColor: colors.loss },
-  heartCtrl: { borderColor: colors.accent },
+  saveCtrl: { borderColor: colors.border },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.lg },
   emptyTitle: { ...typography.heading, color: colors.muted, textAlign: 'center' },
