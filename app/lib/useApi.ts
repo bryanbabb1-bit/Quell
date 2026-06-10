@@ -105,6 +105,8 @@ export function useApi() {
         call<Match>(`/matches/${id}/cancel`, { method: 'POST' }),
       declineMatch: (id: string) =>
         call<Match>(`/matches/${id}/decline`, { method: 'POST' }),
+      nudgeMatch: (id: string) =>
+        call<{ ok: boolean; reason?: string }>(`/matches/${id}/nudge`, { method: 'POST' }),
 
       // Scorecards
       getMatchHoles: (matchId: string) =>

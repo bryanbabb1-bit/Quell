@@ -17,7 +17,6 @@ import { ErrorState, SkeletonCard } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import type { DiscoveryMatch } from '@/types';
 import { spacing, radius, elevation, makeType, type Palette } from '@/constants/theme';
-import { isIndexStale } from '@/lib/format';
 
 const COACH_KEY = 'mp_coach_seen';
 
@@ -86,10 +85,10 @@ export default function DiscoveryScreen() {
     }
   };
 
-  // Swipe-right / accept: confirm a stale index first, then accept.
+  // Swipe-right / accept: always confirm the index first (it's locked onto the
+  // match on accept), then accept.
   const requestAccept = (m: DiscoveryMatch) => {
-    if (user && isIndexStale(user.handicap, user.handicap_updated_at)) setPendingAccept(m);
-    else doAccept(m);
+    setPendingAccept(m);
   };
 
   const confirmIndexAndAccept = async (index: number) => {

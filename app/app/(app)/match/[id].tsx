@@ -7,7 +7,9 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { useUserStore } from '@/store/useUserStore';
 import { useFavorites } from '@/store/useFavoritesStore';
+import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import type { Match, HolesSetup, TeeSummary } from '@/types';
@@ -30,6 +32,11 @@ export default function MatchDetailScreen() {
   const [teeModal, setTeeModal] = useState(false);
   const [courseTees, setCourseTees] = useState<TeeSummary[] | null>(null);
   const [teeBusy, setTeeBusy] = useState(false);
+  const user = useUserStore((s) => s.user);
+  const [confirmAccept, setConfirmAccept] = useState(false);
+  const [sheetBusy, setSheetBusy] = useState(false);
+  const [nudging, setNudging] = useState(false);
+  const [nudged, setNudged] = useState(false);
   const { isFavorite, toggle: toggleFav, load: loadFavs } = useFavorites();
   useEffect(() => { loadFavs(); }, [loadFavs]);
 
@@ -82,12 +89,40 @@ export default function MatchDetailScreen() {
     }
   };
 
-  const acceptChallenge = async () => {
-    if (acting) return;
+  // Accepting a challenge locks your handicap onto the match, so confirm it first.
+  const doAcceptChallenge = async () => {
     setActing(true);
     try { setMatch(await api.acceptMatch(id!)); haptics.success(); }
     catch (e: any) { Alert.alert('Could not accept', e?.message ?? 'Try again.'); }
     finally { setActing(false); }
+  };
+  const confirmIndexAndAccept = async (index: number) => {
+    setSheetBusy(true);
+    try {
+      const updated = await api.updateMe({ handicap: index });
+      useUserStore.setState({ user: updated });
+      setConfirmAccept(false);
+      await doAcceptChallenge();
+    } catch (e: any) {
+      Alert.alert('Could not save your index', e?.message ?? 'Please try again.');
+    } finally {
+      setSheetBusy(false);
+    }
+  };
+
+  // Nudge the opponent to post their scores (push notification).
+  const nudgeOpponent = async () => {
+    if (nudging || nudged) return;
+    setNudging(true);
+    try {
+      const r = await api.nudgeMatch(id!);
+      if (r.ok) { setNudged(true); haptics.success(); }
+      else { Alert.alert("They're in", 'Your opponent has already posted their scores.'); }
+    } catch (e: any) {
+      Alert.alert('Could not nudge', e?.message ?? 'Try again.');
+    } finally {
+      setNudging(false);
+    }
   };
 
   const openTeePicker = async () => {
@@ -167,6 +202,7 @@ export default function MatchDetailScreen() {
     (match.status === 'accepted' || match.status === 'in_progress') && !mySubmitted;
 
   return (
+    <View style={styles.screen}>
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.course}>{match.course_name}</Text>
@@ -237,7 +273,7 @@ export default function MatchDetailScreen() {
             <>
               <Text style={styles.cardTitle}>Challenge</Text>
               <Text style={styles.note}>{match.creator_name ?? 'Someone'} challenged you to a match at {match.course_name}.</Text>
-              <TouchableOpacity style={styles.primaryBtn} disabled={acting} onPress={acceptChallenge}>
+              <TouchableOpacity style={styles.primaryBtn} disabled={acting} onPress={() => { if (!acting) setConfirmAccept(true); }}>
                 <Ionicons name="checkmark-circle-outline" size={18} color={colors.onAccent} />
                 <Text style={styles.primaryText}>Accept challenge</Text>
               </TouchableOpacity>
@@ -310,6 +346,12 @@ export default function MatchDetailScreen() {
                   Submitted{oppSubmitted ? '' : ` — waiting on the ${isCreator ? 'opponent' : 'creator'} to finish.`}
                 </Text>
               </View>
+              {!oppSubmitted && (
+                <TouchableOpacity style={styles.secondaryBtn} disabled={nudging || nudged} onPress={nudgeOpponent}>
+                  <Ionicons name={nudged ? 'checkmark' : 'notifications-outline'} size={18} color={colors.fairway} />
+                  <Text style={styles.secondaryText}>{nudged ? 'Nudge sent' : `Nudge ${firstName(otherName)} to post`}</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/score`)}>
                 <Text style={styles.secondaryText}>Edit my scores</Text>
               </TouchableOpacity>
@@ -361,6 +403,17 @@ export default function MatchDetailScreen() {
         </View>
       </Modal>
     </ScrollView>
+
+      <ConfirmIndexSheet
+        visible={confirmAccept}
+        handicap={user?.handicap ?? null}
+        updatedAt={user?.handicap_updated_at ?? null}
+        actionLabel="Accept match"
+        busy={sheetBusy}
+        onCancel={() => setConfirmAccept(false)}
+        onConfirm={confirmIndexAndAccept}
+      />
+    </View>
   );
 }
 
@@ -494,6 +547,7 @@ function Row({ icon, label, value }: { icon: any; label: string; value: string }
 
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.paper },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.paper },
   container: { padding: spacing.lg, gap: spacing.sm, backgroundColor: colors.paper },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -65,8 +65,8 @@ export function ConfirmIndexSheet({
           <View style={styles.handle} />
           <Text style={styles.title}>Confirm your Handicap Index</Text>
           <Text style={styles.subtitle}>
-            This gets locked onto the match now, before anyone plays — so the result is fair and
-            can't change later. {actionLabel === 'Accept match' ? "Your opponent's was locked when they posted." : "Your opponent confirms theirs when they accept."}
+            Handicaps are locked at the time a match is accepted — they can't change after that, so
+            the result stays fair. Confirm or update your current Handicap Index below.
           </Text>
 
           <View style={styles.ageRow}>

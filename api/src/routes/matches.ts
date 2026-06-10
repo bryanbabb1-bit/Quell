@@ -50,6 +50,7 @@ export async function handleMatches(
   if (action === 'tee' && method === 'POST') return setTee(auth, env, matchId, request);
 
   if (method === 'POST') {
+    if (action === 'nudge') return nudge(auth, env, matchId);
     if (action === 'accept') return accept(auth, env, matchId);
     if (action === 'cancel') return cancel(auth, env, matchId);
     if (action === 'decline') return decline(auth, env, matchId);
@@ -359,6 +360,32 @@ async function setTee(auth: AuthContext, env: Env, matchId: string, request: Req
   }
   const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
   return json(updated);
+}
+
+// ── Nudge (remind the other player to enter their scores) ────────────────────
+// POST /matches/:id/nudge — push the OTHER player a reminder to post their card.
+// Only on a live match, only if that player hasn't already submitted.
+async function nudge(auth: AuthContext, env: Env, matchId: string): Promise<Response> {
+  const match = await env.DB.prepare('SELECT * FROM matches WHERE id = ?')
+    .bind(matchId).first<Record<string, any>>();
+  if (!match) return error('Match not found', 404);
+  const isCreator = match.creator_id === auth.userId;
+  const isOpponent = match.opponent_id === auth.userId;
+  if (!isCreator && !isOpponent) return error('Not your match', 403);
+  if (match.status !== 'accepted' && match.status !== 'in_progress') {
+    return error(`Cannot nudge on a ${match.status} match`, 409);
+  }
+  const targetId = (isCreator ? match.opponent_id : match.creator_id) as string | null;
+  if (!targetId) return error('No opponent to nudge', 400);
+  // No point nudging someone who already posted their card.
+  const targetSubmitted = isCreator ? !!match.opponent_scorecard_id : !!match.creator_scorecard_id;
+  if (targetSubmitted) return json({ ok: false, reason: 'already_submitted' });
+
+  const me = await env.DB.prepare('SELECT first_name FROM users WHERE id = ?')
+    .bind(auth.userId).first<{ first_name: string | null }>();
+  const who = me?.first_name?.trim() || 'Your opponent';
+  await sendPush(env, targetId, 'Your move', `${who} is waiting on your scores — open Foretera to enter them.`, { matchId });
+  return json({ ok: true });
 }
 
 // ── Cancel (creator) ─────────────────────────────────────────────────────────

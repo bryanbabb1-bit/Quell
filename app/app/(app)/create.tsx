@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import type { MatchType, CourseSummary, TeeSummary } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
-import { isIndexStale } from '@/lib/format';
 
 const TYPES: MatchType[] = ['front_nine', 'back_nine', 'eighteen'];
 
@@ -128,11 +127,12 @@ export default function CreateMatchScreen() {
 
   // The creator's index is locked onto the match at post time — confirm/refresh
   // it first when it's unset or stale.
+  // Always confirm the index before posting — it's locked onto the match, so the
+  // player verifies it every time (the sheet pre-fills their current value).
   const submit = () => {
     const payload = buildPayload();
     if (!payload) return;
-    if (user && isIndexStale(user.handicap, user.handicap_updated_at)) setPendingCreate(payload);
-    else doCreate(payload);
+    setPendingCreate(payload);
   };
 
   const confirmIndexAndCreate = async (index: number) => {
