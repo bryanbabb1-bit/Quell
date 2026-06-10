@@ -147,6 +147,7 @@ export default function MatchDetailScreen() {
       )}
 
       <View style={styles.card}>
+        <Row icon="flag-outline" label="Format" value={MATCH_TYPE_LABELS[match.match_type]} />
         <Row icon="calendar-outline" label="When" value={formatPlayWhen(match.play_date)} />
         <Row icon="golf-outline" label="Tees" value={match.tee_color} />
         {match.status === 'open' && (
