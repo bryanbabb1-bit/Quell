@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
@@ -35,6 +35,7 @@ export function CourseSelect({ label, valueName, onSelect, placeholder = 'Search
 
   const choose = (co: CourseSummary) => {
     haptics.select();
+    Keyboard.dismiss();
     onSelect(co);
     setQuery(co.name);
     setOpen(false);

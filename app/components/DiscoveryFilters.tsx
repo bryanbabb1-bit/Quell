@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Switch } from 'react-native';
-import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useColors } from '@/store/useThemeStore';
 import { Button } from '@/components/ui';
 import { CourseSelect } from '@/components/CourseSelect';
@@ -33,18 +32,24 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
 
   useEffect(() => { if (visible) setLocal(value); }, [visible, value]);
 
-  const keyboard = useAnimatedKeyboard();
-  const lift = useAnimatedStyle(() => ({ transform: [{ translateY: -keyboard.height.value }] }));
-
   if (!visible) return null;
 
   return (
     <View style={styles.overlay}>
       <Pressable style={styles.backdrop} onPress={onClose} />
-      <Animated.View style={[styles.sheetWrap, lift]} pointerEvents="box-none">
+      <View style={styles.sheetWrap} pointerEvents="box-none">
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <Text style={styles.title}>Filter matches</Text>
+
+          {/* Course first so its type-ahead sits above the keyboard (the sheet is
+              bottom-anchored and not lifted, so the top fields stay on-screen). */}
+          <CourseSelect
+            label="Course"
+            valueName={local.course || null}
+            onSelect={(course) => setLocal((s) => ({ ...s, course: course?.name ?? '' }))}
+            placeholder="Any course"
+          />
 
           <Text style={styles.label}>Match type</Text>
           <View style={styles.seg}>
@@ -61,13 +66,6 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
               );
             })}
           </View>
-
-          <CourseSelect
-            label="Course"
-            valueName={local.course || null}
-            onSelect={(course) => setLocal((s) => ({ ...s, course: course?.name ?? '' }))}
-            placeholder="Any course"
-          />
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
@@ -87,7 +85,7 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
             <Text style={styles.resetText}>Reset</Text>
           </Pressable>
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 }
