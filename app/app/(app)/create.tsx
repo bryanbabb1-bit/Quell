@@ -49,7 +49,6 @@ export default function CreateMatchScreen() {
   const [teeColor, setTeeColor] = useState('');
   const [teeId, setTeeId] = useState<string | null>(null);
   const [courseTees, setCourseTees] = useState<TeeSummary[]>([]);
-  const [mode, setMode] = useState<'catalog' | 'custom'>('catalog');
   const [playDate, setPlayDate] = useState(isoToday());
   const days = useMemo(() => nextDays(14), []);
   const [matchType, setMatchType] = useState<MatchType>('eighteen');
@@ -83,12 +82,8 @@ export default function CreateMatchScreen() {
 
   // Validate the form and return the create payload, or null (after alerting).
   const buildPayload = (): CreateMatchInput | null => {
-    if (mode === 'catalog') {
-      if (!teeId || !courseName) {
-        Alert.alert('Pick a course', 'Choose a course and tee, or switch to Custom.'); return null;
-      }
-    } else if (!courseName.trim() || !teeColor.trim()) {
-      Alert.alert('Missing info', 'Course and tees are required.'); return null;
+    if (!teeId || !courseName) {
+      Alert.alert('Pick a course', 'Choose a course and tee for the match.'); return null;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(playDate)) {
       Alert.alert('Invalid date', 'Use YYYY-MM-DD (e.g. 2026-06-14).'); return null;
@@ -108,7 +103,7 @@ export default function CreateMatchScreen() {
     return {
       course_name: courseName.trim(),
       tee_color: teeColor.trim(),
-      tee_id: mode === 'catalog' ? teeId : null,
+      tee_id: teeId,
       play_date: playDate,
       play_time: null,
       match_type: matchType,
@@ -171,50 +166,32 @@ export default function CreateMatchScreen() {
           </View>
         ) : null}
 
-        <View style={styles.modeRow}>
-          <TouchableOpacity style={[styles.modeBtn, mode === 'catalog' && styles.modeActive]} onPress={() => setMode('catalog')}>
-            <Text style={[styles.modeText, mode === 'catalog' && styles.modeTextActive]}>From catalog</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.modeBtn, mode === 'custom' && styles.modeActive]} onPress={() => { setMode('custom'); setTeeId(null); }}>
-            <Text style={[styles.modeText, mode === 'custom' && styles.modeTextActive]}>Custom</Text>
-          </TouchableOpacity>
-        </View>
-
-        {mode === 'catalog' ? (
-          <>
-            <CourseSelect
-              label="Course"
-              valueName={courseName || null}
-              onSelect={onSelectCourse}
-              placeholder="Search your course…"
-            />
-            {courseTees.length > 0 ? (
-              <View style={styles.field}>
-                <Text style={styles.label}>Tees</Text>
-                <View style={styles.teeWrap}>
-                  {courseTees.map((t) => {
-                    const active = teeId === t.id;
-                    return (
-                      <TouchableOpacity
-                        key={t.id}
-                        style={[styles.teeBtn, active && styles.teeBtnActive]}
-                        onPress={() => { haptics.select(); setTeeId(t.id); setTeeColor(t.name); }}
-                      >
-                        <Text style={[styles.teeName, active && styles.teeNameActive]}>{t.name}</Text>
-                        <Text style={styles.teeSub}>{t.course_rating ?? '—'} / {t.slope_rating ?? '—'}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : null}
-          </>
-        ) : (
-          <>
-            <Field label="Course" value={courseName} onChangeText={setCourseName} placeholder="Prairie Highlands" />
-            <Field label="Tees" value={teeColor} onChangeText={setTeeColor} placeholder="Blue / White / Black…" />
-          </>
-        )}
+        <CourseSelect
+          label="Course"
+          valueName={courseName || null}
+          onSelect={onSelectCourse}
+          placeholder="Search your course…"
+        />
+        {courseTees.length > 0 ? (
+          <View style={styles.field}>
+            <Text style={styles.label}>Tees</Text>
+            <View style={styles.teeWrap}>
+              {courseTees.map((t) => {
+                const active = teeId === t.id;
+                return (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={[styles.teeBtn, active && styles.teeBtnActive]}
+                    onPress={() => { haptics.select(); setTeeId(t.id); setTeeColor(t.name); }}
+                  >
+                    <Text style={[styles.teeName, active && styles.teeNameActive]}>{t.name}</Text>
+                    <Text style={styles.teeSub}>{t.course_rating ?? '—'} / {t.slope_rating ?? '—'}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.field}>
           <Text style={styles.label}>Date</Text>

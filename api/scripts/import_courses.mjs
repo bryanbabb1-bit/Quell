@@ -85,8 +85,10 @@ for (const c of picked) {
   const loc = c.location || {};
   sql += `INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('${cid}','${esc(c.course_name)}','${esc(loc.city)}','${esc(loc.state)}','2026-06-09T00:00:00.000Z');\n`;
 
+  // Include every men's tee with a full 18-hole card — combos (e.g. "Blue/White")
+  // included, since real courses offer them.
   const tees = (c.tees?.male || []).filter(
-    (t) => t.tee_name && !t.tee_name.includes('/') && Array.isArray(t.holes) && t.holes.length === 18,
+    (t) => t.tee_name && Array.isArray(t.holes) && t.holes.length === 18,
   );
   for (const t of tees) {
     const tid = `tee_api_${c.id}_${slugify(t.tee_name)}`;

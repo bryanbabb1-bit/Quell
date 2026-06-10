@@ -6,7 +6,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from '@clerk/clerk-expo';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
@@ -17,7 +16,6 @@ import { indexAgeLabel } from '@/lib/format';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 export default function ProfileScreen() {
-  const { signOut } = useAuth();
   const api = useApi();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -130,10 +128,6 @@ export default function ProfileScreen() {
 
           <TouchableOpacity style={styles.saveBtn} onPress={save} disabled={saving}>
             {saving ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.saveText}>Save</Text>}
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.signOut} onPress={() => signOut()}>
-            <Text style={styles.signOutText}>Sign out</Text>
           </TouchableOpacity>
         </ScrollView>
     </SafeAreaView>
