@@ -277,18 +277,19 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
 
   // Course handicaps for the segment played (full 18 or the specific nine), plus
   // the strokes the CALLER receives = the net difference allocated to the
-  // higher-handicap side. Null until both handicaps are snapshotted.
+  // higher-handicap side. A player with NO index plays as scratch (0.0) — same
+  // rule the engine uses at settle. Only computed once the match has an opponent.
   const seg = segmentFor(tee, match.match_type);
   let creator_strokes = holes.map(() => 0);
   let opponent_strokes = holes.map(() => 0);
   let creator_course_handicap: number | null = null;
   let opponent_course_handicap: number | null = null;
-  if (match.creator_handicap != null && match.opponent_handicap != null) {
+  if (match.opponent_id) {
     const specs: HoleSpec[] = holes.map((h: any) => ({
       hole: h.hole, par: h.par, stroke_index: h.stroke_index,
     }));
-    creator_course_handicap = segmentCourseHandicap(match.creator_handicap, seg);
-    opponent_course_handicap = segmentCourseHandicap(match.opponent_handicap, seg);
+    creator_course_handicap = segmentCourseHandicap(match.creator_handicap ?? 0, seg);
+    opponent_course_handicap = segmentCourseHandicap(match.opponent_handicap ?? 0, seg);
     // Match-play: only the higher course handicap receives strokes, allocated on
     // the hardest holes by stroke index, on the difference.
     const diff = creator_course_handicap - opponent_course_handicap;
