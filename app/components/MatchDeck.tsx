@@ -91,6 +91,12 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   const passBadgeStyle = useAnimatedStyle(() => ({
     opacity: interpolate(tx.value, [-THRESHOLD, 0], [1, 0], Extrapolation.CLAMP),
   }));
+  const glowAcceptStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(tx.value, [0, THRESHOLD], [0, 1], Extrapolation.CLAMP),
+  }));
+  const glowPassStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(tx.value, [-THRESHOLD, 0], [1, 0], Extrapolation.CLAMP),
+  }));
 
   const passBtn = () => {
     tx.value = withTiming(-OFF, { duration: 220 }, (fin) => { if (fin) runOnJS(advancePast)(); });
@@ -113,6 +119,12 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
 
   return (
     <View style={styles.deck}>
+      <Animated.View style={[styles.glow, glowAcceptStyle]} pointerEvents="none">
+        <LinearGradient colors={['transparent', colors.accentGlow]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+      </Animated.View>
+      <Animated.View style={[styles.glow, glowPassStyle]} pointerEvents="none">
+        <LinearGradient colors={[colors.lossGlow, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+      </Animated.View>
       <View style={styles.cardArea}>
         {next && (
           <View style={[styles.card, styles.cardBehind]} pointerEvents="none">
@@ -193,7 +205,8 @@ function Fact({ icon, text }: { icon: any; text: string }) {
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
   deck: { flex: 1 },
-  cardArea: { flex: 1, margin: spacing.lg, position: 'relative' },
+  glow: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
+  cardArea: { flex: 1, marginHorizontal: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.xs, position: 'relative', zIndex: 1 },
   card: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.surface,
@@ -217,13 +230,14 @@ function makeStyles(colors: Palette) {
   fact: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   factText: { ...typography.body, color: colors.ink, flex: 1 },
   stamp: {
-    position: 'absolute', top: spacing.lg, zIndex: 10, borderWidth: 3, borderRadius: radius.md,
-    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    position: 'absolute', top: 32, zIndex: 20, borderRadius: radius.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8,
   },
-  acceptStamp: { left: spacing.lg, borderColor: colors.fairway, transform: [{ rotate: '-12deg' }] },
-  acceptStampText: { ...typography.title, fontSize: 22, color: colors.fairway },
-  passStamp: { right: spacing.lg, borderColor: colors.flagRed, transform: [{ rotate: '12deg' }] },
-  passStampText: { ...typography.title, fontSize: 22, color: colors.flagRed },
+  acceptStamp: { left: spacing.lg, backgroundColor: colors.accent, transform: [{ rotate: '-10deg' }] },
+  acceptStampText: { ...typography.title, fontSize: 30, color: colors.onAccent, letterSpacing: 1 },
+  passStamp: { right: spacing.lg, backgroundColor: colors.loss, transform: [{ rotate: '10deg' }] },
+  passStampText: { ...typography.title, fontSize: 30, color: '#FFFFFF', letterSpacing: 1 },
   controls: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, paddingBottom: spacing.lg, paddingTop: spacing.sm },
   ctrlBtn: {
     width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center', overflow: 'hidden',

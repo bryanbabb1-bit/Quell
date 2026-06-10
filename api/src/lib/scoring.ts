@@ -106,8 +106,14 @@ export function computeMatch(
   const total = holes.length;
   let delta = 0;            // creator holes-up
   let decidedOnHole: number | null = null;
+  let closeoutDelta = 0;     // the match-deciding margin (locked at closeout)
+  let closeoutRemaining = 0; // holes left to play when it closed out
   const out: HoleResult[] = [];
 
+  // Play EVERY hole so the full round (gross + hole-by-hole card) is shown —
+  // players enter all 9/18 holes. The RESULT, though, is locked at the closeout
+  // hole (the moment the lead exceeded the holes remaining); later holes don't
+  // change who won.
   for (let i = 0; i < total; i++) {
     const cNet = creatorGross[i] - creatorStrokes[i];
     const oNet = opponentGross[i] - opponentStrokes[i];
@@ -123,28 +129,26 @@ export function computeMatch(
       winner, creator_delta: delta, cumulative: deltaLabel(delta),
     });
 
-    // Match closes out when the lead exceeds the holes still to play.
     const holesRemaining = total - (i + 1);
     if (decidedOnHole === null && Math.abs(delta) > holesRemaining) {
       decidedOnHole = holes[i].hole;
-      // Standard match-play scoreline: "X & Y" (up by X with Y to play). The
-      // final hole closeout is "X Up" (handled below since Y would be 0).
-      break;
+      closeoutDelta = delta;
+      closeoutRemaining = holesRemaining;
     }
   }
 
+  // Result is the closeout margin if it closed out, else the margin after the
+  // final hole.
+  const resultDelta = decidedOnHole !== null ? closeoutDelta : delta;
   let final_result: MatchResult['final_result'] = 'tie';
-  if (delta > 0) final_result = 'creator_wins';
-  else if (delta < 0) final_result = 'opponent_wins';
+  if (resultDelta > 0) final_result = 'creator_wins';
+  else if (resultDelta < 0) final_result = 'opponent_wins';
 
   let final_delta: string;
-  if (delta === 0) {
-    final_delta = 'All Square';
-  } else if (decidedOnHole !== null) {
-    const holesRemaining = total - out.length;
-    final_delta = holesRemaining > 0 ? `${Math.abs(delta)} & ${holesRemaining}` : `${Math.abs(delta)} Up`;
+  if (decidedOnHole !== null) {
+    final_delta = closeoutRemaining > 0 ? `${Math.abs(closeoutDelta)} & ${closeoutRemaining}` : `${Math.abs(closeoutDelta)} Up`;
   } else {
-    final_delta = `${Math.abs(delta)} Up`;
+    final_delta = resultDelta === 0 ? 'All Square' : `${Math.abs(resultDelta)} Up`;
   }
 
   return { holes: out, final_result, final_delta, decided_on_hole: decidedOnHole };

@@ -143,9 +143,6 @@ export default function MatchDetailScreen() {
           {match.status === 'completed' && otherId ? (
             <IconAction icon="flash-outline" label="Challenge" onPress={challenge} />
           ) : null}
-          {match.status === 'completed' ? (
-            <IconAction icon="refresh" label="Rematch" disabled={reposting} onPress={rematch} />
-          ) : null}
         </View>
       )}
 

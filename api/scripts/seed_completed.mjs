@@ -33,7 +33,8 @@ function build(want) {
   const cBias = want === 'win' ? -0.6 : want === 'loss' ? 0.5 : 0;
   const oBias = want === 'loss' ? -0.6 : want === 'win' ? 0.5 : 0;
   const holes = [];
-  let delta = 0, decidedOn = null;
+  let delta = 0, decidedOn = null, closeoutDelta = 0, closeoutRemaining = 0;
+  // Play all 18 (full gross/card); lock the result at the closeout hole.
   for (let i = 0; i < 18; i++) {
     const cg = score(PAR[i], cBias);
     const og = score(PAR[i], oBias);
@@ -45,14 +46,15 @@ function build(want) {
       creator_delta: delta, cumulative: delta === 0 ? 'AS' : `${Math.abs(delta)}${delta > 0 ? 'U' : 'D'}`,
     });
     const remaining = 17 - i;
-    if (Math.abs(delta) > remaining) { decidedOn = i + 1; break; }
+    if (decidedOn === null && Math.abs(delta) > remaining) { decidedOn = i + 1; closeoutDelta = delta; closeoutRemaining = remaining; }
   }
-  const played = holes.length;
-  const final = holes[played - 1].creator_delta;
+  const resultDelta = decidedOn !== null ? closeoutDelta : delta;
   let final_result, final_delta;
-  if (final > 0) { final_result = 'creator_wins'; final_delta = decidedOn ? `${final} & ${18 - decidedOn}` : `${final} Up`; }
-  else if (final < 0) { final_result = 'opponent_wins'; final_delta = decidedOn ? `${-final} & ${18 - decidedOn}` : `${-final} Up`; }
-  else { final_result = 'tie'; final_delta = 'All Square'; }
+  if (resultDelta > 0) final_result = 'creator_wins';
+  else if (resultDelta < 0) final_result = 'opponent_wins';
+  else final_result = 'tie';
+  if (decidedOn !== null) final_delta = closeoutRemaining > 0 ? `${Math.abs(closeoutDelta)} & ${closeoutRemaining}` : `${Math.abs(closeoutDelta)} Up`;
+  else final_delta = resultDelta === 0 ? 'All Square' : `${Math.abs(resultDelta)} Up`;
   return { holes, final_result, final_delta, decided_on_hole: decidedOn };
 }
 
