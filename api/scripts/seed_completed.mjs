@@ -11,12 +11,14 @@ const SI  = [11,13,15,3,9,7,1,17,5, 10,8,6,12,14,4,16,18,2];
 
 // Five matches, staggered so the 3 most recent are wins (a 3-win streak), then a
 // loss, then a halve. Equal handicaps → net = gross (simple, deterministic-ish).
+// Timestamps must be the MOST RECENT completed matches (after any pre-existing
+// match) so the streak reads from them: 3 wins on top = a 3-win streak.
 const MATCHES = [
-  { id: 'm_done_1', opp: 'user_demo_01', want: 'win',  at: '2026-06-09T20:00:00.000Z' },
-  { id: 'm_done_2', opp: 'user_demo_03', want: 'win',  at: '2026-06-08T19:00:00.000Z' },
-  { id: 'm_done_3', opp: 'user_demo_06', want: 'win',  at: '2026-06-07T18:00:00.000Z' },
-  { id: 'm_done_4', opp: 'user_demo_11', want: 'loss', at: '2026-06-06T18:00:00.000Z' },
-  { id: 'm_done_5', opp: 'user_demo_14', want: 'tie',  at: '2026-06-05T18:00:00.000Z' },
+  { id: 'm_done_1', opp: 'user_demo_01', want: 'win',  at: '2026-06-10T23:00:00.000Z' },
+  { id: 'm_done_2', opp: 'user_demo_03', want: 'win',  at: '2026-06-10T22:00:00.000Z' },
+  { id: 'm_done_3', opp: 'user_demo_06', want: 'win',  at: '2026-06-10T21:00:00.000Z' },
+  { id: 'm_done_4', opp: 'user_demo_11', want: 'loss', at: '2026-06-10T20:00:00.000Z' },
+  { id: 'm_done_5', opp: 'user_demo_14', want: 'tie',  at: '2026-06-10T19:00:00.000Z' },
 ];
 
 const esc = (s) => String(s).replace(/'/g, "''");
