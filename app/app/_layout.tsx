@@ -27,8 +27,6 @@ import { useThemeStore } from '@/store/useThemeStore';
 import { configureNotifications, registerForPush } from '@/lib/notifications';
 import { colors } from '@/constants/theme';
 
-configureNotifications();
-
 // Hold the native splash until fonts + theme are ready so the first frame is
 // already the dark Tournament look (no light flash, no fallback-font reflow).
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -117,6 +115,7 @@ export default function RootLayout() {
   // rotate at all — this lock keeps every other screen upright.
   useEffect(() => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    configureNotifications();
   }, []);
 
   // Reveal the UI once fonts (loaded or failed — never block on a font error)
