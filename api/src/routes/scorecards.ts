@@ -233,9 +233,9 @@ async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Res
   const [creatorCard, opponentCard, creatorUser, opponentUser] = await Promise.all([
     env.DB.prepare('SELECT * FROM scorecards WHERE id = ?').bind(match.creator_scorecard_id).first(),
     env.DB.prepare('SELECT * FROM scorecards WHERE id = ?').bind(match.opponent_scorecard_id).first(),
-    env.DB.prepare('SELECT first_name, last_name FROM users WHERE id = ?').bind(match.creator_id).first<any>(),
+    env.DB.prepare('SELECT first_name, last_name, profile_photo_url FROM users WHERE id = ?').bind(match.creator_id).first<any>(),
     match.opponent_id
-      ? env.DB.prepare('SELECT first_name, last_name FROM users WHERE id = ?').bind(match.opponent_id).first<any>()
+      ? env.DB.prepare('SELECT first_name, last_name, profile_photo_url FROM users WHERE id = ?').bind(match.opponent_id).first<any>()
       : Promise.resolve(null),
   ]);
 
@@ -247,6 +247,8 @@ async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Res
     opponent_scorecard: opponentCard,
     creator_name: nameOf(creatorUser),
     opponent_name: nameOf(opponentUser),
+    creator_photo_url: creatorUser?.profile_photo_url ?? null,
+    opponent_photo_url: opponentUser?.profile_photo_url ?? null,
     progression: match.match_progression ? JSON.parse(match.match_progression) : null,
   });
 }

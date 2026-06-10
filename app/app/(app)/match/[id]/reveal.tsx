@@ -10,6 +10,7 @@ import { useApi } from '@/lib/useApi';
 import { useResultsStore } from '@/store/useResultsStore';
 import { useColors } from '@/store/useThemeStore';
 import { Confetti } from '@/components/ui';
+import { WinSmash } from '@/components/WinSmash';
 import { haptics } from '@/lib/haptics';
 import type { RevealResponse, HoleResult } from '@/types';
 import { deltaLabel } from '@/lib/format';
@@ -35,6 +36,7 @@ export default function RevealScreen() {
   const [step, setStep] = useState(1);   // 1..holes.length = hole currently shown
   const [done, setDone] = useState(false); // past the last hole → final + stats
   const [paused, setPaused] = useState(false);
+  const [smashSeen, setSmashSeen] = useState(false); // win-smash overlay plays once
 
   const { width: winW } = useWindowDimensions();
   const railRef = useRef<ScrollView>(null);
@@ -48,6 +50,7 @@ export default function RevealScreen() {
       setStep(1);
       setDone(false);
       setPaused(false);
+      setSmashSeen(false);
       if (holes) {
         const map: Record<number, number | null> = {};
         for (const h of holes.holes) map[h.hole] = h.par;
@@ -311,6 +314,18 @@ export default function RevealScreen() {
           )}
         </View>
       </SafeAreaView>
+
+      {done && outcome === 'win' && !smashSeen && data.progression && (
+        <WinSmash
+          winnerName={myName}
+          winnerPhoto={meIsCreator ? data.creator_photo_url : data.opponent_photo_url}
+          loserName={theirName}
+          loserPhoto={meIsCreator ? data.opponent_photo_url : data.creator_photo_url}
+          delta={data.progression.final_delta}
+          youWon
+          onDone={() => setSmashSeen(true)}
+        />
+      )}
     </View>
   );
 }

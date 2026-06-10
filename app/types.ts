@@ -124,6 +124,8 @@ export interface RevealResponse {
   opponent_scorecard: Scorecard;
   creator_name: string;
   opponent_name: string;
+  creator_photo_url: string | null;
+  opponent_photo_url: string | null;
   progression: MatchProgression | null;
 }
 
