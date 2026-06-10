@@ -6,11 +6,18 @@ import { json } from '../lib/response';
 // Derived live from `matches` (no clubs/standings table yet — per-club boards
 // land when the clubs concept does). Fine at beta scale; revisit with a
 // materialized standings table if the match volume grows large.
-export async function handleLeaderboard(auth: AuthContext, env: Env): Promise<Response> {
-  const { results } = await env.DB.prepare(
-    `SELECT creator_id, opponent_id, result FROM matches
-      WHERE status = 'completed' AND result IS NOT NULL AND opponent_id IS NOT NULL`
-  ).all<{ creator_id: string; opponent_id: string; result: string }>();
+export async function handleLeaderboard(auth: AuthContext, env: Env, request: Request): Promise<Response> {
+  // ?course=<exact course_name> scopes the board to one course (the Record
+  // screen defaults to the player's home course); absent = global standings.
+  const course = (new URL(request.url).searchParams.get('course') ?? '').trim();
+
+  let sql = `SELECT creator_id, opponent_id, result FROM matches
+      WHERE status = 'completed' AND result IS NOT NULL AND opponent_id IS NOT NULL`;
+  const binds: unknown[] = [];
+  if (course) { sql += ' AND course_name = ?'; binds.push(course); }
+
+  const { results } = await env.DB.prepare(sql).bind(...binds)
+    .all<{ creator_id: string; opponent_id: string; result: string }>();
 
   type Tally = { wins: number; losses: number; ties: number };
   const tally = new Map<string, Tally>();

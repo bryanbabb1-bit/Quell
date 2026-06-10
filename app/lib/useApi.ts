@@ -53,7 +53,8 @@ export function useApi() {
 
       // Records / leaderboard
       getMyRecord: () => call<MyRecord>('/me/record'),
-      getLeaderboard: () => call<{ entries: LeaderboardEntry[] }>('/leaderboard'),
+      getLeaderboard: (course?: string) =>
+        call<{ entries: LeaderboardEntry[] }>(`/leaderboard${course ? `?course=${encodeURIComponent(course)}` : ''}`),
 
       // Matches
       discover: (filters?: { match_type?: string; course?: string; all?: boolean }) => {

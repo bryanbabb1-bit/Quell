@@ -81,7 +81,7 @@ async function handleRequest(
       response = error('Not found', 404);
     }
   } else if (root === 'leaderboard' && method === 'GET') {
-    response = await handleLeaderboard(auth, env);
+    response = await handleLeaderboard(auth, env, request);
   } else if (root === 'matches') {
     // The matches handler also owns the nested /matches/:id/scorecard,
     // /reveal, and /messages sub-resources once implemented; for now route

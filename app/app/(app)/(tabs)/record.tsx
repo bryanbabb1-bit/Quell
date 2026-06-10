@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
@@ -8,6 +8,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { useUserStore } from '@/store/useUserStore';
 import { SkeletonCard, Avatar } from '@/components/ui';
 import type { MyRecord, LeaderboardEntry, Outcome } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
@@ -17,16 +18,31 @@ export default function RecordScreen() {
   const { userId } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const user = useUserStore((s) => s.user);
   const [record, setRecord] = useState<MyRecord | null>(null);
   const [board, setBoard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scope, setScope] = useState<'home' | 'global'>('global');
+  const [homeName, setHomeName] = useState<string | null>(null);
+
+  // Resolve the home course name and default the board to home-course standings.
+  useEffect(() => {
+    const hid = user?.home_course_id;
+    if (!hid) { setHomeName(null); setScope('global'); return; }
+    api.getCourses().then((r) => {
+      const n = r.courses.find((x) => x.id === hid)?.name ?? null;
+      setHomeName(n);
+      if (n) setScope('home');
+    }).catch(() => {});
+  }, [user, api]);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [rec, lb] = await Promise.all([api.getMyRecord(), api.getLeaderboard()]);
+      const courseParam = scope === 'home' ? (homeName ?? undefined) : undefined;
+      const [rec, lb] = await Promise.all([api.getMyRecord(), api.getLeaderboard(courseParam)]);
       setRecord(rec);
       setBoard(lb.entries);
     } catch (e: any) {
@@ -35,7 +51,7 @@ export default function RecordScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [api]);
+  }, [api, scope, homeName]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -112,7 +128,20 @@ export default function RecordScreen() {
         )}
 
         {/* Leaderboard */}
-        <Text style={styles.sectionTitle}>Leaderboard</Text>
+        <View style={styles.lbHeader}>
+          <Text style={styles.sectionTitle}>Leaderboard</Text>
+          {homeName ? (
+            <View style={styles.scopeToggle}>
+              <TouchableOpacity onPress={() => setScope('home')} style={[styles.scopeBtn, scope === 'home' && styles.scopeActive]}>
+                <Text style={[styles.scopeText, scope === 'home' && styles.scopeTextActive]}>Home</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setScope('global')} style={[styles.scopeBtn, scope === 'global' && styles.scopeActive]}>
+                <Text style={[styles.scopeText, scope === 'global' && styles.scopeTextActive]}>Global</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+        {scope === 'home' && homeName ? <Text style={styles.scopeSub}>{homeName}</Text> : null}
         {board.length > 0 ? (
           <View style={styles.card}>
             <View style={[styles.lbRow, styles.lbHead]}>
@@ -134,7 +163,9 @@ export default function RecordScreen() {
             ))}
           </View>
         ) : (
-          <Text style={styles.emptyNote}>No completed matches across the club yet.</Text>
+          <Text style={styles.emptyNote}>
+            {scope === 'home' && homeName ? `No completed matches at ${homeName} yet.` : 'No completed matches across the club yet.'}
+          </Text>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -183,6 +214,13 @@ function makeStyles(colors: Palette) {
   streakLabel: { ...typography.body, color: colors.muted, flex: 1 },
   streakValue: { ...typography.bodySemiBold },
   sectionTitle: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm },
+  lbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
+  scopeToggle: { flexDirection: 'row', backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, padding: 2 },
+  scopeBtn: { paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill },
+  scopeActive: { backgroundColor: colors.accent },
+  scopeText: { ...typography.caption, color: colors.muted },
+  scopeTextActive: { color: colors.onAccent, fontWeight: '700' },
+  scopeSub: { ...typography.caption, color: colors.muted },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   rowDivider: { borderTopWidth: 1, borderTopColor: colors.border },
