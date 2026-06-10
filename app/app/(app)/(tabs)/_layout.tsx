@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Image } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
@@ -38,6 +38,10 @@ export default function TabsLayout() {
         headerStyle: { backgroundColor: colors.bg },
         headerTitleStyle: { color: colors.text, fontFamily: fonts.display, fontSize: 20, letterSpacing: -0.3 },
         headerShadowVisible: false,
+        // Foretera mark in the top-left of every tab header.
+        headerLeft: () => (
+          <Image source={require('../../../assets/icon.png')} style={styles.headerLogo} />
+        ),
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth, height: 88, paddingTop: 6 },
         tabBarLabelStyle: { fontFamily: fonts.bodyMed, fontSize: 11, letterSpacing: 0.2 },
         tabBarItemStyle: { paddingTop: 4 },
@@ -84,3 +88,7 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerLogo: { width: 30, height: 30, borderRadius: 7, marginLeft: 16 },
+});
