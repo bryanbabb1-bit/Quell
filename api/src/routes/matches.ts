@@ -2,6 +2,7 @@ import type { AuthContext } from '../lib/auth';
 import type { Env } from '../types';
 import { MATCH_TYPES } from '../types';
 import { json, error } from '../lib/response';
+import { sendPush } from '../lib/push';
 import { newId, now } from '../lib/id';
 import {
   parseBody, requireString, optionalString, requireEnum,
@@ -132,22 +133,38 @@ async function create(auth: AuthContext, request: Request, env: Env): Promise<Re
     return error('hcp_range_min must be <= hcp_range_max', 400);
   }
 
+  // Direct challenge: when opponent_id is present the match is pre-addressed to
+  // one player and starts as 'pending' (they accept/decline) instead of 'open'.
+  const opponent_id = optionalString(body.opponent_id, 'opponent_id', 64);
+  let status = 'open';
+  if (opponent_id) {
+    if (opponent_id === auth.userId) return error('You cannot challenge yourself', 400);
+    const opp = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(opponent_id).first();
+    if (!opp) return error('Unknown opponent', 400);
+    status = 'pending';
+  }
+
   // Lock the creator's Handicap Index onto the match at post time (the app
   // nudges them to confirm/refresh it first). The opponent's is locked at accept.
-  const creator = await env.DB.prepare('SELECT handicap FROM users WHERE id = ?')
-    .bind(auth.userId).first<{ handicap: number | null }>();
+  const creator = await env.DB.prepare('SELECT first_name, handicap FROM users WHERE id = ?')
+    .bind(auth.userId).first<{ first_name: string | null; handicap: number | null }>();
 
   const id = newId();
   const ts = now();
   await env.DB.prepare(
     `INSERT INTO matches
-       (id, creator_id, status, course_name, tee_color, tee_id, play_date, play_time,
+       (id, creator_id, opponent_id, status, course_name, tee_color, tee_id, play_date, play_time,
         match_type, stakes, hcp_range_min, hcp_range_max, creator_handicap, created_at, updated_at)
-     VALUES (?, ?, 'open', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    id, auth.userId, course_name, tee_color, tee_id, play_date, play_time,
+    id, auth.userId, opponent_id ?? null, status, course_name, tee_color, tee_id, play_date, play_time,
     match_type, stakes, hcp_range_min, hcp_range_max, creator?.handicap ?? null, ts, ts
   ).run();
+
+  if (opponent_id) {
+    const who = creator?.first_name?.trim() || 'Someone';
+    await sendPush(env, opponent_id, `${who} challenged you to a match`, `${course_name} · tap to accept or decline.`, { matchId: id });
+  }
 
   const match = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(id).first();
   return json(match, 201);
@@ -207,8 +224,13 @@ async function accept(auth: AuthContext, env: Env, matchId: string): Promise<Res
   const match = await env.DB.prepare('SELECT * FROM matches WHERE id = ?')
     .bind(matchId).first<Record<string, any>>();
   if (!match) return error('Match not found', 404);
-  if (match.status !== 'open') return error('Match is no longer open', 409);
   if (match.creator_id === auth.userId) return error('You cannot accept your own match', 400);
+
+  // 'open' = first eligible golfer claims it; 'pending' = a direct challenge only
+  // the targeted opponent can accept.
+  const isOpen = match.status === 'open';
+  const isMyChallenge = match.status === 'pending' && match.opponent_id === auth.userId;
+  if (!isOpen && !isMyChallenge) return error('This match can no longer be accepted', 409);
 
   const [creator, opponent] = await Promise.all([
     env.DB.prepare('SELECT handicap FROM users WHERE id = ?').bind(match.creator_id).first<{ handicap: number | null }>(),
@@ -216,18 +238,27 @@ async function accept(auth: AuthContext, env: Env, matchId: string): Promise<Res
   ]);
 
   const ts = now();
-  // Conditional UPDATE guards against a race: two golfers accepting the same
-  // open match at once — only the first (status still 'open') wins.
-  const res = await env.DB.prepare(
-    `UPDATE matches
-        SET opponent_id = ?, status = 'accepted',
+  // Conditional UPDATE guards a race (two golfers accepting the same open match);
+  // only the first whose status still matches wins.
+  const res = isOpen
+    ? await env.DB.prepare(
+        `UPDATE matches SET opponent_id = ?, status = 'accepted',
             creator_handicap = COALESCE(creator_handicap, ?), opponent_handicap = ?, updated_at = ?
-      WHERE id = ? AND status = 'open'`
-  ).bind(
-    auth.userId, creator?.handicap ?? null, opponent?.handicap ?? null, ts, matchId
-  ).run();
+          WHERE id = ? AND status = 'open'`
+      ).bind(auth.userId, creator?.handicap ?? null, opponent?.handicap ?? null, ts, matchId).run()
+    : await env.DB.prepare(
+        `UPDATE matches SET status = 'accepted',
+            creator_handicap = COALESCE(creator_handicap, ?), opponent_handicap = ?, updated_at = ?
+          WHERE id = ? AND status = 'pending' AND opponent_id = ?`
+      ).bind(creator?.handicap ?? null, opponent?.handicap ?? null, ts, matchId, auth.userId).run();
 
-  if (!res.meta.changes) return error('Match is no longer open', 409);
+  if (!res.meta.changes) return error('This match can no longer be accepted', 409);
+
+  // Tell the creator their challenge was accepted.
+  if (isMyChallenge) {
+    const me = await env.DB.prepare('SELECT first_name FROM users WHERE id = ?').bind(auth.userId).first<{ first_name: string | null }>();
+    await sendPush(env, match.creator_id, `${me?.first_name?.trim() || 'Your challenge'} accepted`, 'Your match is on — enter your scores after you play.', { matchId });
+  }
 
   const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
   return json(updated);
@@ -239,7 +270,7 @@ async function cancel(auth: AuthContext, env: Env, matchId: string): Promise<Res
     .bind(matchId).first<Record<string, any>>();
   if (!match) return error('Match not found', 404);
   if (match.creator_id !== auth.userId) return error('Only the creator can cancel', 403);
-  if (match.status !== 'open' && match.status !== 'accepted') {
+  if (match.status !== 'open' && match.status !== 'accepted' && match.status !== 'pending') {
     return error(`Cannot cancel a ${match.status} match`, 409);
   }
   await setStatus(env, matchId, 'cancelled');
@@ -254,7 +285,10 @@ async function decline(auth: AuthContext, env: Env, matchId: string): Promise<Re
   if (!match) return error('Match not found', 404);
   const isParticipant = match.creator_id === auth.userId || match.opponent_id === auth.userId;
   if (!isParticipant) return error('Not your match', 403);
-  if (match.status !== 'accepted') return error(`Cannot decline a ${match.status} match`, 409);
+  // Back out of an accepted match, or decline a direct challenge addressed to you.
+  const okAccepted = match.status === 'accepted';
+  const okChallenge = match.status === 'pending' && match.opponent_id === auth.userId;
+  if (!okAccepted && !okChallenge) return error(`Cannot decline a ${match.status} match`, 409);
   await setStatus(env, matchId, 'declined');
   const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
   return json(updated);
