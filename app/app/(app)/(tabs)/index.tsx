@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
@@ -112,6 +113,12 @@ export default function DiscoveryScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <LinearGradient
+        colors={[colors.accentGlow, colors.bg, colors.bg]}
+        locations={[0, 0.55, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
       <MatchDeck
         matches={matches}
         onAccept={requestAccept}

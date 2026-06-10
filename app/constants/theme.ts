@@ -40,43 +40,57 @@ export interface Palette {
   ink: string;           // → text
 }
 
-// Shared dark canvas — identical across every palette. Lifted off pure-black
-// (a subtle cool-blue tint keeps it from reading flat/too-dark) and secondary
-// text brightened toward white for readability on the dark surfaces.
-const BG = '#12161E';
-const SURFACE = '#1B212B';
-const SURFACE_RAISED = '#272F3B';
-const TEXT = '#F7F9FC';
-const MUTED = '#AAB4C3';
-const BORDER = '#2D3543';
-const LOSS = '#FF5A5F';
-const LOSS_GLOW = 'rgba(255,90,95,0.14)';
-// Halved-result tone reads as a light neutral/silver on the dark canvas (the
-// old tan was invisible on the reveal). Used for "All Square" text + halved pips.
-const HALVE = '#E6EAF0';
-const HALVE_GLOW = 'rgba(230,234,240,0.10)';
-
-// Build a full palette from just its accent family — the only thing that varies.
-function makePalette(accent: string, accentDark: string, accentGlow: string, onAccent: string): Palette {
+// A theme MODE = a full palette (distinct base + accent), not just an accent
+// swap. Tournament Green is the fallback default; the others are the explore
+// mockups. `pal()` fills the legacy golf-named aliases automatically.
+type PalInput = Omit<Palette,
+  'fairway' | 'fairwayDark' | 'fairwaySoft' | 'flagRed' | 'flagRedSoft' | 'sand' | 'paper' | 'ink'>;
+function pal(p: PalInput): Palette {
   return {
-    bg: BG, surface: SURFACE, surfaceRaised: SURFACE_RAISED,
-    text: TEXT, muted: MUTED, border: BORDER,
-    accent, accentDark, accentGlow,
-    loss: LOSS, lossGlow: LOSS_GLOW,
-    halve: HALVE, halveGlow: HALVE_GLOW,
-    onAccent,
-    // legacy aliases
-    fairway: accent, fairwayDark: accentDark, fairwaySoft: accentGlow,
-    flagRed: LOSS, flagRedSoft: LOSS_GLOW, sand: HALVE,
-    paper: BG, ink: TEXT,
+    ...p,
+    fairway: p.accent, fairwayDark: p.accentDark, fairwaySoft: p.accentGlow,
+    flagRed: p.loss, flagRedSoft: p.lossGlow, sand: p.halve,
+    paper: p.bg, ink: p.text,
   };
 }
 
 export const PALETTES: { id: string; name: string; colors: Palette }[] = [
-  { id: 'fairway',  name: 'Tournament Green', colors: makePalette('#36E27D', '#1FB85F', 'rgba(54,226,125,0.14)', '#06231A') },
-  { id: 'twilight', name: 'Twilight Indigo',  colors: makePalette('#7C83FF', '#5A60E0', 'rgba(124,131,255,0.16)', '#0B0E2A') },
-  { id: 'sunset',   name: 'Sunset Clay',      colors: makePalette('#FF9A5A', '#E0743A', 'rgba(255,154,90,0.16)', '#2A1206') },
-  { id: 'ocean',    name: 'Ocean Teal',       colors: makePalette('#2DD4D4', '#16AAAA', 'rgba(45,212,212,0.16)', '#04221F') },
+  {
+    id: 'fairway', name: 'Tournament Green',
+    colors: pal({
+      bg: '#12161E', surface: '#1B212B', surfaceRaised: '#272F3B',
+      text: '#F7F9FC', muted: '#AAB4C3', border: '#2D3543',
+      accent: '#36E27D', accentDark: '#1FB85F', accentGlow: 'rgba(54,226,125,0.14)', onAccent: '#06231A',
+      loss: '#FF5A5F', lossGlow: 'rgba(255,90,95,0.14)', halve: '#E6EAF0', halveGlow: 'rgba(230,234,240,0.10)',
+    }),
+  },
+  {
+    id: 'augusta', name: 'Augusta Pine',
+    colors: pal({
+      bg: '#0C1A14', surface: '#13251C', surfaceRaised: '#1B3326',
+      text: '#F3F1E7', muted: '#A6B3A6', border: '#244033',
+      accent: '#E7C982', accentDark: '#C9A961', accentGlow: 'rgba(231,201,130,0.16)', onAccent: '#20180A',
+      loss: '#E0653F', lossGlow: 'rgba(224,101,63,0.16)', halve: '#EDEBDD', halveGlow: 'rgba(237,235,221,0.10)',
+    }),
+  },
+  {
+    id: 'broadcast', name: 'Broadcast Electric',
+    colors: pal({
+      bg: '#0B1020', surface: '#141B33', surfaceRaised: '#1E2747',
+      text: '#F4F7FF', muted: '#9AA6C4', border: '#283154',
+      accent: '#4DE0C8', accentDark: '#2FB7A2', accentGlow: 'rgba(77,224,200,0.16)', onAccent: '#042420',
+      loss: '#FF5A6A', lossGlow: 'rgba(255,90,106,0.16)', halve: '#E6EAF5', halveGlow: 'rgba(230,234,245,0.10)',
+    }),
+  },
+  {
+    id: 'carbon', name: 'Carbon Luxe',
+    colors: pal({
+      bg: '#0A0A0C', surface: '#16161A', surfaceRaised: '#202026',
+      text: '#F5F5F7', muted: '#9C9CA6', border: '#2A2A31',
+      accent: '#D4AF37', accentDark: '#B5942C', accentGlow: 'rgba(212,175,55,0.16)', onAccent: '#1A1505',
+      loss: '#FF5A5F', lossGlow: 'rgba(255,90,95,0.16)', halve: '#ECECEF', halveGlow: 'rgba(236,236,239,0.10)',
+    }),
+  },
 ];
 
 export const DEFAULT_PALETTE_ID = 'fairway';
