@@ -10,6 +10,7 @@ import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { MatchDeck } from '@/components/MatchDeck';
+import { AcceptCelebration } from '@/components/AcceptCelebration';
 import { DiscoveryFilters, DEFAULT_FILTERS, isFiltered, type DiscoveryFilterState } from '@/components/DiscoveryFilters';
 import { ErrorState, SkeletonCard } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
@@ -30,6 +31,7 @@ export default function DiscoveryScreen() {
   const [showCoach, setShowCoach] = useState(false);
   const [pendingAccept, setPendingAccept] = useState<DiscoveryMatch | null>(null);
   const [sheetBusy, setSheetBusy] = useState(false);
+  const [celebrate, setCelebrate] = useState<string | null>(null);
   const [filters, setFilters] = useState<DiscoveryFilterState>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
   const filtersRef = useRef(filters);
@@ -59,7 +61,7 @@ export default function DiscoveryScreen() {
   const doAccept = async (m: DiscoveryMatch) => {
     try {
       await api.acceptMatch(m.id);
-      router.push(`/(app)/match/${m.id}`);
+      setCelebrate(m.id); // play the flourish, then navigate (see onDone)
     } catch (e: any) {
       Alert.alert('Could not accept', e?.message ?? 'Please try again.');
     }
@@ -171,6 +173,10 @@ export default function DiscoveryScreen() {
         onCancel={() => setPendingAccept(null)}
         onConfirm={confirmIndexAndAccept}
       />
+
+      {celebrate ? (
+        <AcceptCelebration onDone={() => { const id = celebrate; setCelebrate(null); router.push(`/(app)/match/${id}`); }} />
+      ) : null}
     </SafeAreaView>
   );
 }
