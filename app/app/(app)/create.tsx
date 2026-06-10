@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useApi, type CreateMatchInput } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
@@ -42,6 +42,9 @@ export default function CreateMatchScreen() {
   const api = useApi();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // Direct-challenge mode: opponent pre-set via route params.
+  const { opponent_id, opponent_name } = useLocalSearchParams<{ opponent_id?: string; opponent_name?: string }>();
+  const isChallenge = !!opponent_id;
   const [courseName, setCourseName] = useState('');
   const [teeColor, setTeeColor] = useState('');
   const [teeId, setTeeId] = useState<string | null>(null);
@@ -76,12 +79,17 @@ export default function CreateMatchScreen() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(playDate)) {
       Alert.alert('Invalid date', 'Use YYYY-MM-DD (e.g. 2026-06-14).'); return null;
     }
-    const min = parseInt(hcpMin, 10);
-    const max = parseInt(hcpMax, 10);
-    if (!Number.isInteger(min) || !Number.isInteger(max)) {
-      Alert.alert('Handicap range', 'Enter whole numbers for the min and max handicap.'); return null;
+    // A direct challenge is targeted, so the handicap range is irrelevant —
+    // default it wide. An open match still needs an explicit range.
+    let min = 0, max = 54;
+    if (!isChallenge) {
+      min = parseInt(hcpMin, 10);
+      max = parseInt(hcpMax, 10);
+      if (!Number.isInteger(min) || !Number.isInteger(max)) {
+        Alert.alert('Handicap range', 'Enter whole numbers for the min and max handicap.'); return null;
+      }
+      if (min > max) { Alert.alert('Handicap range', 'Min must be ≤ max.'); return null; }
     }
-    if (min > max) { Alert.alert('Handicap range', 'Min must be ≤ max.'); return null; }
 
     return {
       course_name: courseName.trim(),
@@ -93,6 +101,7 @@ export default function CreateMatchScreen() {
       stakes: null,
       hcp_range_min: min,
       hcp_range_max: max,
+      opponent_id: isChallenge ? opponent_id : null,
     };
   };
 
@@ -141,6 +150,13 @@ export default function CreateMatchScreen() {
         automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
       >
+        {isChallenge ? (
+          <View style={styles.challengeBanner}>
+            <Ionicons name="flash" size={18} color={colors.accent} />
+            <Text style={styles.challengeText}>Challenging {opponent_name || 'a player'}</Text>
+          </View>
+        ) : null}
+
         <View style={styles.modeRow}>
           <TouchableOpacity style={[styles.modeBtn, mode === 'catalog' && styles.modeActive]} onPress={() => setMode('catalog')}>
             <Text style={[styles.modeText, mode === 'catalog' && styles.modeTextActive]}>From catalog</Text>
@@ -209,18 +225,22 @@ export default function CreateMatchScreen() {
           ))}
         </View>
 
-        <Text style={styles.label}>Opponent handicap range</Text>
-        <View style={styles.rowFields}>
-          <View style={styles.flex}>
-            <TextInput style={styles.input} value={hcpMin} onChangeText={setHcpMin} placeholder="Min" placeholderTextColor={colors.muted} keyboardType="numbers-and-punctuation" />
-          </View>
-          <View style={styles.flex}>
-            <TextInput style={styles.input} value={hcpMax} onChangeText={setHcpMax} placeholder="Max" placeholderTextColor={colors.muted} keyboardType="numbers-and-punctuation" />
-          </View>
-        </View>
+        {!isChallenge ? (
+          <>
+            <Text style={styles.label}>Opponent handicap range</Text>
+            <View style={styles.rowFields}>
+              <View style={styles.flex}>
+                <TextInput style={styles.input} value={hcpMin} onChangeText={setHcpMin} placeholder="Min" placeholderTextColor={colors.muted} keyboardType="numbers-and-punctuation" />
+              </View>
+              <View style={styles.flex}>
+                <TextInput style={styles.input} value={hcpMax} onChangeText={setHcpMax} placeholder="Max" placeholderTextColor={colors.muted} keyboardType="numbers-and-punctuation" />
+              </View>
+            </View>
+          </>
+        ) : null}
 
         <TouchableOpacity style={styles.submit} onPress={submit} disabled={submitting}>
-          {submitting ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.submitText}>Post Match</Text>}
+          {submitting ? <ActivityIndicator color={colors.surface} /> : <Text style={styles.submitText}>{isChallenge ? 'Send challenge' : 'Post Match'}</Text>}
         </TouchableOpacity>
       </ScrollView>
 
@@ -230,7 +250,7 @@ export default function CreateMatchScreen() {
       visible={!!pendingCreate}
       handicap={user?.handicap ?? null}
       updatedAt={user?.handicap_updated_at ?? null}
-      actionLabel="Post match"
+      actionLabel={isChallenge ? 'Send challenge' : 'Post match'}
       busy={sheetBusy}
       onCancel={() => setPendingCreate(null)}
       onConfirm={confirmIndexAndCreate}
@@ -267,6 +287,8 @@ function makeStyles(colors: Palette) {
   field: { gap: spacing.xs },
   rowFields: { flexDirection: 'row', gap: spacing.md },
   label: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5 },
+  challengeBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.accentGlow, borderWidth: 1, borderColor: colors.accent, borderRadius: radius.md, padding: spacing.md },
+  challengeText: { ...typography.bodySemiBold, color: colors.accent },
   dateRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.md },
   dateChip: {
     width: 58, alignItems: 'center', paddingVertical: spacing.sm, gap: 2,

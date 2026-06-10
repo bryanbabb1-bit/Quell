@@ -9,7 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { useUserStore } from '@/store/useUserStore';
+import { useFavorites } from '@/store/useFavoritesStore';
 import { SkeletonCard, Avatar } from '@/components/ui';
+import { formatHandicap } from '@/lib/format';
 import type { MyRecord, LeaderboardEntry, Outcome } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
@@ -26,6 +28,8 @@ export default function RecordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<'home' | 'global'>('global');
   const [homeName, setHomeName] = useState<string | null>(null);
+  const { list: favorites, load: loadFavs } = useFavorites();
+  useEffect(() => { loadFavs(); }, [loadFavs]);
 
   // Resolve the home course name and default the board to home-course standings.
   useEffect(() => {
@@ -127,6 +131,31 @@ export default function RecordScreen() {
           <Text style={styles.emptyNote}>No completed matches yet. Win one and it shows up here.</Text>
         )}
 
+        {/* Common opponents */}
+        {favorites.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Common opponents</Text>
+            <View style={styles.card}>
+              {favorites.map((f, i) => (
+                <View key={f.user_id} style={[styles.favRow, i > 0 && styles.rowDivider]}>
+                  <Avatar name={f.name} size={32} />
+                  <View style={styles.favMid}>
+                    <Text style={styles.vsName}>{f.name}</Text>
+                    <Text style={styles.resultCourse}>Index {formatHandicap(f.handicap)}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.challengeBtn}
+                    onPress={() => router.push(`/(app)/create?opponent_id=${f.user_id}&opponent_name=${encodeURIComponent(f.name)}`)}
+                  >
+                    <Ionicons name="flash" size={14} color={colors.onAccent} />
+                    <Text style={styles.challengeBtnText}>Challenge</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
         {/* Leaderboard */}
         <View style={styles.lbHeader}>
           <Text style={styles.sectionTitle}>Leaderboard</Text>
@@ -225,6 +254,10 @@ function makeStyles(colors: Palette) {
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   rowDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   resultMid: { flex: 1 },
+  favRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  favMid: { flex: 1 },
+  challengeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  challengeBtnText: { ...typography.caption, color: colors.onAccent, fontWeight: '700' },
   vsName: { ...typography.bodySemiBold },
   resultCourse: { ...typography.caption },
   resultDelta: { ...typography.bodySemiBold, color: colors.ink },

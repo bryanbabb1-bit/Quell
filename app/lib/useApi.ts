@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { apiJson } from '@/lib/api';
 import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
-  MyRecord, LeaderboardEntry, CourseSummary, TeeSummary,
+  MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -16,6 +16,7 @@ export interface CreateMatchInput {
   stakes?: number | null;
   hcp_range_min: number;
   hcp_range_max: number;
+  opponent_id?: string | null; // present → a direct challenge (status 'pending')
 }
 
 // Binds the API client to the current Clerk session: every call mints a fresh
@@ -42,6 +43,11 @@ export function useApi() {
 
   return useMemo(
     () => ({
+      // Favorites (common opponents)
+      getFavorites: () => call<{ favorites: Favorite[] }>('/favorites'),
+      addFavorite: (userId: string) => call<{ favorited: boolean }>(`/favorites/${userId}`, { method: 'POST' }),
+      removeFavorite: (userId: string) => call<{ favorited: boolean }>(`/favorites/${userId}`, { method: 'DELETE' }),
+
       // Course catalog
       getCourses: () => call<{ courses: CourseSummary[] }>('/courses'),
       getCourse: (id: string) => call<{ course: CourseSummary; tees: TeeSummary[] }>(`/courses/${id}`),

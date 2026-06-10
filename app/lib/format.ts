@@ -50,6 +50,7 @@ export function deltaLabel(delta: number): string {
 
 export const STATUS_LABELS: Record<MatchStatus, string> = {
   open: 'Open',
+  pending: 'Challenge',
   accepted: 'Accepted',
   in_progress: 'In progress',
   completed: 'Completed',

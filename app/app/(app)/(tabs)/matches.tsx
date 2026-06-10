@@ -21,6 +21,7 @@ const TERMINAL = ['completed', 'cancelled', 'declined'];
 
 const statusTint = (c: Palette): Record<string, string> => ({
   open: c.muted,
+  pending: c.accent,
   accepted: c.accent,
   in_progress: c.accent,
   completed: c.text,

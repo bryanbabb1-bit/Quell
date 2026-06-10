@@ -7,6 +7,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { useFavorites } from '@/store/useFavoritesStore';
 import { haptics } from '@/lib/haptics';
 import type { Match, HolesSetup } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
@@ -25,6 +26,8 @@ export default function MatchDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [reposting, setReposting] = useState(false);
+  const { isFavorite, toggle: toggleFav, load: loadFavs } = useFavorites();
+  useEffect(() => { loadFavs(); }, [loadFavs]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -75,6 +78,14 @@ export default function MatchDetailScreen() {
     }
   };
 
+  const acceptChallenge = async () => {
+    if (acting) return;
+    setActing(true);
+    try { setMatch(await api.acceptMatch(id!)); haptics.success(); }
+    catch (e: any) { Alert.alert('Could not accept', e?.message ?? 'Try again.'); }
+    finally { setActing(false); }
+  };
+
   const act = async (fn: () => Promise<Match>, confirmLabel: string) => {
     Alert.alert(confirmLabel, 'Are you sure?', [
       { text: 'No', style: 'cancel' },
@@ -101,6 +112,14 @@ export default function MatchDetailScreen() {
   const isCreator = match.creator_id === userId;
   const isOpponent = match.opponent_id === userId;
   const isParticipant = isCreator || isOpponent;
+  // The other player (relative to the viewer) — the one you can favorite/challenge.
+  const otherId = (isCreator ? match.opponent_id : match.creator_id) as string | null;
+  const otherName = (isCreator ? match.opponent_name : match.creator_name) ?? 'this player';
+  const challenge = () => {
+    if (!otherId) return;
+    haptics.light();
+    router.push(`/(app)/create?opponent_id=${otherId}&opponent_name=${encodeURIComponent(otherName)}`);
+  };
   const mySubmitted = isCreator ? !!match.creator_scorecard_id : !!match.opponent_scorecard_id;
   const oppSubmitted = isCreator ? !!match.opponent_scorecard_id : !!match.creator_scorecard_id;
   const scoringStage =
@@ -137,6 +156,41 @@ export default function MatchDetailScreen() {
               Index → Course Handicap for {match.tee_color} tees, {MATCH_TYPE_LABELS[match.match_type]}.
               Strokes are given on the difference.
             </Text>
+          )}
+          {otherId ? (
+            <TouchableOpacity
+              style={styles.favRow}
+              onPress={() => toggleFav(otherId, { name: otherName, handicap: isCreator ? match.opponent_handicap : match.creator_handicap })}
+            >
+              <Ionicons name={isFavorite(otherId) ? 'star' : 'star-outline'} size={18} color={isFavorite(otherId) ? colors.accent : colors.muted} />
+              <Text style={styles.favText}>{isFavorite(otherId) ? `${otherName} — common opponent` : `Star ${otherName} as a common opponent`}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      )}
+
+      {isParticipant && match.status === 'pending' && (
+        <View style={styles.card}>
+          {isOpponent ? (
+            <>
+              <Text style={styles.cardTitle}>Challenge</Text>
+              <Text style={styles.note}>{match.creator_name ?? 'Someone'} challenged you to a match at {match.course_name}.</Text>
+              <TouchableOpacity style={styles.primaryBtn} disabled={acting} onPress={acceptChallenge}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.onAccent} />
+                <Text style={styles.primaryText}>Accept challenge</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.dangerBtn} disabled={acting} onPress={() => act(() => api.declineMatch(match.id), 'Decline challenge')}>
+                <Text style={styles.dangerText}>Decline</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text style={styles.cardTitle}>Challenge sent</Text>
+              <Text style={styles.note}>Waiting for {match.opponent_name ?? 'your opponent'} to accept.</Text>
+              <TouchableOpacity style={styles.dangerBtn} disabled={acting} onPress={() => act(() => api.cancelMatch(match.id), 'Withdraw challenge')}>
+                <Text style={styles.dangerText}>Withdraw challenge</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
       )}
@@ -200,6 +254,12 @@ export default function MatchDetailScreen() {
           <TouchableOpacity style={styles.secondaryBtn} disabled={reposting} onPress={rematch}>
             <Ionicons name="refresh" size={18} color={colors.fairway} />
             <Text style={styles.secondaryText}>{reposting ? 'Posting…' : 'Rematch'}</Text>
+          </TouchableOpacity>
+        )}
+        {isParticipant && otherId && match.status === 'completed' && (
+          <TouchableOpacity style={styles.secondaryBtn} onPress={challenge}>
+            <Ionicons name="flash-outline" size={18} color={colors.fairway} />
+            <Text style={styles.secondaryText}>Challenge {otherName}</Text>
           </TouchableOpacity>
         )}
         {isCreator && (match.status === 'open' || match.status === 'accepted') && (
@@ -324,6 +384,8 @@ function makeStyles(colors: Palette) {
   rowLabel: { ...typography.body, color: colors.muted, flex: 1 },
   rowValue: { ...typography.bodySemiBold },
   note: { ...typography.caption, color: colors.muted },
+  favRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.xs },
+  favText: { ...typography.caption, color: colors.text, flex: 1 },
   primaryBtn: { flexDirection: 'row', gap: spacing.sm, backgroundColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
   primaryText: { ...typography.bodySemiBold, color: colors.surface },
   secondaryBtn: { flexDirection: 'row', gap: spacing.sm, borderWidth: 1, borderColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', justifyContent: 'center' },
