@@ -15,6 +15,9 @@ export interface Env {
   // When set, tokens whose azp isn't listed are rejected. Left unset = current
   // behavior, so enabling it is a deliberate, non-breaking opt-in.
   CLERK_AUTHORIZED_PARTIES?: string;
+  // Giphy API key (Worker secret) for GIF search in messages. Unset = GIF search
+  // returns empty (feature soft-disabled).
+  GIPHY_API_KEY?: string;
 }
 
 // Match domain enums — kept in one place so routes and validation agree.

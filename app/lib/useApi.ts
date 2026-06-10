@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { apiJson } from '@/lib/api';
 import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
-  MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile,
+  MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -127,6 +127,13 @@ export function useApi() {
           method: 'POST',
           body: JSON.stringify({ body }),
         }),
+      sendGif: (matchId: string, gif_url: string) =>
+        call<Message>(`/matches/${matchId}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({ gif_url }),
+        }),
+      searchGifs: (q: string) =>
+        call<{ gifs: Gif[]; unconfigured?: boolean }>(`/gifs${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ''}`),
     }),
     [call]
   );

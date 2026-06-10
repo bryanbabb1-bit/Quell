@@ -138,8 +138,8 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.switchLabel}>Saved only</Text>
-              <Text style={styles.switchHint}>Just the matches you've starred to revisit</Text>
+              <Text style={styles.switchLabel}>Favorites only</Text>
+              <Text style={styles.switchHint}>Only matches from players you've starred</Text>
             </View>
             <Switch
               value={local.starred}

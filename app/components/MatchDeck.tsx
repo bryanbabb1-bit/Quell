@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { DiscoveryMatch } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { useColors } from '@/store/useThemeStore';
-import { useSavedMatchesStore } from '@/store/useSavedMatchesStore';
+import { useFavorites } from '@/store/useFavoritesStore';
 import { formatHandicap, formatPlayWhen } from '@/lib/format';
 import { haptics } from '@/lib/haptics';
 import { Avatar } from '@/components/ui';
@@ -35,9 +35,7 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
 }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const isSaved = useSavedMatchesStore((s) => s.isSaved);
-  const toggleSaved = useSavedMatchesStore((s) => s.toggle);
-  const savedIds = useSavedMatchesStore((s) => s.saved);
+  const { isFavorite, toggle: toggleFav } = useFavorites();
   const [index, setIndex] = useState(0);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
@@ -111,12 +109,14 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
     tx.value = withTiming(-OFF, { duration: 220 }, (fin) => { if (fin) runOnJS(advancePast)(); });
   };
   const acceptBtn = () => { if (current) { haptics.medium(); onAccept(current); } };
-  const saveBtn = () => {
+  // Star = favorite the CREATOR (same as starring from their profile); shows up
+  // in Favorites on the Record screen.
+  const favBtn = () => {
     if (!current) return;
     haptics.light();
-    toggleSaved(current.id);
+    toggleFav(current.creator_id, { name: creatorName(current), handicap: current.creator_handicap_index });
   };
-  const saved = current ? (savedIds.includes(current.id) || isSaved(current.id)) : false;
+  const faved = current ? isFavorite(current.creator_id) : false;
 
   if (!current) {
     return (
@@ -168,8 +168,8 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
             <Ionicons name="flag" size={34} color={colors.onAccent} />
           </LinearGradient>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.saveCtrl, saved && styles.saveCtrlOn]} onPress={saveBtn} activeOpacity={0.85}>
-          <Ionicons name={saved ? 'star' : 'star-outline'} size={26} color={saved ? SAVE_YELLOW : colors.muted} />
+        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.saveCtrl, faved && styles.saveCtrlOn]} onPress={favBtn} activeOpacity={0.85}>
+          <Ionicons name={faved ? 'star' : 'star-outline'} size={26} color={faved ? SAVE_YELLOW : colors.muted} />
         </TouchableOpacity>
       </View>
     </View>

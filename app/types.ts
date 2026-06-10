@@ -74,8 +74,16 @@ export interface Message {
   match_id: string;
   sender_id: string;
   body: string;
+  gif_url: string | null;
   read: number;
   created_at: string;
+}
+
+// A GIF search result (Giphy, proxied through the Worker).
+export interface Gif {
+  id: string;
+  preview: string; // small, for the picker grid
+  full: string;    // shown in the message bubble
 }
 
 export const MATCH_TYPE_LABELS: Record<MatchType, string> = {

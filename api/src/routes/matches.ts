@@ -195,11 +195,26 @@ async function create(auth: AuthContext, request: Request, env: Env): Promise<Re
 // ── Mine ─────────────────────────────────────────────────────────────────────
 async function listMine(auth: AuthContext, env: Env): Promise<Response> {
   const { results } = await env.DB.prepare(
-    `SELECT * FROM matches
-      WHERE creator_id = ? OR opponent_id = ?
-      ORDER BY play_date DESC, created_at DESC LIMIT 200`
-  ).bind(auth.userId, auth.userId).all();
-  return json({ matches: results });
+    `SELECT m.*,
+            cu.first_name AS creator_first_name, cu.last_name AS creator_last_name,
+            ou.first_name AS opponent_first_name, ou.last_name AS opponent_last_name
+       FROM matches m
+       JOIN users cu ON cu.id = m.creator_id
+       LEFT JOIN users ou ON ou.id = m.opponent_id
+      WHERE m.creator_id = ? OR m.opponent_id = ?
+      ORDER BY m.play_date DESC, m.created_at DESC LIMIT 200`
+  ).bind(auth.userId, auth.userId).all<Record<string, any>>();
+
+  const name = (f: unknown, l: unknown): string | null => {
+    const n = [f, l].filter((s) => typeof s === 'string' && (s as string).trim()).join(' ').trim();
+    return n || null;
+  };
+  const matches = (results ?? []).map((m) => ({
+    ...m,
+    creator_name: name(m.creator_first_name, m.creator_last_name) ?? 'A golfer',
+    opponent_name: m.opponent_id ? (name(m.opponent_first_name, m.opponent_last_name) ?? 'Opponent') : null,
+  }));
+  return json({ matches });
 }
 
 // ── Get one ──────────────────────────────────────────────────────────────────

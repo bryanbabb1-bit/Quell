@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
@@ -30,8 +31,15 @@ const statusTint = (c: Palette): Record<string, string> => ({
   expired: c.muted,
 });
 
+// The other player's name relative to the viewer (null for open matches).
+function opponentOf(m: Match, userId: string | null | undefined): string | null {
+  if (!m.opponent_id) return null;
+  return (m.creator_id === userId ? m.opponent_name : m.creator_name) ?? null;
+}
+
 export default function MyMatchesScreen() {
   const api = useApi();
+  const { userId } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const tint = useMemo(() => statusTint(colors), [colors]);
@@ -128,9 +136,13 @@ export default function MyMatchesScreen() {
             activeOpacity={0.8}
           >
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.course}>{item.course_name}</Text>
-              <Text style={styles.sub}>
-                {formatPlayWhen(item.play_date)} · {MATCH_TYPE_LABELS[item.match_type]}
+              <Text style={styles.course}>
+                {opponentOf(item, userId) ? `vs ${opponentOf(item, userId)}` : item.course_name}
+              </Text>
+              <Text style={styles.sub} numberOfLines={1}>
+                {opponentOf(item, userId)
+                  ? `${item.course_name} · ${formatPlayWhen(item.play_date)}`
+                  : `Open · ${formatPlayWhen(item.play_date)} · ${MATCH_TYPE_LABELS[item.match_type]}`}
               </Text>
             </View>
             <View style={[styles.badge, { borderColor: tint[item.status] ?? colors.muted }]}>

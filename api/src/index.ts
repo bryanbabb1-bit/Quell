@@ -13,6 +13,7 @@ import { handleFavorites } from './routes/favorites';
 import { handlePlayer } from './routes/players';
 import { runReminders } from './routes/reminders';
 import { handleUploadPhoto, servePhoto } from './routes/photos';
+import { handleGifs } from './routes/gifs';
 
 // CORS only matters for browsers (Expo Web, dev tooling). Native iOS/Android
 // don't send Origin and aren't subject to CORS. Reflect the Origin only when
@@ -110,6 +111,8 @@ async function handleRequest(
     response = await handlePlayer(auth, env, segments);
   } else if (root === 'photo' && method === 'POST') {
     response = await handleUploadPhoto(auth, env, request);
+  } else if (root === 'gifs' && method === 'GET') {
+    response = await handleGifs(auth, env, request);
   } else {
     response = error('Not found', 404);
   }

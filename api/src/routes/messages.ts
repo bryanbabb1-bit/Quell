@@ -2,7 +2,7 @@ import type { AuthContext } from '../lib/auth';
 import type { Env } from '../types';
 import { json, error } from '../lib/response';
 import { newId, now } from '../lib/id';
-import { parseBody, requireString } from '../lib/validate';
+import { parseBody, requireString, optionalString } from '../lib/validate';
 
 // In-app messaging, scoped to a match (build-order step 5). D1 is the durable
 // record; the realtime-delivery vendor (Firestore vs. a Cloudflare-native
@@ -49,13 +49,15 @@ async function listMessages(auth: AuthContext, env: Env, matchId: string): Promi
 
 async function sendMessage(auth: AuthContext, env: Env, matchId: string, request: Request): Promise<Response> {
   const body = await parseBody(request);
-  const text = requireString(body.body, 'body', 2000);
+  // A message is either text or a GIF (a Giphy CDN url).
+  const gifUrl = optionalString(body.gif_url, 'gif_url', 1024);
+  const text = gifUrl ? (optionalString(body.body, 'body', 2000) ?? '') : requireString(body.body, 'body', 2000);
 
   const id = newId();
   const ts = now();
   await env.DB.prepare(
-    'INSERT INTO messages (id, match_id, sender_id, body, read, created_at) VALUES (?, ?, ?, ?, 0, ?)'
-  ).bind(id, matchId, auth.userId, text, ts).run();
+    'INSERT INTO messages (id, match_id, sender_id, body, gif_url, read, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)'
+  ).bind(id, matchId, auth.userId, text, gifUrl ?? null, ts).run();
 
   const message = await env.DB.prepare('SELECT * FROM messages WHERE id = ?').bind(id).first();
   return json(message, 201);

@@ -132,10 +132,10 @@ export default function RecordScreen() {
           <Text style={styles.emptyNote}>No completed matches yet. Win one and it shows up here.</Text>
         )}
 
-        {/* Common opponents */}
+        {/* Favorites */}
         {favorites.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Common opponents</Text>
+            <Text style={styles.sectionTitle}>Favorites</Text>
             <View style={styles.card}>
               {favorites.map((f, i) => (
                 <View key={f.user_id} style={[styles.favRow, i > 0 && styles.rowDivider]}>

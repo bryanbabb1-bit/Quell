@@ -8,7 +8,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
-import { useSavedMatchesStore } from '@/store/useSavedMatchesStore';
+import { useFavorites } from '@/store/useFavoritesStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { MatchDeck } from '@/components/MatchDeck';
 import { AcceptCelebration } from '@/components/AcceptCelebration';
@@ -36,12 +36,11 @@ export default function DiscoveryScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
-  const hydrateSaved = useSavedMatchesStore((s) => s.hydrate);
-  const savedIds = useSavedMatchesStore((s) => s.saved);
-  const savedRef = useRef(savedIds);
-  savedRef.current = savedIds;
+  const { ids: favIds, load: loadFavs } = useFavorites();
+  const favRef = useRef(favIds);
+  favRef.current = favIds;
 
-  useEffect(() => { hydrateSaved(); }, [hydrateSaved]);
+  useEffect(() => { loadFavs(); }, [loadFavs]);
 
   const load = useCallback(async (f?: DiscoveryFilterState) => {
     try {
@@ -49,10 +48,10 @@ export default function DiscoveryScreen() {
       const eff = f ?? filtersRef.current;
       const from = localTodayISO();          // floor: never show past matches
       const days = eff.dates;                // specific days the player can play
-      // "Saved only": pull the broader feed (ignore home-course/handicap defaults)
-      // then keep just the matches the player has starred locally.
+      // "Favorites only": pull the broader feed (ignore home-course/handicap
+      // defaults) then keep just matches from players the user has starred.
       const { matches } = await api.discover(eff.starred ? { ...eff, from, days, all: true } : { ...eff, from, days });
-      setMatches(eff.starred ? matches.filter((m) => savedRef.current.includes(m.id)) : matches);
+      setMatches(eff.starred ? matches.filter((m) => favRef.current.includes(m.creator_id)) : matches);
     } catch (e: any) {
       setError(e?.message ?? 'Could not load matches.');
     } finally {
@@ -60,14 +59,13 @@ export default function DiscoveryScreen() {
     }
   }, [api]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { load(); loadFavs(); }, [load, loadFavs]));
 
-  // "Saved only" filters against the locally-stored saved ids; re-run it when
-  // those change (secure-store hydration finishing, or a star toggle) so the deck
-  // isn't briefly empty before the ids are available.
+  // "Favorites only" filters against the favorited creator ids; re-run it when
+  // those change (favorites loading, or a star toggle) so the deck reflects them.
   useEffect(() => {
     if (filtersRef.current.starred) load();
-  }, [savedIds, load]);
+  }, [favIds, load]);
 
   const applyFilters = (f: DiscoveryFilterState) => {
     setFilters(f);
