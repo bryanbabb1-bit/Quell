@@ -94,6 +94,28 @@ describe('computeMatch', () => {
     expect(() => computeMatch(HOLES_18, allGross(4), [4, 4, 4], 0)).toThrow();
   });
 
+  it('gives the field player the FULL difference when the opponent is a plus golfer', () => {
+    // Creator is +2 (course handicap -2), opponent is a 10. Low-to-high
+    // difference = 12 → the HIGHER handicap (opponent) receives 12 strokes,
+    // allocated on their hardest 12 holes (SI 1..12). diff (creator perspective)
+    // = creatorCH - opponentCH = -2 - 10 = -12.
+    const r = computeMatch(HOLES_18, allGross(4), allGross(4), -12);
+    expect(r.holes[0].winner).toBe('opponent');   // SI 1 → opponent stroke, net 3 < 4
+    expect(r.holes[0].opponent_net).toBe(3);
+    expect(r.holes[11].winner).toBe('opponent');  // SI 12 → last stroke
+    expect(r.holes[12].winner).toBe('tie');       // SI 13 → no stroke
+    expect(r.final_result).toBe('opponent_wins');
+  });
+
+  it('allocates pops = the course-handicap difference to the HIGHER handicap', () => {
+    // Creator 12, opponent 5 → creator is higher by 7 → creator gets 7 strokes
+    // (diff = creatorCH - opponentCH = +7), on SI 1..7.
+    const r = computeMatch(HOLES_18, allGross(4), allGross(4), 7);
+    expect(r.holes.slice(0, 7).every((h) => h.winner === 'creator')).toBe(true);
+    expect(r.holes[7].winner).toBe('tie'); // SI 8 → no stroke
+    expect(r.final_result).toBe('creator_wins');
+  });
+
   it('allocates each player\'s strokes on their OWN tee when tees differ', () => {
     // Opponent plays a tee whose stroke index is REVERSED (hole 1 is SI 18,
     // hole 18 is SI 1). The opponent receives 1 stroke → it must land on THEIR
@@ -123,6 +145,11 @@ describe('segmentCourseHandicap', () => {
     // round(10 * 130/113 + (71.5 - 72)) = round(11.504 - 0.5) = 11
     expect(segmentCourseHandicap(10, { slope: 130, rating: 71.5, par: 72, isNine: false })).toBe(11);
   });
+  it('turns a plus index into a NEGATIVE course handicap on 18 holes', () => {
+    // +1.2 is stored as -1.2: round(-1.2*130/113 + (71.5-72)) = round(-1.38 - 0.5) = -2
+    expect(segmentCourseHandicap(-1.2, { slope: 130, rating: 71.5, par: 72, isNine: false })).toBe(-2);
+  });
+
   it('uses the HALF index against a nine\'s own ratings', () => {
     // round(5 * 128/113 + (35.7 - 36)) = round(5.664 - 0.3) = 5
     expect(segmentCourseHandicap(10, { slope: 128, rating: 35.7, par: 36, isNine: true })).toBe(5);

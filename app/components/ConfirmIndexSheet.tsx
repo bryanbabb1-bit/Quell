@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { formatHandicap, indexAgeLabel } from '@/lib/format';
+import { formatHandicap, indexAgeLabel, parseHandicapInput } from '@/lib/format';
 import { useColors } from '@/store/useThemeStore';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
@@ -47,11 +47,10 @@ export function ConfirmIndexSheet({
   if (!visible) return null;
 
   const submit = () => {
-    const raw = text.trim();
-    if (raw === '') { setErr('Enter your current Handicap Index.'); return; }
+    if (text.trim() === '') { setErr('Enter your current Handicap Index.'); return; }
     // "+1.2" is a plus handicap (better than scratch) -> stored negative.
-    const value = raw.startsWith('+') ? -Number(raw.slice(1)) : Number(raw);
-    if (!Number.isFinite(value) || value < -10 || value > 54) {
+    const value = parseHandicapInput(text);
+    if (value == null || value < -10 || value > 54) {
       setErr('Enter a number like 8.4, or +1.2 for a plus handicap.');
       return;
     }

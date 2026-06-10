@@ -6,6 +6,16 @@ export function formatHandicap(h: number | null | undefined): string {
   return h < 0 ? `+${Math.abs(h).toFixed(1)}` : h.toFixed(1);
 }
 
+// Parse a typed Handicap Index. Golf convention: a "+1.2" handicap is BETTER
+// than scratch and is stored NEGATIVE (-1.2); a plain "8.4" is stored positive.
+// Returns null for blank/non-numeric. Does NOT range-check — the caller decides.
+export function parseHandicapInput(raw: string): number | null {
+  const t = raw.trim();
+  if (t === '') return null;
+  const value = t.startsWith('+') ? -Number(t.slice(1)) : Number(t);
+  return Number.isFinite(value) ? value : null;
+}
+
 // "Sat, Jun 14" from a YYYY-MM-DD. Match "when" is a date only — no tee time.
 // (Second arg kept for call-site compatibility; intentionally ignored.)
 export function formatPlayWhen(date: string, _time?: string | null): string {

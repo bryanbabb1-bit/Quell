@@ -5,7 +5,6 @@ import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import {
@@ -120,7 +119,13 @@ export default function RootLayout() {
   // restores) rotation. app.json orientation is "default" so the dev build can
   // rotate at all — this lock keeps every other screen upright.
   useEffect(() => {
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    // Lazy-require: expo-screen-orientation is a NATIVE module. A top-level import
+    // here would crash the WHOLE app at parse time on any dev client that predates
+    // the module. Require it guarded so boot is never at its mercy.
+    try {
+      const SO = require('expo-screen-orientation');
+      SO.lockAsync(SO.OrientationLock.PORTRAIT_UP).catch(() => {});
+    } catch { /* native module not in this build — skip the lock */ }
     configureNotifications();
   }, []);
 

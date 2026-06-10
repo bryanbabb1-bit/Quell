@@ -64,7 +64,11 @@ export async function handleMatches(
 async function discover(auth: AuthContext, env: Env, request: Request): Promise<Response> {
   const me = await env.DB.prepare('SELECT handicap, home_course_id FROM users WHERE id = ?')
     .bind(auth.userId).first<{ handicap: number | null; home_course_id: string | null }>();
-  const today = now().slice(0, 10);
+  // Floor on the caller's LOCAL today (passed as ?from) so a match posted for
+  // "today" doesn't drop off in the evening when the Worker's UTC clock has
+  // already rolled to tomorrow. Fall back to the server's UTC date.
+  const fromParam = new URL(request.url).searchParams.get('from');
+  const today = (fromParam && /^\d{4}-\d{2}-\d{2}$/.test(fromParam)) ? fromParam : now().slice(0, 10);
 
   // Optional search params (the Discovery filter sheet sets these):
   //   match_type=front_nine|back_nine|eighteen   course=<substring>
@@ -322,6 +326,10 @@ async function setTee(auth: AuthContext, env: Env, matchId: string, request: Req
   const myCard = isCreator ? match.creator_scorecard_id : match.opponent_scorecard_id;
   if (myCard) return error('You already entered scores — tees are locked', 409);
 
+  // A match with no linked tee has no course to validate against — refuse rather
+  // than let someone attach a tee from an arbitrary course.
+  if (!match.tee_id) return error('This match has no course linked — tees cannot be changed', 409);
+
   const body = await parseBody(request);
   const teeId = requireString(body.tee_id, 'tee_id', 32);
   const tee = await env.DB.prepare('SELECT id, name, course_id FROM tees WHERE id = ?')
@@ -329,12 +337,10 @@ async function setTee(auth: AuthContext, env: Env, matchId: string, request: Req
   if (!tee) return error('Unknown tee_id', 400);
 
   // Must be a tee on THIS match's course.
-  if (match.tee_id) {
-    const baseTee = await env.DB.prepare('SELECT course_id FROM tees WHERE id = ?')
-      .bind(match.tee_id).first<{ course_id: string }>();
-    if (baseTee && baseTee.course_id !== tee.course_id) {
-      return error('That tee is on a different course', 400);
-    }
+  const baseTee = await env.DB.prepare('SELECT course_id FROM tees WHERE id = ?')
+    .bind(match.tee_id).first<{ course_id: string }>();
+  if (baseTee && baseTee.course_id !== tee.course_id) {
+    return error('That tee is on a different course', 400);
   }
 
   const ts = now();
@@ -370,8 +376,9 @@ async function decline(auth: AuthContext, env: Env, matchId: string): Promise<Re
   if (!match) return error('Match not found', 404);
   const isParticipant = match.creator_id === auth.userId || match.opponent_id === auth.userId;
   if (!isParticipant) return error('Not your match', 403);
-  // Back out of an accepted match, or decline a direct challenge addressed to you.
-  const okAccepted = match.status === 'accepted';
+  // Back out of an accepted match (opponent only — the creator cancels instead),
+  // or decline a direct challenge addressed to you.
+  const okAccepted = match.status === 'accepted' && match.opponent_id === auth.userId;
   const okChallenge = match.status === 'pending' && match.opponent_id === auth.userId;
   if (!okAccepted && !okChallenge) return error(`Cannot decline a ${match.status} match`, 409);
   await setStatus(env, matchId, 'declined');

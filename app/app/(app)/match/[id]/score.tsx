@@ -108,6 +108,8 @@ export default function ScoreEntryScreen() {
   const alreadySubmitted = match.creator_id === userId
     ? !!match.creator_scorecard_id
     : !!match.opponent_scorecard_id;
+  // Each player may be on their own tee — show MINE, not always the creator's.
+  const myTee = match.creator_id === userId ? match.tee_color : (match.opponent_tee_color ?? match.tee_color);
 
   // Split into nines for the scorecard look (a 9-hole match is just one section).
   const front = holesInfo.filter((h) => h.hole <= 9);
@@ -141,7 +143,7 @@ export default function ScoreEntryScreen() {
 
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>{match.course_name}</Text>
-        <Text style={styles.sub}>{match.tee_color} tees · {MATCH_TYPE_LABELS[match.match_type]}</Text>
+        <Text style={styles.sub}>{myTee} tees · {MATCH_TYPE_LABELS[match.match_type]}</Text>
 
         {alreadySubmitted && (
           <View style={styles.notice}>

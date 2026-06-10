@@ -12,7 +12,7 @@ import { useSavedMatchesStore } from '@/store/useSavedMatchesStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { MatchDeck } from '@/components/MatchDeck';
 import { AcceptCelebration } from '@/components/AcceptCelebration';
-import { DiscoveryFilters, DEFAULT_FILTERS, isFiltered, untilForWithin, type DiscoveryFilterState } from '@/components/DiscoveryFilters';
+import { DiscoveryFilters, DEFAULT_FILTERS, isFiltered, untilForWithin, localTodayISO, type DiscoveryFilterState } from '@/components/DiscoveryFilters';
 import { ErrorState, SkeletonCard } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import type { DiscoveryMatch } from '@/types';
@@ -49,9 +49,10 @@ export default function DiscoveryScreen() {
       setError(null);
       const eff = f ?? filtersRef.current;
       const until = untilForWithin(eff.within);
+      const from = localTodayISO(); // floor on the player's LOCAL today, not server UTC
       // "Saved only": pull the broader feed (ignore home-course/handicap defaults)
       // then keep just the matches the player has starred locally.
-      const { matches } = await api.discover(eff.starred ? { ...eff, until, all: true } : { ...eff, until });
+      const { matches } = await api.discover(eff.starred ? { ...eff, until, from, all: true } : { ...eff, until, from });
       setMatches(eff.starred ? matches.filter((m) => savedRef.current.includes(m.id)) : matches);
     } catch (e: any) {
       setError(e?.message ?? 'Could not load matches.');
@@ -61,6 +62,13 @@ export default function DiscoveryScreen() {
   }, [api]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // "Saved only" filters against the locally-stored saved ids; re-run it when
+  // those change (secure-store hydration finishing, or a star toggle) so the deck
+  // isn't briefly empty before the ids are available.
+  useEffect(() => {
+    if (filtersRef.current.starred) load();
+  }, [savedIds, load]);
 
   const applyFilters = (f: DiscoveryFilterState) => {
     setFilters(f);

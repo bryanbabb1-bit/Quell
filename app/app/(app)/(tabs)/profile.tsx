@@ -11,7 +11,7 @@ import { useColors } from '@/store/useThemeStore';
 import { CourseSelect } from '@/components/CourseSelect';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
-import { indexAgeLabel } from '@/lib/format';
+import { indexAgeLabel, formatHandicap, parseHandicapInput } from '@/lib/format';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 export default function ProfileScreen() {
@@ -61,7 +61,7 @@ export default function ProfileScreen() {
     if (!user) return;
     setFirstName(user.first_name ?? '');
     setLastName(user.last_name ?? '');
-    setHandicap(user.handicap != null ? String(user.handicap) : '');
+    setHandicap(user.handicap != null ? formatHandicap(user.handicap) : '');
     const hid = user.home_course_id ?? null;
     setHomeCourseId(hid);
     if (hid) api.getCourses().then((r) => setHomeCourseName(r.courses.find((x) => x.id === hid)?.name ?? null)).catch(() => {});
@@ -79,8 +79,8 @@ export default function ProfileScreen() {
       if (handicap.trim() === '') {
         patch.handicap = null;
       } else {
-        const n = Number(handicap);
-        if (!Number.isFinite(n)) { Alert.alert('Invalid handicap', 'Enter a number like 8.4 or +1.2.'); setSaving(false); return; }
+        const n = parseHandicapInput(handicap);
+        if (n == null) { Alert.alert('Invalid handicap', 'Enter a number like 8.4, or +1.2 for a plus handicap.'); setSaving(false); return; }
         patch.handicap = n;
       }
       const updated = await api.updateMe(patch);
@@ -124,7 +124,7 @@ export default function ProfileScreen() {
             label="Handicap Index"
             value={handicap}
             onChangeText={setHandicap}
-            placeholder="e.g. 8.4 (use + for plus, e.g. -1.2)"
+            placeholder="e.g. 8.4, or +1.2 for a plus handicap"
             keyboardType="numbers-and-punctuation"
           />
           {user && (

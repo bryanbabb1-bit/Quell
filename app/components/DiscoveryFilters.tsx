@@ -11,14 +11,24 @@ export const DEFAULT_FILTERS: DiscoveryFilterState = { match_type: 'any', course
 export const isFiltered = (f: DiscoveryFilterState) =>
   f.match_type !== 'any' || f.course.trim() !== '' || f.all || f.starred || f.within !== 'any';
 
+const p2 = (n: number) => String(n).padStart(2, '0');
+const isoDate = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+
+// The player's LOCAL today (YYYY-MM-DD) — used as the discovery floor so a match
+// posted for "today" doesn't vanish in the evening when the server's UTC clock
+// has already rolled to tomorrow.
+export function localTodayISO(): string {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  return isoDate(d);
+}
+
 // Map a "When" preset to an upper-bound play date (YYYY-MM-DD), or undefined for
 // "any". Range is today → today + N days.
 export function untilForWithin(within: string): string | undefined {
   if (!within || within === 'any') return undefined;
   const add = within === 'today' ? 0 : within === '3d' ? 3 : within === '7d' ? 7 : within === '14d' ? 14 : 0;
   const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + add);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return isoDate(d);
 }
 
 const TYPE_OPTIONS = [
