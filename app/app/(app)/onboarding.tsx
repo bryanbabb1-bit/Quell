@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
 import { CourseSelect } from '@/components/CourseSelect';
-import { Button } from '@/components/ui';
+import { Avatar, Button } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
+import { parseHandicapInput } from '@/lib/format';
 import { makeType, spacing, radius, type Palette } from '@/constants/theme';
 
 // First-run profile setup: name, home course (optional), handicap index. Shown
@@ -25,6 +27,32 @@ export default function OnboardingScreen() {
   const [homeCourseName, setHomeCourseName] = useState<string | null>(null);
   const [handicap, setHandicap] = useState(user?.handicap != null ? String(user.handicap) : '');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Optional but ENCOURAGED: add a profile photo so opponents see a face. Native
+  // image-picker is lazy-required so onboarding never depends on the native module.
+  const pickPhoto = async () => {
+    let ImagePicker: typeof import('expo-image-picker') | null = null;
+    try { ImagePicker = require('expo-image-picker'); } catch { ImagePicker = null; }
+    if (!ImagePicker?.launchImageLibraryAsync) {
+      Alert.alert('Update needed', 'Photo upload activates once you install the latest Quell build.');
+      return;
+    }
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Allow photos', 'Enable photo access for Quell in iOS Settings to add a picture.'); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.6 });
+    if (res.canceled || !res.assets?.[0]) return;
+    setUploading(true);
+    try {
+      const { url } = await api.uploadPhoto(res.assets[0].uri);
+      if (user) setUser({ user: { ...user, profile_photo_url: url } });
+      haptics.success();
+    } catch (e: any) {
+      Alert.alert('Could not upload', e?.message ?? 'Try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const finish = async () => {
     if (!firstName.trim()) { Alert.alert('Your name', 'Enter at least a first name so opponents know who they’re playing.'); return; }
@@ -34,9 +62,8 @@ export default function OnboardingScreen() {
       home_course_id: homeCourseId,
     };
     if (handicap.trim() !== '') {
-      const raw = handicap.trim();
-      const value = raw.startsWith('+') ? -Number(raw.slice(1)) : Number(raw);
-      if (!Number.isFinite(value) || value < -10 || value > 54) {
+      const value = parseHandicapInput(handicap);
+      if (value == null || value < -10 || value > 54) {
         Alert.alert('Handicap Index', 'Enter a number like 8.4, or +1.2 for a plus handicap.'); return;
       }
       patch.handicap = value;
@@ -59,6 +86,14 @@ export default function OnboardingScreen() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
         <Text style={styles.brand}>Welcome to Quell</Text>
         <Text style={styles.sub}>A couple of details so we can match you up.</Text>
+
+        <TouchableOpacity style={styles.avatarWrap} onPress={pickPhoto} disabled={uploading} activeOpacity={0.85}>
+          <Avatar name={[firstName, lastName].filter(Boolean).join(' ') || user?.email} size={96} photoUrl={user?.profile_photo_url} />
+          <View style={styles.avatarBadge}>
+            {uploading ? <ActivityIndicator color={colors.onAccent} size="small" /> : <Ionicons name="camera" size={16} color={colors.onAccent} />}
+          </View>
+        </TouchableOpacity>
+        <Text style={styles.avatarHint}>Add a photo — recommended</Text>
 
         <View style={styles.field}>
           <Text style={styles.label}>First name</Text>
@@ -95,6 +130,9 @@ function makeStyles(c: Palette) {
     container: { padding: spacing.lg, gap: spacing.md },
     brand: { ...t.hero, fontSize: 32, marginTop: spacing.md },
     sub: { ...t.body, color: c.muted, marginBottom: spacing.sm },
+    avatarWrap: { alignSelf: 'center', marginTop: spacing.xs },
+    avatarBadge: { position: 'absolute', right: -2, bottom: -2, width: 30, height: 30, borderRadius: 15, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: c.bg },
+    avatarHint: { ...t.caption, color: c.muted, textAlign: 'center', marginBottom: spacing.sm },
     field: { gap: spacing.xs },
     label: { ...t.overline, color: c.muted },
     input: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: 16, color: c.text },
