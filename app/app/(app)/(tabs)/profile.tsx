@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useApi } from '@/lib/useApi';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
@@ -31,6 +30,16 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
 
   const pickPhoto = async () => {
+    // Lazy-require: expo-image-picker is a NATIVE module. Importing it at the top
+    // of this route file crashes the whole route on a dev client that doesn't
+    // have the module baked in — which drops the Profile tab out of the navigator
+    // entirely. Requiring it here, guarded, keeps the screen safe on any build.
+    let ImagePicker: typeof import('expo-image-picker') | null = null;
+    try { ImagePicker = require('expo-image-picker'); } catch { ImagePicker = null; }
+    if (!ImagePicker?.launchImageLibraryAsync) {
+      Alert.alert('Update needed', 'Photo upload activates once you install the latest Quell build.');
+      return;
+    }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert('Allow photos', 'Enable photo access for Quell in iOS Settings to set a picture.'); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.6 });
