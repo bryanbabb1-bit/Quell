@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { Stack, router, useSegments } from 'expo-router';
 import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { StatusBar } from 'expo-status-bar';
@@ -128,6 +128,22 @@ export default function RootLayout() {
 
   if (!ready) return null; // splash still showing
 
+  // If the Clerk publishable key didn't make it into the bundle, Clerk throws a
+  // cryptic "useAuth outside ClerkProvider". Surface the real cause + the fix
+  // instead of a red crash.
+  if (!publishableKey) {
+    return (
+      <View style={styles.keyless}>
+        <Text style={styles.keylessTitle}>Missing Clerk key in this bundle</Text>
+        <Text style={styles.keylessText}>
+          Metro didn&apos;t inline EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Stop Metro and restart it
+          from the app folder with a clean cache, then reload:
+        </Text>
+        <Text style={styles.keylessCode}>cd C:\Projects\Quell\app{'\n'}npx expo start --dev-client -c</Text>
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
@@ -156,4 +172,8 @@ export function BootSpinner() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper },
+  keyless: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 12, backgroundColor: colors.bg },
+  keylessTitle: { color: colors.text, fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  keylessText: { color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  keylessCode: { color: colors.accent, fontSize: 13, fontFamily: 'Courier', textAlign: 'center', marginTop: 8 },
 });
