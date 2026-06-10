@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Switch } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Switch } from 'react-native';
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useColors } from '@/store/useThemeStore';
 import { Button } from '@/components/ui';
+import { CourseSelect } from '@/components/CourseSelect';
 import { haptics } from '@/lib/haptics';
 import { makeType, spacing, radius, type Palette } from '@/constants/theme';
 
@@ -61,15 +62,11 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
             })}
           </View>
 
-          <Text style={styles.label}>Course</Text>
-          <TextInput
-            style={styles.input}
-            value={local.course}
-            onChangeText={(v) => setLocal((s) => ({ ...s, course: v }))}
+          <CourseSelect
+            label="Course"
+            valueName={local.course || null}
+            onSelect={(course) => setLocal((s) => ({ ...s, course: course?.name ?? '' }))}
             placeholder="Any course"
-            placeholderTextColor={c.muted}
-            returnKeyType="search"
-            onSubmitEditing={() => onApply(local)}
           />
 
           <View style={styles.switchRow}>

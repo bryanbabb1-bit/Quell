@@ -1,5 +1,17 @@
 # Seeding real course data
 
+> ✅ **DONE (2026-06-09):** 11 KC-metro courses imported with REAL par, stroke
+> index, and USGA CR/Slope (Prairie Highlands, Ironhorse, Falcon Ridge, Sycamore
+> Ridge, Shadow Glen, Deer Creek, Tomahawk Hills, Canyon Farms, The National of
+> KC, Tiffany Greens, Shoal Creek). Source = **GolfCourseAPI** via
+> `api/scripts/import_courses.mjs` → `seeds/real_courses.sql` (applied
+> local+remote). The API key lives in the `GOLF_COURSE_API_KEY` Windows User env
+> var (never committed). To add more courses: append names to `QUERIES` in the
+> script and re-run `node scripts/import_courses.mjs`, then
+> `wrangler d1 execute match-play --remote --file=seeds/real_courses.sql`.
+> Free tier is rate-limited — the script throttles (1.8s) + retries on 429.
+
+
 Quell scores against real `courses → tees → holes` rows (par + stroke index per
 hole, plus course rating / slope / par per tee, with front-9 and back-9 splits
 for 9-hole handicapping). Today the catalog has only the placeholder
