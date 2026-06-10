@@ -52,6 +52,15 @@ export function indexAgeLabel(handicap: number | null | undefined, updatedAt: st
   return `Updated ${d} days ago`;
 }
 
+// Message timestamp: "2:34 PM" for today, "Jun 9, 2:34 PM" otherwise.
+export function formatMessageTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const today = new Date().toDateString() === d.toDateString();
+  return today ? time : `${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, ${time}`;
+}
+
 // Match-play scoreline from a signed holes-up delta (viewer's perspective).
 export function deltaLabel(delta: number): string {
   if (delta === 0) return 'All Square';

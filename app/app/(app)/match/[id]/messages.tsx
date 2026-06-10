@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import type { Message } from '@/types';
+import { formatMessageTime } from '@/lib/format';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const POLL_MS = 5000;
@@ -83,8 +84,11 @@ export default function MessagesScreen() {
           renderItem={({ item }) => {
             const mine = item.sender_id === userId;
             return (
-              <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-                <Text style={[styles.bubbleText, mine && styles.mineText]}>{item.body}</Text>
+              <View style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}>
+                <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
+                  <Text style={[styles.bubbleText, mine && styles.mineText]}>{item.body}</Text>
+                </View>
+                <Text style={styles.time}>{formatMessageTime(item.created_at)}</Text>
               </View>
             );
           }}
@@ -113,11 +117,15 @@ function makeStyles(colors: Palette) {
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper },
   list: { padding: spacing.md, gap: spacing.sm, flexGrow: 1 },
   empty: { ...typography.caption, textAlign: 'center', marginTop: spacing.xl },
-  bubble: { maxWidth: '80%', borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.accent },
-  theirs: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  row: { maxWidth: '80%', gap: 3 },
+  rowMine: { alignSelf: 'flex-end', alignItems: 'flex-end' },
+  rowTheirs: { alignSelf: 'flex-start', alignItems: 'flex-start' },
+  bubble: { borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  mine: { backgroundColor: colors.accent },
+  theirs: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   bubbleText: { ...typography.body },
   mineText: { color: colors.onAccent },
+  time: { ...typography.caption, fontSize: 11, color: colors.muted, marginHorizontal: 4 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, padding: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.paper },
   input: { flex: 1, maxHeight: 120, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: 16, color: colors.ink },
   sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.fairway, alignItems: 'center', justifyContent: 'center' },
