@@ -185,7 +185,9 @@ function FeedRow({ m, divider, colors, styles }: {
     <TouchableOpacity
       style={[styles.row, divider && styles.rowDivider]}
       activeOpacity={0.7}
-      onPress={() => router.push(`/(app)/match/${m.id}`)}
+      // Completed public matches → straight into the reveal (watch it play out, or
+      // "Skip to result"). Live matches → the read-only match detail.
+      onPress={() => router.push(m.status === 'completed' ? `/(app)/match/${m.id}/reveal` : `/(app)/match/${m.id}`)}
     >
       <View style={styles.players}>
         <View style={styles.playerLine}>

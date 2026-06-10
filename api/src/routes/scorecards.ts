@@ -213,7 +213,11 @@ async function settle(env: Env, match: Record<string, any>): Promise<void> {
 async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Response> {
   let match = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
   if (!match) return error('Match not found', 404);
-  if (match.creator_id !== auth.userId && match.opponent_id !== auth.userId) {
+  // Participants can always reveal. A public match's result is public once it's
+  // completed, so anyone can watch the reveal / skip to the result from the feed.
+  const isParticipant = match.creator_id === auth.userId || match.opponent_id === auth.userId;
+  const publicCompleted = match.visibility === 'public' && match.status === 'completed';
+  if (!isParticipant && !publicCompleted) {
     return error('Not your match', 403);
   }
   // The lock: refuse until BOTH cards are submitted.

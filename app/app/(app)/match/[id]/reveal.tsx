@@ -66,7 +66,12 @@ export default function RevealScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const meIsCreator = !!data && data.match.creator_id === userId;
+  // Spectators (public-feed viewers who aren't in the match) anchor to the
+  // creator's side and see a neutral, named result — no "You", no win-smash, no
+  // confetti. Participants see their own perspective as before.
+  const meIsParticipant = !!data && (data.match.creator_id === userId || data.match.opponent_id === userId);
+  const isSpectator = !!data && !meIsParticipant;
+  const meIsCreator = !!data && (isSpectator || data.match.creator_id === userId);
   const mySide: 'creator' | 'opponent' = meIsCreator ? 'creator' : 'opponent';
   const theirName = data ? (meIsCreator ? data.opponent_name : data.creator_name) : 'Opponent';
   const myName = data ? (meIsCreator ? data.creator_name : data.opponent_name) : 'You';
@@ -121,12 +126,12 @@ export default function RevealScreen() {
   // Win celebration when we reach the final screen.
   const celebrated = useRef(false);
   useEffect(() => {
-    if (done && outcome === 'win' && !celebrated.current) {
+    if (done && outcome === 'win' && !isSpectator && !celebrated.current) {
       celebrated.current = true;
       haptics.success();
     }
     if (!done) celebrated.current = false;
-  }, [done, outcome]);
+  }, [done, outcome, isSpectator]);
 
   // Auto-scroll the timeline so the active hole stays in view as it progresses.
   useEffect(() => {
@@ -154,6 +159,14 @@ export default function RevealScreen() {
   const shareResult = async () => {
     const p = data?.progression;
     if (!p) return;
+    if (isSpectator) {
+      // Neutral, third-person share for a feed spectator.
+      const line = outcome === 'tie'
+        ? `${myName} and ${theirName} halved their match`
+        : `${outcome === 'win' ? myName : theirName} beat ${outcome === 'win' ? theirName : myName} ${p.final_delta}`;
+      try { await Share.share({ message: `${line} at ${data!.match.course_name} — Foretera` }); } catch { /* dismissed */ }
+      return;
+    }
     const phrase = outcome === 'win' ? `beat ${theirName} ${p.final_delta}`
       : outcome === 'loss' ? `lost to ${theirName} ${p.final_delta}`
       : `halved my match with ${theirName}`;
@@ -189,7 +202,7 @@ export default function RevealScreen() {
   return (
     <View style={styles.flex}>
       <LinearGradient colors={grad} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
-      {done && outcome === 'win' && <Confetti />}
+      {done && outcome === 'win' && !isSpectator && <Confetti />}
 
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
         {/* Top bar */}
@@ -212,7 +225,9 @@ export default function RevealScreen() {
         {/* Scoreline */}
         <View style={styles.scoreline}>
           <Animated.Text key={`d-${done ? 'f' : step}`} entering={FadeIn.duration(300)} style={[styles.scoreBig, deltaColor(myDelta, colors)]}>
-            {done && outcome ? finalHeadline(outcome) : deltaLabel(myDelta)}
+            {done && outcome
+              ? (isSpectator ? spectatorHeadline(outcome, myName, theirName) : finalHeadline(outcome))
+              : deltaLabel(myDelta)}
           </Animated.Text>
           {done && outcome !== 'tie' && (
             <Text style={styles.finalDelta}>{data.progression.final_delta}</Text>
@@ -253,7 +268,7 @@ export default function RevealScreen() {
               </Text>
               <View style={styles.matchup}>
                 <HoleSide
-                  name={myName} you
+                  name={myName} you={!isSpectator}
                   gross={meIsCreator ? current.creator_gross : current.opponent_gross}
                   net={meIsCreator ? current.creator_net : current.opponent_net}
                   strokes={meIsCreator ? current.creator_strokes : current.opponent_strokes}
@@ -272,7 +287,7 @@ export default function RevealScreen() {
               </View>
               <Text style={[styles.holeOutcome, holeOutcomeColor(current, mySide, colors)]}>
                 {current.winner === 'tie' ? 'Hole halved'
-                  : current.winner === mySide ? 'You win the hole'
+                  : current.winner === mySide ? (isSpectator ? `${myName} wins the hole` : 'You win the hole')
                   : `${theirName} wins the hole`}
               </Text>
               <Text style={styles.tapHint}>Tap to advance · tap a hole above to revisit</Text>
@@ -303,10 +318,12 @@ export default function RevealScreen() {
                 <Ionicons name="refresh" size={18} color={colors.accent} />
                 <Text style={styles.secondaryText}>Replay</Text>
               </Pressable>
-              <Pressable style={styles.secondaryBtn} onPress={() => router.replace(`/(app)/match/${id}/scorecard`)}>
-                <Ionicons name="grid-outline" size={18} color={colors.accent} />
-                <Text style={styles.secondaryText}>Scorecard</Text>
-              </Pressable>
+              {!isSpectator && (
+                <Pressable style={styles.secondaryBtn} onPress={() => router.replace(`/(app)/match/${id}/scorecard`)}>
+                  <Ionicons name="grid-outline" size={18} color={colors.accent} />
+                  <Text style={styles.secondaryText}>Scorecard</Text>
+                </Pressable>
+              )}
               <Pressable style={styles.primaryBtn} onPress={() => router.back()}>
                 <Text style={styles.primaryText}>Done</Text>
               </Pressable>
@@ -315,7 +332,7 @@ export default function RevealScreen() {
         </View>
       </SafeAreaView>
 
-      {done && outcome === 'win' && !smashSeen && data.progression && (
+      {done && outcome === 'win' && !smashSeen && !isSpectator && data.progression && (
         <WinSmash
           winnerName={myName}
           winnerPhoto={meIsCreator ? data.creator_photo_url : data.opponent_photo_url}
@@ -449,6 +466,12 @@ function StatCell({ label, value, tone, styles }: {
 
 function finalHeadline(o: Outcome): string {
   return o === 'win' ? 'You win' : o === 'loss' ? 'You lost' : 'All Square';
+}
+// Neutral headline for a spectator (mySide is anchored to the creator, so a
+// 'win' outcome means the creator — myName — won).
+function spectatorHeadline(o: Outcome, creatorName: string, opponentName: string): string {
+  if (o === 'tie') return 'All Square';
+  return `${o === 'win' ? creatorName : opponentName} wins`;
 }
 function deltaColor(delta: number, c: Palette) {
   if (delta > 0) return { color: c.win };

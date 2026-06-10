@@ -249,7 +249,7 @@ export default function CreateMatchScreen() {
         </View>
         <Text style={styles.note}>
           {visibility === 'public'
-            ? 'Shows in the course feed once you tee off — players + result, never stakes.'
+            ? 'Shows in the course feed once you tee off — players, format, and result.'
             : 'Only you and your opponent can see this match.'}
         </Text>
 
@@ -344,7 +344,7 @@ function makeStyles(colors: Palette) {
   segment: { flexDirection: 'row', gap: spacing.sm },
   segBtn: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.sm + 2, alignItems: 'center', backgroundColor: colors.surface },
   segBtnActive: { backgroundColor: colors.fairway, borderColor: colors.fairway },
-  segRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  segRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   segText: { ...typography.bodySemiBold, color: colors.ink },
   segTextActive: { color: colors.surface },
   note: { ...typography.caption, color: colors.muted },
