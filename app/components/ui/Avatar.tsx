@@ -1,8 +1,9 @@
-import { View, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 
 // Deterministic avatar: initials on a color picked by hashing the name, so the
 // same player always gets the same hue. Dark text reads on every bright hue.
+// When photoUrl is set, shows the photo instead.
 const AVATAR_COLORS = ['#36E27D', '#7C83FF', '#FF9A5A', '#2DD4D4', '#FFD166', '#FF5A5F', '#5EC2FF', '#C98BFF'];
 
 function hash(s: string): number {
@@ -11,7 +12,10 @@ function hash(s: string): number {
   return h;
 }
 
-export function Avatar({ name, size = 44 }: { name?: string | null; size?: number }) {
+export function Avatar({ name, size = 44, photoUrl }: { name?: string | null; size?: number; photoUrl?: string | null }) {
+  if (photoUrl) {
+    return <Image source={{ uri: photoUrl }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  }
   const label = (name ?? '?').trim() || '?';
   const initials =
     label.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
