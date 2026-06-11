@@ -125,7 +125,7 @@ export default function MyMatchesScreen() {
             ? <ErrorState message={error} onRetry={() => { setLoading(true); load(); }} />
             : showArchived
               ? <EmptyState icon="archive-outline" title="Nothing archived" message="Long-press a finished match to archive it." />
-              : <EmptyState icon="list-outline" title="No matches yet" message="Your record doesn't write itself. Post one, or take an open match in Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
+              : <EmptyState icon="list-outline" title="No matches yet" message="Post a match or accept one from Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
         }
         renderItem={({ item }) => (
           <TouchableOpacity

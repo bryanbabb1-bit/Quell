@@ -233,7 +233,7 @@ export default function RevealScreen() {
           <Pressable hitSlop={12} onPress={() => router.back()} style={styles.iconBtn}>
             <Ionicons name="close" size={26} color={colors.text} />
           </Pressable>
-          <Text style={styles.topCaption}>{done ? 'The Settle · Final' : `The Settle · Hole ${current?.hole ?? ''} · ${step}/${holes.length}`}</Text>
+          <Text style={styles.topCaption}>{done ? 'Final' : `Hole ${current?.hole ?? ''} · ${step}/${holes.length}`}</Text>
           {!done ? (
             <Pressable hitSlop={12} onPress={() => setPaused((p) => !p)} style={styles.iconBtn}>
               <Ionicons name={paused ? 'play' : 'pause'} size={24} color={colors.text} />
@@ -323,7 +323,7 @@ export default function RevealScreen() {
                 <Ionicons name="flame" size={22} color={colors.gold} />
                 <View style={styles.milestoneMid}>
                   <Text style={styles.milestoneTitle}>{streak} straight wins</Text>
-                  <Text style={styles.milestoneSub}>The heater is real. Keep it rolling.</Text>
+                  <Text style={styles.milestoneSub}>Your longest active run — keep it going.</Text>
                 </View>
                 <Pressable hitSlop={10} onPress={shareResult} accessibilityRole="button" accessibilityLabel="Share your streak">
                   <Ionicons name="share-outline" size={20} color={colors.gold} />
@@ -354,12 +354,10 @@ export default function RevealScreen() {
                 <Ionicons name="refresh" size={18} color={colors.accent} />
                 <Text style={styles.secondaryText}>Replay</Text>
               </Pressable>
-              {!isSpectator && (
-                <Pressable style={styles.secondaryBtn} onPress={() => router.replace(`/(app)/match/${id}/scorecard`)}>
-                  <Ionicons name="grid-outline" size={18} color={colors.accent} />
-                  <Text style={styles.secondaryText}>Scorecard</Text>
-                </Pressable>
-              )}
+              <Pressable style={styles.secondaryBtn} onPress={() => router.replace(`/(app)/match/${id}/scorecard`)}>
+                <Ionicons name="grid-outline" size={18} color={colors.accent} />
+                <Text style={styles.secondaryText}>Scorecard</Text>
+              </Pressable>
               <Pressable style={styles.primaryBtn} onPress={() => router.back()}>
                 <Text style={styles.primaryText}>Done</Text>
               </Pressable>
@@ -424,18 +422,19 @@ function HoleSide({ name, gross, net, strokes, won, you, stepKey }: {
   );
 }
 
-// ── The Drama Meter ──────────────────────────────────────────────────────────
-// The progression already contains the story — surface it. Lead changes, holes
-// all square, how late it was decided → one verdict line, like a broadcast
-// graphic. A true classic gets the gold treatment.
-function dramaFor(holes: HoleResult[], decidedOn: number | null): { verdict: string; detail: string; classic: boolean } {
+// ── How it unfolded ──────────────────────────────────────────────────────────
+// Factual match-story stats straight from the progression — no editorializing.
+// A genuinely wild match (3+ lead changes AND decided at the very end) earns a
+// gold border; the data speaks for itself.
+function storyFor(holes: HoleResult[], decidedOn: number | null): {
+  leadChanges: number; squareHoles: number; decidedLine: string; classic: boolean;
+} {
   let leadChanges = 0, squareHoles = 0;
   let prev = 0;
   let leader: number = 0; // sign of the current leader, 0 = nobody yet
   for (const h of holes) {
     const d = h.creator_delta;
-    // "All square" only counts when a lead was ERASED — the opening holes
-    // before anyone leads aren't drama.
+    // Count a return to all square only when a lead was erased.
     if (d === 0 && prev !== 0) squareHoles++;
     const s = Math.sign(d);
     if (s !== 0 && leader !== 0 && s !== leader) leadChanges++;
@@ -443,44 +442,28 @@ function dramaFor(holes: HoleResult[], decidedOn: number | null): { verdict: str
     prev = d;
   }
   const total = holes.length;
-  const lastDelta = Math.abs(prev);
   const wentDistance = decidedOn == null || decidedOn >= total;
-  const tightFinish = wentDistance && lastDelta <= 1;
-  const earlyKill = decidedOn != null && decidedOn <= total - 4;
-
-  // leader === 0 after the loop ⇔ the delta was NEVER non-zero (every hole halved).
-  if (leader === 0 && total > 0) {
-    return { verdict: 'Dead heat', detail: 'Every hole halved — neither player ever led', classic: false };
-  }
-  if (leadChanges >= 3 && tightFinish) {
-    return { verdict: 'Instant classic', detail: `${leadChanges} lead changes · decided on the last hole`, classic: true };
-  }
-  if (tightFinish) {
-    return { verdict: 'Down to the wire', detail: `${squareHoles} holes all square · settled on ${total === 18 ? '18' : 'the last'}`, classic: leadChanges >= 2 };
-  }
-  if (leadChanges >= 3) {
-    return { verdict: 'A brawl', detail: `${leadChanges} lead changes before it broke`, classic: false };
-  }
-  if (earlyKill) {
-    return { verdict: 'Wire to wire', detail: `Closed out on ${decidedOn} — never in doubt`, classic: false };
-  }
-  if (leadChanges === 0 && squareHoles <= 2) {
-    return { verdict: 'One-way traffic', detail: 'The leader never blinked', classic: false };
-  }
-  return { verdict: 'A grind', detail: `${squareHoles} holes all square · ${leadChanges} lead ${leadChanges === 1 ? 'change' : 'changes'}`, classic: false };
+  const decidedLine = decidedOn != null && decidedOn < total
+    ? `Closed out on hole ${decidedOn}`
+    : Math.abs(prev) === 0 ? 'All square after the last hole' : 'Decided on the final hole';
+  const classic = leadChanges >= 3 && wentDistance && Math.abs(prev) <= 1;
+  return { leadChanges, squareHoles, decidedLine, classic };
 }
 
 function DramaCard({ holes, decidedOn, colors, styles }: {
   holes: HoleResult[]; decidedOn: number | null; colors: Palette; styles: ReturnType<typeof makeStyles>;
 }) {
-  const d = useMemo(() => dramaFor(holes, decidedOn), [holes, decidedOn]);
+  const s = useMemo(() => storyFor(holes, decidedOn), [holes, decidedOn]);
   if (holes.length === 0) return null; // forfeit/empty progression — no story to tell
   return (
-    <Animated.View entering={FadeIn.duration(420)} style={[styles.dramaCard, d.classic && styles.dramaClassic]}>
-      <Ionicons name={d.classic ? 'trophy' : 'pulse'} size={18} color={d.classic ? colors.gold : colors.muted} />
+    <Animated.View entering={FadeIn.duration(420)} style={[styles.dramaCard, s.classic && styles.dramaClassic]}>
+      <Ionicons name={s.classic ? 'trophy' : 'analytics-outline'} size={18} color={s.classic ? colors.gold : colors.muted} />
       <View style={styles.dramaMid}>
-        <Text style={[styles.dramaVerdict, d.classic && styles.dramaVerdictGold]}>{d.verdict}</Text>
-        <Text style={styles.dramaDetail}>{d.detail}</Text>
+        <Text style={styles.dramaVerdict}>How it unfolded</Text>
+        <Text style={styles.dramaDetail}>
+          {s.leadChanges} lead {s.leadChanges === 1 ? 'change' : 'changes'}
+          {s.squareHoles > 0 ? ` · back to all square ${s.squareHoles}×` : ''} · {s.decidedLine.toLowerCase()}
+        </Text>
       </View>
     </Animated.View>
   );
@@ -648,7 +631,6 @@ function makeStyles(c: Palette) {
     dramaClassic: { borderColor: c.gold, backgroundColor: c.goldGlow },
     dramaMid: { flex: 1, gap: 2 },
     dramaVerdict: { ...t.heading },
-    dramaVerdictGold: { color: c.gold },
     dramaDetail: { ...t.caption, color: c.muted },
     statsCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
     statsTitle: { ...t.overline, color: c.muted },

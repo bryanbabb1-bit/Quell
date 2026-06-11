@@ -111,13 +111,13 @@ async function submit(auth: AuthContext, env: Env, matchId: string, request: Req
     const settled = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
     // Only claim completion if the engine actually settled it (course data present).
     if (settled?.status === 'completed') {
-      await sendPush(env, otherId, 'Your Settle is ready', `${who} posted. Watch it play out hole by hole.`, { matchId });
+      await sendPush(env, otherId, 'Your result is ready', `${who} posted — watch the reveal.`, { matchId });
       return json({ status: 'completed', match: settled });
     }
     return json({ status: 'waiting_on_opponent', match: settled });
   }
 
-  await sendPush(env, otherId, "It's your turn", `${who} posted their card. Yours seals the Settle.`, { matchId });
+  await sendPush(env, otherId, "It's your turn", `${who} posted their card. Enter yours to unlock the reveal.`, { matchId });
   return json({ status: 'waiting_on_opponent' });
 }
 
@@ -275,7 +275,11 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
   const match = await env.DB.prepare('SELECT * FROM matches WHERE id = ?')
     .bind(matchId).first<Record<string, any>>();
   if (!match) return error('Match not found', 404);
-  if (match.creator_id !== auth.userId && match.opponent_id !== auth.userId) {
+  // Participants always; spectators on a PUBLIC, COMPLETED match (same rule as
+  // the reveal — par/SI context for the public scorecard, no score data here).
+  const isParticipant = match.creator_id === auth.userId || match.opponent_id === auth.userId;
+  const publicCompleted = match.visibility === 'public' && match.status === 'completed';
+  if (!isParticipant && !publicCompleted) {
     return error('Not your match', 403);
   }
 
@@ -297,8 +301,9 @@ async function holesSetup(auth: AuthContext, env: Env, matchId: string): Promise
   if (!match.tee_id) return json(emptyCourse);
 
   // Each player's own tee (they may differ). Pre-accept there's no opponent yet,
-  // so fall back to the creator's tee.
-  const callerIsCreator = match.creator_id === auth.userId;
+  // so fall back to the creator's tee. Spectators anchor to the creator's
+  // perspective (matching the public scorecard/reveal orientation).
+  const callerIsCreator = isParticipant ? match.creator_id === auth.userId : true;
   const opponentTeeId = match.opponent_tee_id ?? match.tee_id;
   const [creatorTee, opponentTee] = await Promise.all([
     loadTee(env, match.tee_id, range),

@@ -32,6 +32,8 @@ export interface Palette {
   halveGlow: string;     // translucent halve wash
   gold: string;          // CHAMPIONSHIP gold — belts, streaks, milestones, favorites
   goldGlow: string;      // translucent gold wash
+  live: string;          // COMMUNITY/broadcast — live matches, feed activity, messages
+  liveGlow: string;      // translucent live wash
   onAccent: string;      // text/icon on top of an accent fill
 
   // ── Legacy golf aliases (back-compat — point at the dark tokens above) ──
@@ -59,33 +61,41 @@ function pal(p: PalInput): Palette {
   };
 }
 
+// ── "CLUBHOUSE" — the look. ──────────────────────────────────────────────────
+// Deep pine canvas with WARM parchment text (editorial, not blue-tech), one
+// refined green reserved for actions + wins, championship gold for prestige,
+// and a broadcast cyan for everything LIVE/community (feed, in-progress,
+// messages). The point: each context owns a hue — the brand green is no longer
+// painted over everything.
 export const PALETTES: { id: string; name: string; colors: Palette }[] = [
   {
-    // Tournament Green — DARK (default).
+    // Clubhouse — DARK (default).
     id: 'fairway', name: 'Dark',
     colors: pal({
       scheme: 'dark',
-      bg: '#12161E', surface: '#1B212B', surfaceRaised: '#272F3B',
-      text: '#F7F9FC', muted: '#AAB4C3', border: '#2D3543',
-      accent: '#36E27D', accentDark: '#1FB85F', accentGlow: 'rgba(54,226,125,0.14)', onAccent: '#06231A',
-      win: '#36E27D', winGlow: 'rgba(54,226,125,0.16)',
-      loss: '#FF5A5F', lossGlow: 'rgba(255,90,95,0.14)', halve: '#E6EAF0', halveGlow: 'rgba(230,234,240,0.10)',
-      gold: '#F2C14E', goldGlow: 'rgba(242,193,78,0.16)',
+      bg: '#0D1411', surface: '#16201A', surfaceRaised: '#1F2D25',
+      text: '#F2EFE6', muted: '#9CAB9E', border: '#28362D',
+      accent: '#34C878', accentDark: '#249757', accentGlow: 'rgba(52,200,120,0.13)', onAccent: '#06231A',
+      win: '#34C878', winGlow: 'rgba(52,200,120,0.15)',
+      loss: '#E5645C', lossGlow: 'rgba(229,100,92,0.14)', halve: '#C9C2B2', halveGlow: 'rgba(201,194,178,0.10)',
+      gold: '#E3B341', goldGlow: 'rgba(227,179,65,0.15)',
+      live: '#56C8D8', liveGlow: 'rgba(86,200,216,0.14)',
     }),
   },
   {
-    // Tournament Green — LIGHT. Same green brand on a clean, bright canvas.
+    // Clubhouse — LIGHT. Parchment canvas, masters green, deep gold.
     id: 'fairway-light', name: 'Light',
     colors: pal({
       scheme: 'light',
-      bg: '#F3F7F3', surface: '#FFFFFF', surfaceRaised: '#E6EEE7',
-      text: '#13231A', muted: '#5A6A60', border: '#D3DDD5',
-      accent: '#1FAE5E', accentDark: '#178A49', accentGlow: 'rgba(31,174,94,0.12)', onAccent: '#FFFFFF',
-      win: '#1B9E54', winGlow: 'rgba(27,158,84,0.14)',
-      // halve must stay visible on the light canvas (#F3F7F3) — a pale silver
-      // chip there fails WCAG 3:1 for UI components.
-      loss: '#D8433D', lossGlow: 'rgba(216,67,61,0.12)', halve: '#8A99A6', halveGlow: 'rgba(138,153,166,0.28)',
-      gold: '#B8860B', goldGlow: 'rgba(184,134,11,0.14)',
+      bg: '#F5F3EC', surface: '#FFFFFF', surfaceRaised: '#EAE7DC',
+      text: '#1B241E', muted: '#67705F', border: '#DAD6C8',
+      accent: '#1E8E5A', accentDark: '#157146', accentGlow: 'rgba(30,142,90,0.12)', onAccent: '#FFFFFF',
+      win: '#1B8A52', winGlow: 'rgba(27,138,82,0.13)',
+      // halve must stay visible on the parchment canvas — a pale chip there
+      // fails WCAG 3:1 for UI components.
+      loss: '#C44E45', lossGlow: 'rgba(196,78,69,0.12)', halve: '#8A8674', halveGlow: 'rgba(138,134,116,0.26)',
+      gold: '#A87A1F', goldGlow: 'rgba(168,122,31,0.13)',
+      live: '#2B7FA3', liveGlow: 'rgba(43,127,163,0.12)',
     }),
   },
 ];

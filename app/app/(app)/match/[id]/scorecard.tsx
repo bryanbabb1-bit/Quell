@@ -61,8 +61,12 @@ export default function ScorecardScreen() {
     );
   }
 
-  const meIsCreator = data.match.creator_id === userId;
+  // Spectators (public-feed viewers) anchor to the creator's side and see real
+  // names on both rows instead of "You".
+  const isSpectator = data.match.creator_id !== userId && data.match.opponent_id !== userId;
+  const meIsCreator = isSpectator || data.match.creator_id === userId;
   const holes = data.progression.holes;
+  const youLabel = isSpectator ? (data.creator_name.split(' ')[0] || 'P1') : 'You';
   const themName = meIsCreator ? data.opponent_name : data.creator_name;
 
   const youGross = (h: HoleResult) => (meIsCreator ? h.creator_gross : h.opponent_gross);
@@ -159,7 +163,7 @@ export default function ScorecardScreen() {
           <Cell text="Hole" label head />
           <Cell text="Par" label />
           <Cell text="S.I." label dim />
-          <Cell text="You" label bold />
+          <Cell text={youLabel} label bold />
           <Cell text={themName} label bold />
         </View>
 

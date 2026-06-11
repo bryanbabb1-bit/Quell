@@ -104,7 +104,7 @@ export default function FeedScreen() {
       {/* Course header + switcher */}
       <View style={styles.courseHeader}>
         <TouchableOpacity style={styles.courseTitleRow} activeOpacity={0.7} onPress={() => { haptics.select(); setSwitching((s) => !s); }}>
-          <Ionicons name="golf-outline" size={18} color={colors.accent} />
+          <Ionicons name="golf-outline" size={18} color={colors.live} />
           <Text style={styles.courseTitle} numberOfLines={1}>{course ?? 'Pick a course'}</Text>
           <Ionicons name={switching ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
         </TouchableOpacity>
@@ -153,8 +153,8 @@ export default function FeedScreen() {
         {!loading && course && rows.length === 0 && !error && (
           <EmptyState
             icon="newspaper-outline"
-            title="Quiet out there"
-            message={`No public matches at ${course} ${onToday ? 'today' : 'on this day'}. Post one as Public and put it on the board.`}
+            title={`Quiet day at ${course?.split(' ')[0] ?? 'this course'}`}
+            message={`No public matches ${onToday ? 'today' : 'on this day'}. Post one as Public and it shows here.`}
           />
         )}
 
@@ -251,7 +251,7 @@ function makeStyles(colors: Palette) {
     error: { ...typography.caption, color: colors.flagRed, textAlign: 'center' },
     sectionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
     sectionTitle: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm },
-    liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent, marginTop: spacing.sm },
+    liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live, marginTop: spacing.sm },
     card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
     row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
     rowDivider: { borderTopWidth: 1, borderTopColor: colors.border },
@@ -262,10 +262,10 @@ function makeStyles(colors: Palette) {
     rowRight: { alignItems: 'flex-end', gap: 4, maxWidth: 130 },
     resultText: { ...typography.bodySemiBold, color: colors.ink, textAlign: 'right' },
     statusChip: { backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
-    statusChipLive: { backgroundColor: colors.accent },
+    statusChipLive: { backgroundColor: colors.live },
     statusChipText: { ...typography.caption, color: colors.muted },
-    statusChipTextLive: { color: colors.onAccent, fontWeight: '700' },
+    statusChipTextLive: { color: colors.scheme === 'dark' ? colors.bg : '#FFFFFF', fontWeight: '700' },
     meta: { ...typography.caption, color: colors.muted, textAlign: 'right' },
-    mineTag: { ...typography.caption, color: colors.accent, fontSize: 11 },
+    mineTag: { ...typography.caption, color: colors.live, fontSize: 11 },
   });
 }

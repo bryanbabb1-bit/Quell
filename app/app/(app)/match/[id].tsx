@@ -355,10 +355,10 @@ export default function MatchDetailScreen() {
               </Text>
             ) : (
               <>
-                <Text style={styles.note}>Both cards are in. The result is sealed — watch it play out.</Text>
+                <Text style={styles.note}>Both cards are in. See how it played out hole by hole.</Text>
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/reveal`)}>
                   <Ionicons name="trophy-outline" size={18} color={colors.surface} />
-                  <Text style={styles.primaryText}>Watch the Settle</Text>
+                  <Text style={styles.primaryText}>Watch the reveal</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.secondaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/scorecard`)}>
                   <Text style={styles.secondaryText}>Head-to-head scorecard</Text>
@@ -371,8 +371,8 @@ export default function MatchDetailScreen() {
               {/* Pre-Settle tension: they're in their card right now. */}
               {!oppSubmitted && otherScoringAt && (
                 <View style={styles.statusRow}>
-                  <Ionicons name="create-outline" size={16} color={colors.accent} />
-                  <Text style={[styles.statusText, { color: colors.accent }]}>
+                  <Ionicons name="create-outline" size={16} color={colors.live} />
+                  <Text style={[styles.statusText, { color: colors.live }]}>
                     {firstName(otherName)} is entering scores…
                   </Text>
                 </View>
@@ -380,8 +380,8 @@ export default function MatchDetailScreen() {
               {oppSubmitted && (
                 <View style={styles.statusRow}>
                   <Ionicons name="lock-closed" size={16} color={colors.accent} />
-                  <Text style={[styles.statusText, { color: colors.accent }]}>
-                    {firstName(otherName)}'s card is in. Yours seals the Settle.
+                  <Text style={[styles.statusText, { color: colors.live }]}>
+                    {firstName(otherName)}'s card is in. Yours unlocks the reveal.
                   </Text>
                 </View>
               )}
@@ -401,8 +401,8 @@ export default function MatchDetailScreen() {
               {/* Pre-Settle tension: they've opened score entry but haven't posted. */}
               {!oppSubmitted && otherScoringAt && (
                 <View style={styles.statusRow}>
-                  <Ionicons name="create-outline" size={16} color={colors.accent} />
-                  <Text style={[styles.statusText, { color: colors.accent }]}>
+                  <Ionicons name="create-outline" size={16} color={colors.live} />
+                  <Text style={[styles.statusText, { color: colors.live }]}>
                     {firstName(otherName)} is entering scores…
                   </Text>
                 </View>

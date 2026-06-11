@@ -24,8 +24,9 @@ const creatorName = (m: DiscoveryMatch) =>
 // Swipe RIGHT (or tap the flag) to accept, LEFT (or tap X) to pass; tap the heart
 // to favorite the creator. Accept is routed to the parent (index-confirm +
 // acceptMatch); pass is local (advances the deck).
-export function MatchDeck({ matches, onAccept, onPass, onReload }: {
+export function MatchDeck({ matches, resetSignal = 0, onAccept, onPass, onReload }: {
   matches: DiscoveryMatch[];
+  resetSignal?: number; // bump to force the deck back to the top (manual refresh)
   onAccept: (m: DiscoveryMatch) => void;
   onPass: (m: DiscoveryMatch) => void;
   onReload: () => void;
@@ -46,13 +47,17 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   // jarring.
   const deckKey = useMemo(() => matches.map((m) => m.id).join(','), [matches]);
   const lastKey = useRef(deckKey);
+  const lastReset = useRef(resetSignal);
   useEffect(() => {
-    if (lastKey.current === deckKey) return;
+    const contentChanged = lastKey.current !== deckKey;
+    const forced = lastReset.current !== resetSignal;
+    if (!contentChanged && !forced) return;
     lastKey.current = deckKey;
+    lastReset.current = resetSignal;
     setIndex(0);
     tx.value = 0;
     ty.value = 0;
-  }, [deckKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [deckKey, resetSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const current: DiscoveryMatch | undefined = matches[index];
   const next: DiscoveryMatch | undefined = matches[index + 1];
@@ -129,8 +134,8 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
     return (
       <View style={styles.empty}>
         <Ionicons name="golf-outline" size={48} color={colors.muted} />
-        <Text style={styles.emptyTitle}>The tee sheet is empty</Text>
-        <Text style={styles.emptyHint}>Nobody's posted a match you can take. Be the problem — post one.</Text>
+        <Text style={styles.emptyTitle}>No open matches right now</Text>
+        <Text style={styles.emptyHint}>Refresh to revisit ones you passed on, or post your own.</Text>
         <TouchableOpacity style={styles.reloadBtn} onPress={onReload}>
           <Ionicons name="refresh" size={18} color={colors.fairway} />
           <Text style={styles.reloadText}>Refresh</Text>

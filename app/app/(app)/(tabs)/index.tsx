@@ -39,6 +39,10 @@ export default function DiscoveryScreen() {
   const { ids: favIds, load: loadFavs } = useFavorites();
   const favRef = useRef(favIds);
   favRef.current = favIds;
+  // Matches passed on this session. A refresh RECYCLES them — new matches
+  // first, then the ones already seen — instead of dead-ending the deck.
+  const passedRef = useRef<Set<string>>(new Set());
+  const [deckReset, setDeckReset] = useState(0);
 
   useEffect(() => { loadFavs(); }, [loadFavs]);
 
@@ -51,7 +55,11 @@ export default function DiscoveryScreen() {
       // "Favorites only": pull the broader feed (ignore home-course/handicap
       // defaults) then keep just matches from players the user has starred.
       const { matches } = await api.discover(eff.starred ? { ...eff, from, days, all: true } : { ...eff, from, days });
-      setMatches(eff.starred ? matches.filter((m) => favRef.current.includes(m.creator_id)) : matches);
+      const list = eff.starred ? matches.filter((m) => favRef.current.includes(m.creator_id)) : matches;
+      // Unseen matches lead; previously-passed ones recycle to the back.
+      const fresh = list.filter((m) => !passedRef.current.has(m.id));
+      const seen = list.filter((m) => passedRef.current.has(m.id));
+      setMatches([...fresh, ...seen]);
     } catch (e: any) {
       setError(e?.message ?? 'Could not load matches.');
     } finally {
@@ -139,9 +147,17 @@ export default function DiscoveryScreen() {
       />
       <MatchDeck
         matches={matches}
+        resetSignal={deckReset}
         onAccept={requestAccept}
-        onPass={() => { /* pass is local — the deck advances itself */ }}
-        onReload={() => load()}
+        onPass={(m) => { passedRef.current.add(m.id); }}
+        onReload={() => {
+          haptics.light();
+          // Forget this session's passes so everything comes back around, fresh
+          // posts first, and force the deck back to the top.
+          passedRef.current = new Set();
+          load();
+          setDeckReset((k) => k + 1);
+        }}
       />
 
       <TouchableOpacity style={styles.filterBtn} onPress={() => { haptics.light(); setShowFilters(true); }} activeOpacity={0.85}>

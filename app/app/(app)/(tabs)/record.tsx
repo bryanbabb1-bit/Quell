@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
@@ -88,26 +89,63 @@ export default function RecordScreen() {
       >
         {error && <Text style={styles.error}>{error}</Text>}
 
-        {/* Record summary */}
-        <View style={styles.statRow}>
-          <Stat label="Won" value={record?.wins ?? 0} accent={colors.fairway} />
-          <Stat label="Lost" value={record?.losses ?? 0} accent={colors.flagRed} />
-          <Stat label="Halved" value={record?.ties ?? 0} accent={colors.muted} />
-        </View>
-        <View style={styles.subRow}>
-          <Text style={styles.subItem}>{record?.played ?? 0} played</Text>
-          <Text style={styles.subDot}>·</Text>
-          <Text style={styles.subItem}>{record?.win_pct ?? 0}% win rate</Text>
-        </View>
-
-        <View style={styles.streakCard}>
-          <Ionicons
-            name={streak?.type === 'win' ? 'flame' : streak?.type === 'loss' ? 'snow-outline' : 'remove-outline'}
-            size={20}
-            color={streak?.type === 'win' ? colors.fairway : streak?.type === 'loss' ? colors.flagRed : colors.muted}
+        {/* ── HERO: the record as a broadcast graphic ── */}
+        <View style={styles.hero}>
+          <LinearGradient
+            colors={[colors.surfaceRaised, colors.surface]}
+            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
           />
-          <Text style={styles.streakLabel}>Current streak</Text>
-          <Text style={styles.streakValue}>{streakText}</Text>
+          <Text style={styles.heroLabel}>Career record</Text>
+          <View style={styles.heroTallyRow}>
+            <View style={styles.heroTallyCol}>
+              <Text style={[styles.heroNum, { color: colors.win }]}>{record?.wins ?? 0}</Text>
+              <Text style={styles.heroNumLabel}>W</Text>
+            </View>
+            <Text style={styles.heroDash}>–</Text>
+            <View style={styles.heroTallyCol}>
+              <Text style={[styles.heroNum, { color: colors.loss }]}>{record?.losses ?? 0}</Text>
+              <Text style={styles.heroNumLabel}>L</Text>
+            </View>
+            <Text style={styles.heroDash}>–</Text>
+            <View style={styles.heroTallyCol}>
+              <Text style={[styles.heroNum, { color: colors.muted }]}>{record?.ties ?? 0}</Text>
+              <Text style={styles.heroNumLabel}>H</Text>
+            </View>
+          </View>
+
+          {/* Win-rate bar */}
+          <View style={styles.rateRow}>
+            <View style={styles.rateTrack}>
+              <View style={[styles.rateFill, { width: `${record?.win_pct ?? 0}%` }]} />
+            </View>
+            <Text style={styles.rateText}>{record?.win_pct ?? 0}%</Text>
+          </View>
+
+          <View style={styles.heroFootRow}>
+            {/* Streak chip */}
+            <View style={[styles.streakChip, streak?.type === 'win' && (streak?.count ?? 0) >= 3 && styles.streakChipHot]}>
+              <Ionicons
+                name={streak?.type === 'win' ? 'flame' : streak?.type === 'loss' ? 'trending-down' : 'remove-outline'}
+                size={14}
+                color={streak?.type === 'win' ? ((streak?.count ?? 0) >= 3 ? colors.gold : colors.win) : streak?.type === 'loss' ? colors.loss : colors.muted}
+              />
+              <Text style={styles.streakChipText}>{streakText === '—' ? 'No streak' : streakText}</Text>
+            </View>
+            {/* Form guide — last 5, newest first */}
+            {record && record.recent.length > 0 && (
+              <View style={styles.formRow}>
+                <Text style={styles.formLabel}>Form</Text>
+                {record.recent.slice(0, 5).map((r, i) => (
+                  <View key={r.match_id} style={[styles.formChip,
+                    r.outcome === 'win' ? { backgroundColor: colors.win } : r.outcome === 'loss' ? { backgroundColor: colors.loss } : { backgroundColor: colors.halve },
+                    i === 0 && styles.formChipLatest]}>
+                    <Text style={styles.formChipText}>{r.outcome === 'win' ? 'W' : r.outcome === 'loss' ? 'L' : 'H'}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Recent results */}
@@ -131,7 +169,7 @@ export default function RecordScreen() {
             ))}
           </View>
         ) : (
-          <Text style={styles.emptyNote}>Nothing on the record yet. Settle one and it lands here.</Text>
+          <Text style={styles.emptyNote}>No completed matches yet — your results will show here.</Text>
         )}
 
         {/* Favorites */}
@@ -217,17 +255,6 @@ export default function RecordScreen() {
   );
 }
 
-function Stat({ label, value, accent }: { label: string; value: number; accent: string }) {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  return (
-    <View style={styles.stat}>
-      <Text style={[styles.statValue, { color: accent }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function OutcomeChip({ outcome }: { outcome: Outcome }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -245,19 +272,34 @@ function makeStyles(colors: Palette) {
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper },
   container: { padding: spacing.lg, gap: spacing.md },
   error: { ...typography.caption, color: colors.flagRed, textAlign: 'center' },
-  statRow: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: spacing.lg },
-  stat: { flex: 1, alignItems: 'center' },
-  statValue: { ...typography.title, fontSize: 34 },
-  statLabel: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5 },
-  subRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
-  subItem: { ...typography.body, color: colors.muted },
-  subDot: { color: colors.muted },
-  streakCard: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md,
+  // Hero — the record as a broadcast graphic.
+  hero: {
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.lg, gap: spacing.md, overflow: 'hidden',
   },
-  streakLabel: { ...typography.body, color: colors.muted, flex: 1 },
-  streakValue: { ...typography.bodySemiBold },
+  heroLabel: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 1.2, color: colors.muted },
+  heroTallyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  heroTallyCol: { alignItems: 'center', minWidth: 64 },
+  heroNum: { ...typography.title, fontSize: 44, lineHeight: 50 },
+  heroNumLabel: { ...typography.caption, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: colors.muted },
+  heroDash: { ...typography.title, fontSize: 28, color: colors.border, marginBottom: 14 },
+  rateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  rateTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
+  rateFill: { height: '100%', borderRadius: 3, backgroundColor: colors.win },
+  rateText: { ...typography.bodySemiBold, color: colors.text, minWidth: 40, textAlign: 'right' },
+  heroFootRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  streakChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.surfaceRaised, borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: 6,
+  },
+  streakChipHot: { backgroundColor: colors.goldGlow, borderWidth: 1, borderColor: colors.gold },
+  streakChipText: { ...typography.caption, color: colors.text, fontWeight: '700' },
+  formRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  formLabel: { ...typography.caption, color: colors.muted, marginRight: 2 },
+  formChip: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', opacity: 0.75 },
+  formChipLatest: { opacity: 1, transform: [{ scale: 1.15 }] },
+  formChipText: { ...typography.caption, fontSize: 11, color: colors.bg, fontWeight: '800' },
   sectionTitle: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm },
   lbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
   scopeToggle: { flexDirection: 'row', backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, padding: 2 },
