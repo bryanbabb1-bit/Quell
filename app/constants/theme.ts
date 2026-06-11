@@ -79,7 +79,9 @@ export const PALETTES: { id: string; name: string; colors: Palette }[] = [
       text: '#13231A', muted: '#5A6A60', border: '#D3DDD5',
       accent: '#1FAE5E', accentDark: '#178A49', accentGlow: 'rgba(31,174,94,0.12)', onAccent: '#FFFFFF',
       win: '#1B9E54', winGlow: 'rgba(27,158,84,0.14)',
-      loss: '#D8433D', lossGlow: 'rgba(216,67,61,0.12)', halve: '#C4CDD2', halveGlow: 'rgba(196,205,210,0.5)',
+      // halve must stay visible on the light canvas (#F3F7F3) — a pale silver
+      // chip there fails WCAG 3:1 for UI components.
+      loss: '#D8433D', lossGlow: 'rgba(216,67,61,0.12)', halve: '#8A99A6', halveGlow: 'rgba(138,153,166,0.28)',
     }),
   },
 ];

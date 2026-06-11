@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useApi } from '@/lib/useApi';
+import { useCourses } from '@/store/useCourseStore';
 import { useColors } from '@/store/useThemeStore';
 import { haptics } from '@/lib/haptics';
 import { makeType, spacing, radius, type Palette } from '@/constants/theme';
@@ -18,12 +18,11 @@ export function CourseSelect({ label, valueName, onSelect, placeholder = 'Search
 }) {
   const c = useColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const api = useApi();
-  const [courses, setCourses] = useState<CourseSummary[] | null>(null);
+  const { courses, load } = useCourses();
   const [query, setQuery] = useState(valueName ?? '');
   const [open, setOpen] = useState(false);
 
-  useEffect(() => { api.getCourses().then((r) => setCourses(r.courses)).catch(() => setCourses([])); }, [api]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => { setQuery(valueName ?? ''); }, [valueName]);
 
   const matches = useMemo(() => {

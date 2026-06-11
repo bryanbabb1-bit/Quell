@@ -76,6 +76,14 @@ export function useApi() {
       getMe: () => call<any>('/me'),
       updateMe: (patch: Record<string, unknown>) =>
         call<any>('/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+      deleteMe: () => call<{ deleted: boolean }>('/me', { method: 'DELETE' }),
+
+      // Blocking + reporting (safety)
+      getBlocks: () => call<{ blocked: string[] }>('/blocks'),
+      blockUser: (userId: string) => call<{ blocked: boolean }>(`/blocks/${userId}`, { method: 'POST' }),
+      unblockUser: (userId: string) => call<{ blocked: boolean }>(`/blocks/${userId}`, { method: 'DELETE' }),
+      reportUser: (input: { reported_id: string; match_id?: string | null; reason: 'spam' | 'abuse' | 'cheating' | 'other'; detail?: string | null }) =>
+        call<{ reported: boolean }>('/reports', { method: 'POST', body: JSON.stringify(input) }),
 
       // Records / leaderboard
       getMyRecord: () => call<MyRecord>('/me/record'),

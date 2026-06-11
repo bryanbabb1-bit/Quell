@@ -54,39 +54,58 @@ export async function runReminders(env: Env): Promise<void> {
     const course = m.course_name as string;
 
     // ── Forfeit (+2 days) ──
+    // Guarded UPDATEs (status IN accepted/in_progress) + push only when the
+    // write actually landed — overlapping cron invocations otherwise both read
+    // the stale row and double-push the forfeit.
     if (daysSince >= 2) {
       if (creatorIn !== opponentIn) {
         const winnerId = creatorIn ? m.creator_id : m.opponent_id;
         const loserId = creatorIn ? m.opponent_id : m.creator_id;
         const result = creatorIn ? 'creator_wins' : 'opponent_wins';
-        await env.DB.prepare(
-          `UPDATE matches SET status='completed', result=?, completed_at=?, updated_at=? WHERE id=?`
+        const res = await env.DB.prepare(
+          `UPDATE matches SET status='completed', result=?, completed_at=?, updated_at=?
+            WHERE id=? AND status IN ('accepted','in_progress')`
         ).bind(result, now(), now(), m.id).run();
-        await sendPush(env, winnerId, 'You won by forfeit', `Your opponent didn't submit their ${course} score in time.`, { matchId: m.id });
-        await sendPush(env, loserId, 'You forfeited', `You didn't submit your ${course} score in time.`, { matchId: m.id });
+        if ((res.meta.changes ?? 0) > 0) {
+          await sendPush(env, winnerId, 'You won by forfeit', `Your opponent didn't submit their ${course} score in time.`, { matchId: m.id });
+          await sendPush(env, loserId, 'You forfeited', `You didn't submit your ${course} score in time.`, { matchId: m.id });
+        }
       } else {
         // neither submitted
-        await env.DB.prepare(`UPDATE matches SET status='expired', updated_at=? WHERE id=?`).bind(now(), m.id).run();
-        for (const uid of unsubmitted) await sendPush(env, uid, 'Match expired', `Neither player submitted a score for ${course}.`, { matchId: m.id });
+        const res = await env.DB.prepare(
+          `UPDATE matches SET status='expired', updated_at=? WHERE id=? AND status IN ('accepted','in_progress')`
+        ).bind(now(), m.id).run();
+        if ((res.meta.changes ?? 0) > 0) {
+          for (const uid of unsubmitted) await sendPush(env, uid, 'Match expired', `Neither player submitted a score for ${course}.`, { matchId: m.id });
+        }
       }
       continue;
     }
 
-    // ── Warning (+1 day) ──
+    // ── Warning (+1 day) ── (stamp BEFORE pushing: a duplicate stamp is
+    // harmless, a missed stamp re-sends the warning every hour)
     if (daysSince === 1 && !m.forfeit_warning_at) {
-      for (const uid of unsubmitted) {
-        await sendPush(env, uid, 'Submit or forfeit', `Enter your ${course} score by tomorrow or you'll forfeit the match.`, { matchId: m.id });
+      const res = await env.DB.prepare(
+        `UPDATE matches SET forfeit_warning_at=? WHERE id=? AND forfeit_warning_at IS NULL`
+      ).bind(now(), m.id).run();
+      if ((res.meta.changes ?? 0) > 0) {
+        for (const uid of unsubmitted) {
+          await sendPush(env, uid, 'Submit or forfeit', `Enter your ${course} score by tomorrow or you'll forfeit the match.`, { matchId: m.id });
+        }
       }
-      await env.DB.prepare(`UPDATE matches SET forfeit_warning_at=? WHERE id=?`).bind(now(), m.id).run();
       continue;
     }
 
     // ── Reminder (play day, after 7pm local) ──
     if (daysSince === 0 && ref.hour >= 19 && !m.score_reminder_at) {
-      for (const uid of unsubmitted) {
-        await sendPush(env, uid, 'Post your score', `Don't forget to enter your ${course} score from today's match.`, { matchId: m.id });
+      const res = await env.DB.prepare(
+        `UPDATE matches SET score_reminder_at=? WHERE id=? AND score_reminder_at IS NULL`
+      ).bind(now(), m.id).run();
+      if ((res.meta.changes ?? 0) > 0) {
+        for (const uid of unsubmitted) {
+          await sendPush(env, uid, 'Post your score', `Don't forget to enter your ${course} score from today's match.`, { matchId: m.id });
+        }
       }
-      await env.DB.prepare(`UPDATE matches SET score_reminder_at=? WHERE id=?`).bind(now(), m.id).run();
     }
   }
 }

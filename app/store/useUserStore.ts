@@ -11,7 +11,8 @@ export interface User {
   handicap_updated_at: string | null;
   profile_photo_url: string | null;
   home_course_id: string | null;
-  expo_push_token: string | null;
+  // 0/1 from SQLite — the raw push token never leaves the server.
+  push_enabled: number;
   created_at: string;
   updated_at: string;
 }

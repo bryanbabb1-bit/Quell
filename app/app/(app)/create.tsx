@@ -118,8 +118,10 @@ export default function CreateMatchScreen() {
   const doCreate = async (payload: CreateMatchInput) => {
     setSubmitting(true);
     try {
-      await api.createMatch(payload);
-      router.back();
+      const created = await api.createMatch(payload);
+      // Land on the new match so it's obvious it posted (back would silently
+      // drop them on Discovery with no confirmation).
+      router.replace(`/(app)/match/${created.id}`);
     } catch (e: any) {
       Alert.alert('Could not post', e?.message ?? 'Please try again.');
     } finally {

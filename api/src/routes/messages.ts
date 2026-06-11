@@ -49,8 +49,16 @@ async function listMessages(auth: AuthContext, env: Env, matchId: string): Promi
 
 async function sendMessage(auth: AuthContext, env: Env, matchId: string, request: Request): Promise<Response> {
   const body = await parseBody(request);
-  // A message is either text or a GIF (a Giphy CDN url).
+  // A message is either text or a GIF (a Giphy CDN url). Allowlist the host —
+  // an arbitrary URL here gets rendered by the other player's client.
   const gifUrl = optionalString(body.gif_url, 'gif_url', 1024);
+  if (gifUrl) {
+    let host = '';
+    try { host = new URL(gifUrl).hostname; } catch { /* fall through to reject */ }
+    if (!/^media\d*\.giphy\.com$/.test(host) || !gifUrl.startsWith('https://')) {
+      return error('gif_url must be a Giphy CDN URL', 400);
+    }
+  }
   const text = gifUrl ? (optionalString(body.body, 'body', 2000) ?? '') : requireString(body.body, 'body', 2000);
 
   const id = newId();

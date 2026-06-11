@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,12 +20,40 @@ export default function PlayerScreen() {
   const { isFavorite, toggle: toggleFav, load: loadFavs } = useFavorites();
   const [p, setP] = useState<PlayerProfile | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     try { setErr(null); setP(await api.getPlayer(id)); } catch (e: any) { setErr(e?.message ?? 'Could not load this player.'); }
+    api.getBlocks().then((r) => setBlocked(r.blocked.includes(id))).catch(() => {});
   }, [api, id]);
   useEffect(() => { load(); loadFavs(); }, [load, loadFavs]);
+
+  const toggleBlock = () => {
+    if (!p) return;
+    if (blocked) {
+      api.unblockUser(p.user_id).then(() => setBlocked(false)).catch(() => {});
+      return;
+    }
+    Alert.alert(`Block ${p.name.split(' ')[0]}?`, "You won't see each other's matches, and neither of you can challenge the other.", [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Block', style: 'destructive', onPress: () => api.blockUser(p.user_id).then(() => setBlocked(true)).catch(() => {}) },
+    ]);
+  };
+
+  const report = () => {
+    if (!p) return;
+    const send = (reason: 'spam' | 'abuse' | 'cheating') =>
+      api.reportUser({ reported_id: p.user_id, reason })
+        .then(() => Alert.alert('Report sent', "Thanks — we'll take a look."))
+        .catch(() => Alert.alert('Could not send', 'Try again in a moment.'));
+    Alert.alert(`Report ${p.name.split(' ')[0]}`, 'What happened?', [
+      { text: 'Spam', onPress: () => send('spam') },
+      { text: 'Abusive behavior', onPress: () => send('abuse') },
+      { text: 'Cheating', onPress: () => send('cheating') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   if (err) {
     return <SafeAreaView style={styles.safe} edges={['bottom']}><ErrorState message={err} onRetry={load} /></SafeAreaView>;
@@ -84,10 +112,25 @@ export default function PlayerScreen() {
 
         {!p.is_me ? (
           <Button
-            title={`Challenge ${p.name.split(' ')[0]}`}
+            title={blocked ? 'Blocked' : `Challenge ${p.name.split(' ')[0]}`}
             icon="flash"
+            disabled={blocked}
             onPress={() => { haptics.light(); router.push(`/(app)/create?opponent_id=${p.user_id}&opponent_name=${encodeURIComponent(p.name)}`); }}
           />
+        ) : null}
+
+        {/* Safety actions — required for a UGC app (block + report). */}
+        {!p.is_me ? (
+          <View style={styles.safetyRow}>
+            <TouchableOpacity style={styles.safetyBtn} onPress={toggleBlock} accessibilityRole="button" accessibilityLabel={blocked ? 'Unblock player' : 'Block player'}>
+              <Ionicons name={blocked ? 'lock-open-outline' : 'remove-circle-outline'} size={16} color={c.muted} />
+              <Text style={styles.safetyText}>{blocked ? 'Unblock' : 'Block'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.safetyBtn} onPress={report} accessibilityRole="button" accessibilityLabel="Report player">
+              <Ionicons name="flag-outline" size={16} color={c.muted} />
+              <Text style={styles.safetyText}>Report</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -127,5 +170,8 @@ function makeStyles(c: Palette) {
     tone_muted: { color: c.muted },
     tone_text: { color: c.text },
     note: { ...t.caption, color: c.muted },
+    safetyRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.lg, marginTop: spacing.sm },
+    safetyBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+    safetyText: { ...t.caption, color: c.muted },
   });
 }

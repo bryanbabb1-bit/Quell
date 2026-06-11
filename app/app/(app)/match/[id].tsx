@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Modal,
 } from 'react-native';
@@ -57,16 +57,20 @@ export default function MatchDetailScreen() {
     }
   }, [api, id, userId]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
   // While a match is live, poll so it flips to "Reveal ready" on its own the
-  // moment the opponent submits — no manual refresh needed.
-  useEffect(() => {
-    const s = match?.status;
-    if (s !== 'accepted' && s !== 'in_progress') return;
-    const t = setInterval(() => { load(); }, 5000);
+  // moment the opponent submits. Focus-scoped: the interval dies when the
+  // player navigates away (score entry, messages) instead of polling behind
+  // the pushed screen. 10s is plenty — push notifies the real event.
+  const statusRef = useRef<string | undefined>(undefined);
+  statusRef.current = match?.status;
+  useFocusEffect(useCallback(() => {
+    load();
+    const t = setInterval(() => {
+      const s = statusRef.current;
+      if (s === 'accepted' || s === 'in_progress') load();
+    }, 10000);
     return () => clearInterval(t);
-  }, [match?.status, load]);
+  }, [load]));
 
   // Re-post the same matchup as a fresh open match (today's date).
   const rematch = async () => {

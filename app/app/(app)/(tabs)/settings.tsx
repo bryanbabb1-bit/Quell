@@ -20,7 +20,8 @@ export default function SettingsScreen() {
   const api = useApi();
   const user = useUserStore((s) => s.user);
   const [notifBusy, setNotifBusy] = useState(false);
-  const [notifOn, setNotifOn] = useState(!!user?.expo_push_token);
+  const [notifOn, setNotifOn] = useState(!!user?.push_enabled);
+  const [deleting, setDeleting] = useState(false);
 
   const toggleNotifications = async (v: boolean) => {
     setNotifBusy(true);
@@ -53,6 +54,28 @@ export default function SettingsScreen() {
     Alert.alert('Sign out', 'Sign out of Foretera?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+    ]);
+  };
+
+  // App Store 5.1.1(v): account deletion must be available in-app. Two-step
+  // confirm — this is permanent (Clerk account + profile are gone; completed
+  // match results remain, anonymized).
+  const confirmDelete = () => {
+    Alert.alert('Delete your account?', 'This permanently deletes your account and profile. Completed match results stay, without your name. This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete account', style: 'destructive', onPress: async () => {
+          setDeleting(true);
+          try {
+            await api.deleteMe();
+            await signOut();
+          } catch (e: any) {
+            Alert.alert('Could not delete', e?.message ?? 'Try again in a moment.');
+          } finally {
+            setDeleting(false);
+          }
+        },
+      },
     ]);
   };
 
@@ -115,6 +138,10 @@ export default function SettingsScreen() {
           <TouchableOpacity style={[styles.row, styles.rowDivider]} onPress={confirmSignOut} activeOpacity={0.7}>
             <Ionicons name="log-out-outline" size={20} color={c.loss} />
             <Text style={[styles.rowLabel, { color: c.loss }]}>Sign out</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.row, styles.rowDivider]} onPress={confirmDelete} disabled={deleting} activeOpacity={0.7}>
+            <Ionicons name="trash-outline" size={20} color={c.loss} />
+            <Text style={[styles.rowLabel, { color: c.loss }]}>{deleting ? 'Deleting…' : 'Delete account'}</Text>
           </TouchableOpacity>
         </View>
 

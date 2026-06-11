@@ -7,6 +7,7 @@ import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { useCourses } from '@/store/useCourseStore';
 import { useUserStore } from '@/store/useUserStore';
 import { CourseSelect } from '@/components/CourseSelect';
 import { Avatar, EmptyState } from '@/components/ui';
@@ -60,15 +61,15 @@ export default function FeedScreen() {
   const [error, setError] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
 
-  // Default the feed to the player's home course (once it's resolved).
+  // Default the feed to the player's home course (once the catalog resolves).
+  const { courses, load: loadCourses } = useCourses();
+  useEffect(() => { loadCourses(); }, [loadCourses]);
   useEffect(() => {
     const hid = user?.home_course_id;
-    if (!hid || course) return;
-    api.getCourses().then((r) => {
-      const n = r.courses.find((x) => x.id === hid)?.name ?? null;
-      if (n) setCourse(n);
-    }).catch(() => {});
-  }, [user, api, course]);
+    if (!hid || course || !courses) return;
+    const n = courses.find((x) => x.id === hid)?.name ?? null;
+    if (n) setCourse(n);
+  }, [user, courses, course]);
 
   const load = useCallback(async () => {
     if (!course) { setLoading(false); return; }
@@ -89,6 +90,9 @@ export default function FeedScreen() {
   const live = rows.filter((m) => m.status === 'accepted' || m.status === 'in_progress');
   const done = rows.filter((m) => m.status === 'completed');
   const onToday = date === isoToday();
+  // Matches can only be posted 14 days out — navigating past that is dead air.
+  const maxDate = shiftIso(isoToday(), 14);
+  const atMax = date >= maxDate;
 
   const onPickCourse = (c: CourseSummary | null) => {
     setCourse(c?.name ?? null);
@@ -113,7 +117,12 @@ export default function FeedScreen() {
 
       {/* Date navigator */}
       <View style={styles.dateBar}>
-        <TouchableOpacity hitSlop={10} onPress={() => { haptics.select(); setDate((d) => shiftIso(d, -1)); }}>
+        <TouchableOpacity
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
+          onPress={() => { haptics.select(); setDate((d) => shiftIso(d, -1)); }}
+        >
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.dateMid}>
@@ -124,8 +133,14 @@ export default function FeedScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity hitSlop={10} onPress={() => { haptics.select(); setDate((d) => shiftIso(d, 1)); }}>
-          <Ionicons name="chevron-forward" size={22} color={colors.text} />
+        <TouchableOpacity
+          hitSlop={10}
+          disabled={atMax}
+          accessibilityRole="button"
+          accessibilityLabel="Next day"
+          onPress={() => { haptics.select(); setDate((d) => shiftIso(d, 1)); }}
+        >
+          <Ionicons name="chevron-forward" size={22} color={atMax ? colors.border : colors.text} />
         </TouchableOpacity>
       </View>
 

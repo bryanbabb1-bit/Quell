@@ -111,7 +111,7 @@ async function submit(auth: AuthContext, env: Env, matchId: string, request: Req
     const settled = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
     // Only claim completion if the engine actually settled it (course data present).
     if (settled?.status === 'completed') {
-      await sendPush(env, otherId, 'Match result is ready', `${who} finished — open Quell to see how it played out.`, { matchId });
+      await sendPush(env, otherId, 'Match result is ready', `${who} finished — open Foretera to see how it played out.`, { matchId });
       return json({ status: 'completed', match: settled });
     }
     return json({ status: 'waiting_on_opponent', match: settled });
@@ -205,8 +205,12 @@ async function settle(env: Env, match: Record<string, any>): Promise<void> {
     opponentTee.holes
   );
 
+  // Guarded: two players submitting at the same moment can both reach settle();
+  // only the first write wins — the second sees 0 changes and the re-fetch picks
+  // up the already-settled row.
   await env.DB.prepare(
-    `UPDATE matches SET result = ?, match_progression = ?, status = 'completed', completed_at = ?, updated_at = ? WHERE id = ?`
+    `UPDATE matches SET result = ?, match_progression = ?, status = 'completed', completed_at = ?, updated_at = ?
+      WHERE id = ? AND status != 'completed'`
   ).bind(result.final_result, JSON.stringify(result), now(), now(), match.id).run();
 }
 
@@ -228,10 +232,15 @@ async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Res
   // Lazy settle: if both cards are in but the match was never computed (e.g. it
   // had no tee linked at submit time, since fixed), settle it now so the result
   // surfaces instead of dead-ending on a stuck in_progress match.
-  if (!match.match_progression && match.tee_id) {
+  if (match.status !== 'completed' && match.tee_id) {
     await settle(env, match);
     match = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
     if (!match) return error('Match not found', 404);
+  }
+  // Cards stay sealed until the match is actually settled — never serve raw
+  // scorecards for a still-live match (the whole point of the hidden-entry lock).
+  if (match.status !== 'completed') {
+    return error('The result is not ready yet', 409);
   }
 
   const [creatorCard, opponentCard, creatorUser, opponentUser] = await Promise.all([

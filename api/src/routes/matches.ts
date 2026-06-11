@@ -95,8 +95,10 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
     `SELECT m.*, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
             u.handicap AS creator_handicap_index, u.profile_photo_url AS creator_photo_url
        FROM matches m JOIN users u ON u.id = m.creator_id
-      WHERE m.status = 'open' AND m.creator_id != ? AND m.play_date >= ?`;
-  const binds: unknown[] = [auth.userId, today];
+      WHERE m.status = 'open' AND m.creator_id != ? AND m.play_date >= ?
+        AND m.creator_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
+        AND m.creator_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)`;
+  const binds: unknown[] = [auth.userId, today, auth.userId, auth.userId];
 
   if (me?.handicap != null && !showAll) {
     sql += ' AND ? BETWEEN m.hcp_range_min AND m.hcp_range_max';
@@ -110,8 +112,9 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
     sql += ' AND m.play_date <= ?';
     binds.push(untilDate);
   }
-  // Specific days the player can play (the "When" multi-select). Validated dates.
-  const qpDays = (url.searchParams.get('days') ?? '').split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+  // Specific days the player can play (the "When" multi-select). Validated dates,
+  // capped so a hostile caller can't blow out the bind-parameter budget.
+  const qpDays = (url.searchParams.get('days') ?? '').split(',').map((s) => s.trim()).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s)).slice(0, 14);
   if (qpDays.length) {
     sql += ` AND m.play_date IN (${qpDays.map(() => '?').join(',')})`;
     binds.push(...qpDays);
@@ -161,6 +164,20 @@ async function create(auth: AuthContext, request: Request, env: Env): Promise<Re
   if (hcp_range_min > hcp_range_max) {
     return error('hcp_range_min must be <= hcp_range_max', 400);
   }
+  // Realistic WHS bounds — also stops a -9999..9999 range that would match every
+  // player in discovery.
+  if (hcp_range_min < -10 || hcp_range_max > 54) {
+    return error('Handicap range must be between -10 and 54', 400);
+  }
+
+  // Cap how many unresolved posts one player can have — bounds challenge/post
+  // spam beyond the global rate limit.
+  const openCount = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM matches WHERE creator_id = ? AND status IN ('open','pending')`
+  ).bind(auth.userId).first<{ n: number }>();
+  if ((openCount?.n ?? 0) >= 10) {
+    return error('You already have 10 open matches — cancel one first', 429);
+  }
 
   // Visibility (optional; defaults to private). Public matches surface in the
   // course feed once they're being played.
@@ -176,6 +193,11 @@ async function create(auth: AuthContext, request: Request, env: Env): Promise<Re
     if (opponent_id === auth.userId) return error('You cannot challenge yourself', 400);
     const opp = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(opponent_id).first();
     if (!opp) return error('Unknown opponent', 400);
+    // A block in either direction kills direct challenges.
+    const blocked = await env.DB.prepare(
+      'SELECT 1 FROM blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)'
+    ).bind(auth.userId, opponent_id, opponent_id, auth.userId).first();
+    if (blocked) return error('You cannot challenge this player', 403);
     status = 'pending';
   }
 
@@ -251,6 +273,18 @@ async function getOne(auth: AuthContext, env: Env, matchId: string): Promise<Res
     return error('Match not found', 404);
   }
 
+  // Non-participants get a display-safe projection: no handicap indexes, no
+  // stakes, no hole-by-hole progression, no scorecard ids. (The reveal endpoint
+  // separately serves public COMPLETED matches in full — that's the deliberate
+  // spectator surface; this guards casual detail reads.)
+  if (!isParticipant) {
+    for (const k of ['creator_handicap', 'opponent_handicap', 'stakes', 'match_progression',
+                     'creator_scorecard_id', 'opponent_scorecard_id', 'score_reminder_at',
+                     'forfeit_warning_at', 'nudge_last_sent_at'] as const) {
+      match[k] = null;
+    }
+  }
+
   // Derived display names so the client can label the Players card with real
   // names instead of "creator/opponent".
   const fullName = (f: unknown, l: unknown): string | null => {
@@ -282,6 +316,12 @@ async function accept(auth: AuthContext, env: Env, matchId: string): Promise<Res
   const isOpen = match.status === 'open';
   const isMyChallenge = match.status === 'pending' && match.opponent_id === auth.userId;
   if (!isOpen && !isMyChallenge) return error('This match can no longer be accepted', 409);
+
+  // A block in either direction means these two never get matched.
+  const blocked = await env.DB.prepare(
+    'SELECT 1 FROM blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)'
+  ).bind(auth.userId, match.creator_id, match.creator_id, auth.userId).first();
+  if (blocked) return error('This match can no longer be accepted', 409);
 
   const [creator, opponent] = await Promise.all([
     env.DB.prepare('SELECT handicap FROM users WHERE id = ?').bind(match.creator_id).first<{ handicap: number | null }>(),
@@ -410,6 +450,14 @@ async function nudge(auth: AuthContext, env: Env, matchId: string): Promise<Resp
   const targetSubmitted = isCreator ? !!match.opponent_scorecard_id : !!match.creator_scorecard_id;
   if (targetSubmitted) return json({ ok: false, reason: 'already_submitted' });
 
+  // One nudge per hour per match — bounds push spam.
+  if (match.nudge_last_sent_at && Date.now() - Date.parse(match.nudge_last_sent_at) < 3_600_000) {
+    return json({ ok: false, reason: 'cooldown' });
+  }
+  // Stamp BEFORE pushing so a crash mid-push can't re-arm the nudge.
+  await env.DB.prepare('UPDATE matches SET nudge_last_sent_at = ? WHERE id = ?')
+    .bind(now(), matchId).run();
+
   const me = await env.DB.prepare('SELECT first_name FROM users WHERE id = ?')
     .bind(auth.userId).first<{ first_name: string | null }>();
   const who = me?.first_name?.trim() || 'Your opponent';
@@ -426,7 +474,20 @@ async function cancel(auth: AuthContext, env: Env, matchId: string): Promise<Res
   if (match.status !== 'open' && match.status !== 'accepted' && match.status !== 'pending') {
     return error(`Cannot cancel a ${match.status} match`, 409);
   }
-  await setStatus(env, matchId, 'cancelled');
+  // Once anyone's card is in the result is forming — cancelling would orphan a
+  // submitted round.
+  if (match.creator_scorecard_id || match.opponent_scorecard_id) {
+    return error('Scores are in — the match can no longer be cancelled', 409);
+  }
+  const ok = await setStatus(env, matchId, 'cancelled', ['open', 'accepted', 'pending']);
+  if (!ok) return error('This match just changed — reload and try again', 409);
+  // The opponent agreed to play — tell them it's off.
+  if (match.opponent_id && match.status === 'accepted') {
+    const me = await env.DB.prepare('SELECT first_name FROM users WHERE id = ?')
+      .bind(auth.userId).first<{ first_name: string | null }>();
+    await sendPush(env, match.opponent_id, 'Match cancelled',
+      `${me?.first_name?.trim() || 'Your opponent'} cancelled your match at ${match.course_name}.`, { matchId });
+  }
   const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
   return json(updated);
 }
@@ -443,7 +504,13 @@ async function decline(auth: AuthContext, env: Env, matchId: string): Promise<Re
   const okAccepted = match.status === 'accepted' && match.opponent_id === auth.userId;
   const okChallenge = match.status === 'pending' && match.opponent_id === auth.userId;
   if (!okAccepted && !okChallenge) return error(`Cannot decline a ${match.status} match`, 409);
-  await setStatus(env, matchId, 'declined');
+  const ok = await setStatus(env, matchId, 'declined', ['accepted', 'pending']);
+  if (!ok) return error('This match just changed — reload and try again', 409);
+  // Tell the creator their match/challenge was declined.
+  const me = await env.DB.prepare('SELECT first_name FROM users WHERE id = ?')
+    .bind(auth.userId).first<{ first_name: string | null }>();
+  await sendPush(env, match.creator_id, okChallenge ? 'Challenge declined' : 'Opponent backed out',
+    `${me?.first_name?.trim() || 'Your opponent'} ${okChallenge ? 'declined your challenge' : 'backed out of your match'} at ${match.course_name}.`, { matchId });
   const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
   return json(updated);
 }
@@ -499,9 +566,11 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
        LEFT JOIN users ou ON ou.id = m.opponent_id
       WHERE m.visibility = 'public' AND m.course_name = ? AND m.play_date = ?
         AND m.status IN ('accepted', 'in_progress', 'completed')
+        AND m.creator_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
+        AND (m.opponent_id IS NULL OR m.opponent_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?))
       ORDER BY (m.status = 'completed') ASC, m.play_time ASC, m.created_at ASC
       LIMIT 100`
-  ).bind(course, date).all<Record<string, any>>();
+  ).bind(course, date, auth.userId, auth.userId).all<Record<string, any>>();
 
   const name = (f: unknown, l: unknown): string | null => {
     const n = [f, l].filter((s) => typeof s === 'string' && (s as string).trim()).join(' ').trim();
@@ -536,7 +605,12 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
   return json({ matches: rows });
 }
 
-async function setStatus(env: Env, matchId: string, status: string): Promise<void> {
-  await env.DB.prepare('UPDATE matches SET status = ?, updated_at = ? WHERE id = ?')
-    .bind(status, now(), matchId).run();
+// Guarded transition: only fires while the row is still in one of
+// `fromStatuses`, so a racing settle/cancel/decline can't stomp a terminal
+// state. Returns whether the transition actually happened.
+async function setStatus(env: Env, matchId: string, status: string, fromStatuses: string[]): Promise<boolean> {
+  const res = await env.DB.prepare(
+    `UPDATE matches SET status = ?, updated_at = ? WHERE id = ? AND status IN (${fromStatuses.map(() => '?').join(',')})`
+  ).bind(status, now(), matchId, ...fromStatuses).run();
+  return (res.meta.changes ?? 0) > 0;
 }

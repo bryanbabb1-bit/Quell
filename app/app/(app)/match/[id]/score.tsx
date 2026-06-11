@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
@@ -31,6 +31,9 @@ export default function ScoreEntryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [scores, setScores] = useState<Record<number, number>>({});
+  // Seed the par baseline ONCE — a re-focus (backgrounding the app, a phone
+  // call) must never wipe scores the player already typed in.
+  const seeded = useRef(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -42,9 +45,12 @@ export default function ScoreEntryScreen() {
       setMyStrokes(setup.my_strokes);
       setParTotal(setup.par_total);
       // Start each hole at par (or a neutral baseline when there's no course data).
-      const init: Record<number, number> = {};
-      for (const h of setup.holes) init[h.hole] = h.par ?? FALLBACK_SCORE;
-      setScores(init);
+      if (!seeded.current) {
+        seeded.current = true;
+        const init: Record<number, number> = {};
+        for (const h of setup.holes) init[h.hole] = h.par ?? FALLBACK_SCORE;
+        setScores(init);
+      }
     } catch (e: any) {
       setError(e?.message ?? 'Could not load this match.');
     } finally {
@@ -70,6 +76,20 @@ export default function ScoreEntryScreen() {
   const toPar = parTotal != null ? grossTotal - parTotal : null;
 
   const submit = async () => {
+    if (!match || submitting) return;
+    // A locked card is destroyed by a re-submit — make that deliberate.
+    const mySubmitted = match.creator_id === userId ? !!match.creator_scorecard_id : !!match.opponent_scorecard_id;
+    if (mySubmitted) {
+      Alert.alert('Overwrite your scores?', 'You already submitted this card. Submitting again replaces it.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Overwrite', style: 'destructive', onPress: () => doSubmit() },
+      ]);
+      return;
+    }
+    doSubmit();
+  };
+
+  const doSubmit = async () => {
     if (!match || submitting) return;
     const hole_scores: HoleEntry[] = holesInfo.map((h) => ({ hole: h.hole, gross: scores[h.hole] ?? FALLBACK_SCORE }));
     haptics.medium();

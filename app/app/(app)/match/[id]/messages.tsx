@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
@@ -50,11 +50,13 @@ export default function MessagesScreen() {
     }
   }, [api, id]);
 
-  useEffect(() => {
+  // Focus-scoped poll — the thread is pushed on the stack, so a plain effect
+  // would keep hammering /messages after the player navigates back.
+  useFocusEffect(useCallback(() => {
     load();
     const t = setInterval(load, POLL_MS);
     return () => clearInterval(t);
-  }, [load]);
+  }, [load]));
 
   const appendAndScroll = (msg: Message) => {
     setMessages((prev) => [...prev, msg]);

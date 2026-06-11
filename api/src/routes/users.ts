@@ -4,17 +4,29 @@ import { json, error } from '../lib/response';
 import { now } from '../lib/id';
 import { parseBody, optionalString, optionalNumber } from '../lib/validate';
 
+// The profile shape the client gets. Explicit columns — never SELECT * — so a
+// future internal column can't silently leak. The raw push token is write-only
+// (a token alone lets anyone push to the device); the client only needs to know
+// whether one is registered.
+const ME_COLUMNS = `id, email, first_name, last_name, ghin_number, handicap,
+  handicap_updated_at, profile_photo_url, home_course_id, timezone,
+  (expo_push_token IS NOT NULL) AS push_enabled, created_at, updated_at`;
+
+async function selectMe(env: Env, userId: string) {
+  return env.DB.prepare(`SELECT ${ME_COLUMNS} FROM users WHERE id = ?`).bind(userId).first();
+}
+
 // GET /me — returns the current user's profile, lazily creating the row on
 // first authenticated request (same upsert-on-read pattern as TrueForecast,
 // so a freshly-signed-up Clerk user always has a backing row).
 export async function handleGetMe(auth: AuthContext, env: Env): Promise<Response> {
-  let user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(auth.userId).first();
+  let user = await selectMe(env, auth.userId);
   if (!user) {
     const ts = now();
     await env.DB.prepare(
       'INSERT INTO users (id, email, created_at, updated_at) VALUES (?, ?, ?, ?)'
     ).bind(auth.userId, auth.email, ts, ts).run();
-    user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(auth.userId).first();
+    user = await selectMe(env, auth.userId);
   }
   return json(user);
 }
@@ -34,7 +46,16 @@ export async function handleUpdateMe(auth: AuthContext, request: Request, env: E
     // Stamp when the index was last set so the app can detect a stale index.
     fields.push('handicap_updated_at = ?'); values.push(now());
   }
-  if ('profile_photo_url' in body) { fields.push('profile_photo_url = ?'); values.push(optionalString(body.profile_photo_url, 'profile_photo_url', 1024)); }
+  if ('profile_photo_url' in body) {
+    // Only OUR uploaded photos — an arbitrary URL here gets rendered by every
+    // other user's client (tracking pixel / junk injection). POST /photo is the
+    // real write path; this accepts its output or a clear.
+    const raw = optionalString(body.profile_photo_url, 'profile_photo_url', 1024);
+    if (raw !== null && !raw.startsWith(`${new URL(request.url).origin}/photos/`)) {
+      return error('profile_photo_url must be an uploaded photo', 400);
+    }
+    fields.push('profile_photo_url = ?'); values.push(raw);
+  }
   if ('expo_push_token' in body) { fields.push('expo_push_token = ?'); values.push(optionalString(body.expo_push_token, 'expo_push_token', 256)); }
   if ('home_course_id' in body) { fields.push('home_course_id = ?'); values.push(optionalString(body.home_course_id, 'home_course_id', 64)); }
   if ('timezone' in body) { fields.push('timezone = ?'); values.push(optionalString(body.timezone, 'timezone', 64)); }
@@ -46,8 +67,33 @@ export async function handleUpdateMe(auth: AuthContext, request: Request, env: E
   values.push(auth.userId);
 
   await env.DB.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
-  const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(auth.userId).first();
+  const user = await selectMe(env, auth.userId);
   return json(user);
+}
+
+// DELETE /me — full account deletion (App Store 5.1.1(v) requires it in-app).
+// Deletes the Clerk user (kills all sessions), then scrubs our rows: profile,
+// favorites (both directions), blocks, push token. Matches/scorecards STAY —
+// results belong to both players — but with the users row gone every JOIN
+// resolves the name to "A golfer", which is the anonymization.
+export async function handleDeleteMe(auth: AuthContext, env: Env): Promise<Response> {
+  // Clerk first: if this fails the account still works and the user can retry.
+  const resp = await fetch(`https://api.clerk.com/v1/users/${auth.userId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${env.CLERK_SECRET_KEY}` },
+  });
+  // 404 = already gone from Clerk; treat as success so cleanup still runs.
+  if (!resp.ok && resp.status !== 404) {
+    console.error('Clerk user delete failed', resp.status, await resp.text().catch(() => ''));
+    return error('Could not delete your account — try again', 502);
+  }
+
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM favorites WHERE user_id = ? OR favorite_user_id = ?').bind(auth.userId, auth.userId),
+    env.DB.prepare('DELETE FROM blocks WHERE blocker_id = ? OR blocked_id = ?').bind(auth.userId, auth.userId),
+    env.DB.prepare('DELETE FROM users WHERE id = ?').bind(auth.userId),
+  ]);
+  return json({ deleted: true });
 }
 
 type Outcome = 'win' | 'loss' | 'tie';

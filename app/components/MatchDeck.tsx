@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Dimensions, View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useWindowDimensions, View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -15,9 +15,6 @@ import { haptics } from '@/lib/haptics';
 import { Avatar } from '@/components/ui';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
-const { width } = Dimensions.get('window');
-const THRESHOLD = width * 0.25;
-const OFF = width * 1.4;
 const SAVE_YELLOW = '#F5C518'; // a saved/starred match fills yellow (not theme green)
 
 const creatorName = (m: DiscoveryMatch) =>
@@ -36,16 +33,26 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { isFavorite, toggle: toggleFav } = useFavorites();
+  // Live window width (not module-time) so swipe thresholds survive rotation.
+  const { width } = useWindowDimensions();
+  const THRESHOLD = width * 0.25;
+  const OFF = width * 1.4;
   const [index, setIndex] = useState(0);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
 
-  // Fresh list (a reload) → restart the deck.
+  // Restart the deck only when the CONTENT changes — focus-refetches return a
+  // new array of the same matches, and snapping back to card 0 mid-browse is
+  // jarring.
+  const deckKey = useMemo(() => matches.map((m) => m.id).join(','), [matches]);
+  const lastKey = useRef(deckKey);
   useEffect(() => {
+    if (lastKey.current === deckKey) return;
+    lastKey.current = deckKey;
     setIndex(0);
     tx.value = 0;
     ty.value = 0;
-  }, [matches]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [deckKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const current: DiscoveryMatch | undefined = matches[index];
   const next: DiscoveryMatch | undefined = matches[index + 1];
@@ -160,15 +167,25 @@ export function MatchDeck({ matches, onAccept, onPass, onReload }: {
       </View>
 
       <View style={styles.controls}>
-        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.passCtrl]} onPress={passBtn} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={[styles.ctrlBtn, styles.ctrlSide, styles.passCtrl]} onPress={passBtn} activeOpacity={0.85}
+          accessibilityRole="button" accessibilityLabel="Pass on this match"
+        >
           <Ionicons name="close" size={30} color={colors.loss} />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlMain]} onPress={acceptBtn} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={[styles.ctrlBtn, styles.ctrlMain]} onPress={acceptBtn} activeOpacity={0.85}
+          accessibilityRole="button" accessibilityLabel="Accept this match"
+        >
           <LinearGradient colors={[colors.accent, colors.accentDark]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ctrlFill}>
             <Ionicons name="flag" size={34} color={colors.onAccent} />
           </LinearGradient>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.ctrlBtn, styles.ctrlSide, styles.saveCtrl, faved && styles.saveCtrlOn]} onPress={favBtn} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={[styles.ctrlBtn, styles.ctrlSide, styles.saveCtrl, faved && styles.saveCtrlOn]} onPress={favBtn} activeOpacity={0.85}
+          accessibilityRole="button" accessibilityLabel={faved ? 'Remove player from favorites' : 'Favorite this player'}
+          accessibilityState={{ selected: faved }}
+        >
           <Ionicons name={faved ? 'star' : 'star-outline'} size={26} color={faved ? SAVE_YELLOW : colors.muted} />
         </TouchableOpacity>
       </View>

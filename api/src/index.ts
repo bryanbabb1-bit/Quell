@@ -3,7 +3,8 @@ import { json, error } from './lib/response';
 import { now } from './lib/id';
 import { ValidationError } from './lib/validate';
 import type { Env } from './types';
-import { handleGetMe, handleUpdateMe, handleGetMyRecord } from './routes/users';
+import { handleGetMe, handleUpdateMe, handleGetMyRecord, handleDeleteMe } from './routes/users';
+import { handleBlocks, handleReports } from './routes/blocks';
 import { handleLeaderboard } from './routes/leaderboard';
 import { handleMatches } from './routes/matches';
 import { handleScorecards } from './routes/scorecards';
@@ -56,7 +57,7 @@ async function handleRequest(
 
   // ── Public ──
   if (root === 'health' && method === 'GET') {
-    return { response: json({ ok: true, timestamp: now(), env: env.ENVIRONMENT }), userId: null };
+    return { response: json({ ok: true, timestamp: now() }), userId: null };
   }
   if (root === 'photos' && method === 'GET') {
     return { response: await servePhoto(env, segments), userId: null };
@@ -83,6 +84,8 @@ async function handleRequest(
       response = await handleGetMe(auth, env);
     } else if (url.pathname === '/me' && method === 'PATCH') {
       response = await handleUpdateMe(auth, request, env);
+    } else if (url.pathname === '/me' && method === 'DELETE') {
+      response = await handleDeleteMe(auth, env);
     } else if (url.pathname === '/me/record' && method === 'GET') {
       response = await handleGetMyRecord(auth, env);
     } else {
@@ -109,6 +112,10 @@ async function handleRequest(
     response = await handleFavorites(request, auth, env, segments);
   } else if (root === 'players' && method === 'GET') {
     response = await handlePlayer(auth, env, segments);
+  } else if (root === 'blocks') {
+    response = await handleBlocks(request, auth, env, segments);
+  } else if (root === 'reports') {
+    response = await handleReports(request, auth, env);
   } else if (root === 'photo' && method === 'POST') {
     response = await handleUploadPhoto(auth, env, request);
   } else if (root === 'gifs' && method === 'GET') {

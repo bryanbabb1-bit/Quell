@@ -8,6 +8,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
+import { useCourses } from '@/store/useCourseStore';
 import { useUserStore } from '@/store/useUserStore';
 import { useFavorites } from '@/store/useFavoritesStore';
 import { SkeletonCard, Avatar } from '@/components/ui';
@@ -33,15 +34,16 @@ export default function RecordScreen() {
   useEffect(() => { loadFavs(); }, [loadFavs]);
 
   // Resolve the home course name and default the board to home-course standings.
+  const { courses, load: loadCourses } = useCourses();
+  useEffect(() => { loadCourses(); }, [loadCourses]);
   useEffect(() => {
     const hid = user?.home_course_id;
     if (!hid) { setHomeName(null); setScope('global'); return; }
-    api.getCourses().then((r) => {
-      const n = r.courses.find((x) => x.id === hid)?.name ?? null;
-      setHomeName(n);
-      if (n) setScope('home');
-    }).catch(() => {});
-  }, [user, api]);
+    if (!courses) return;
+    const n = courses.find((x) => x.id === hid)?.name ?? null;
+    setHomeName(n);
+    if (n) setScope('home');
+  }, [user, courses]);
 
   const load = useCallback(async () => {
     try {
@@ -116,7 +118,7 @@ export default function RecordScreen() {
               <TouchableOpacity
                 key={r.match_id}
                 style={[styles.resultRow, i > 0 && styles.rowDivider]}
-                onPress={() => router.push(`/(app)/match/${r.match_id}`)}
+                onPress={() => { haptics.select(); router.push(`/(app)/match/${r.match_id}`); }}
               >
                 <OutcomeChip outcome={r.outcome} />
                 <Avatar name={r.opponent_name} size={32} photoUrl={r.opponent_photo_url} />
@@ -188,7 +190,7 @@ export default function RecordScreen() {
                 style={[styles.lbRow, styles.rowDivider, e.is_me && styles.lbMine]}
                 activeOpacity={0.7}
                 disabled={e.is_me}
-                onPress={() => router.push(`/(app)/player/${e.user_id}`)}
+                onPress={() => { haptics.select(); router.push(`/(app)/player/${e.user_id}`); }}
               >
                 <Text style={styles.lbRank}>{i + 1}</Text>
                 <Avatar name={e.name} size={26} photoUrl={e.photo_url} />

@@ -40,6 +40,9 @@ export function useFavorites() {
   const setFavorited = useFavoritesStore((s) => s.setFavorited);
 
   const load = useCallback(async () => {
+    // Hydrate once — every screen mount calls load(), so without this guard the
+    // same list refetches on each navigation. Toggles keep it fresh after.
+    if (useFavoritesStore.getState().loaded) return;
     try { const r = await api.getFavorites(); setList(r.favorites); } catch { /* keep last */ }
   }, [api, setList]);
 
