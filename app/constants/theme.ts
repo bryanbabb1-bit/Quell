@@ -61,41 +61,42 @@ function pal(p: PalInput): Palette {
   };
 }
 
-// ── "CLUBHOUSE" — the look. ──────────────────────────────────────────────────
-// Deep pine canvas with WARM parchment text (editorial, not blue-tech), one
-// refined green reserved for actions + wins, championship gold for prestige,
-// and a broadcast cyan for everything LIVE/community (feed, in-progress,
-// messages). The point: each context owns a hue — the brand green is no longer
-// painted over everything.
+// ── "MEMBERS" — Black + Gold. ────────────────────────────────────────────────
+// Private-club luxury: rich black, warm ivory, champagne gold, bronze. The
+// positioning is "an exclusive golf network", not "a golf scorecard app" — so
+// the brand color is CHAMPAGNE GOLD (every other golf app owns green). Green
+// survives ONLY as the semantic win color (W = green, L = red, on any theme);
+// community/live surfaces get a silvered steel-blue so they read as their own
+// space. Think Centurion card, not GPS rangefinder.
 export const PALETTES: { id: string; name: string; colors: Palette }[] = [
   {
-    // Clubhouse — DARK (default).
+    // Members — DARK (default). Rich black + ivory + champagne.
     id: 'fairway', name: 'Dark',
     colors: pal({
       scheme: 'dark',
-      bg: '#0D1411', surface: '#16201A', surfaceRaised: '#1F2D25',
-      text: '#F2EFE6', muted: '#9CAB9E', border: '#28362D',
-      accent: '#34C878', accentDark: '#249757', accentGlow: 'rgba(52,200,120,0.13)', onAccent: '#06231A',
-      win: '#34C878', winGlow: 'rgba(52,200,120,0.15)',
-      loss: '#E5645C', lossGlow: 'rgba(229,100,92,0.14)', halve: '#C9C2B2', halveGlow: 'rgba(201,194,178,0.10)',
-      gold: '#E3B341', goldGlow: 'rgba(227,179,65,0.15)',
-      live: '#56C8D8', liveGlow: 'rgba(86,200,216,0.14)',
+      bg: '#0C0C0E', surface: '#151518', surfaceRaised: '#1F1F24',
+      text: '#F5F1E6', muted: '#A8A296', border: '#2B2B30',
+      accent: '#D4B36A', accentDark: '#B6934B', accentGlow: 'rgba(212,179,106,0.13)', onAccent: '#16120A',
+      win: '#46B17C', winGlow: 'rgba(70,177,124,0.14)',
+      loss: '#D26A5C', lossGlow: 'rgba(210,106,92,0.13)', halve: '#BCB3A0', halveGlow: 'rgba(188,179,160,0.10)',
+      gold: '#E8C87E', goldGlow: 'rgba(232,200,126,0.15)',
+      live: '#8FB3CC', liveGlow: 'rgba(143,179,204,0.13)',
     }),
   },
   {
-    // Clubhouse — LIGHT. Parchment canvas, masters green, deep gold.
+    // Members — LIGHT. The ivory membership card: warm white + bronze.
     id: 'fairway-light', name: 'Light',
     colors: pal({
       scheme: 'light',
-      bg: '#F5F3EC', surface: '#FFFFFF', surfaceRaised: '#EAE7DC',
-      text: '#1B241E', muted: '#67705F', border: '#DAD6C8',
-      accent: '#1E8E5A', accentDark: '#157146', accentGlow: 'rgba(30,142,90,0.12)', onAccent: '#FFFFFF',
-      win: '#1B8A52', winGlow: 'rgba(27,138,82,0.13)',
-      // halve must stay visible on the parchment canvas — a pale chip there
-      // fails WCAG 3:1 for UI components.
-      loss: '#C44E45', lossGlow: 'rgba(196,78,69,0.12)', halve: '#8A8674', halveGlow: 'rgba(138,134,116,0.26)',
-      gold: '#A87A1F', goldGlow: 'rgba(168,122,31,0.13)',
-      live: '#2B7FA3', liveGlow: 'rgba(43,127,163,0.12)',
+      bg: '#F6F2E9', surface: '#FFFFFF', surfaceRaised: '#ECE6D8',
+      text: '#191613', muted: '#6E6759', border: '#DCD5C3',
+      accent: '#96772B', accentDark: '#7A6021', accentGlow: 'rgba(150,119,43,0.12)', onAccent: '#FFFFFF',
+      win: '#1F7A4D', winGlow: 'rgba(31,122,77,0.12)',
+      // halve must stay visible on the ivory canvas — a pale chip there fails
+      // WCAG 3:1 for UI components.
+      loss: '#B5483C', lossGlow: 'rgba(181,72,60,0.12)', halve: '#8B8470', halveGlow: 'rgba(139,132,112,0.26)',
+      gold: '#8E6F1F', goldGlow: 'rgba(142,111,31,0.13)',
+      live: '#3E6E8E', liveGlow: 'rgba(62,110,142,0.12)',
     }),
   },
 ];

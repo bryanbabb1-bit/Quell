@@ -120,17 +120,25 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
     sql += ` AND m.play_date IN (${qpDays.map(() => '?').join(',')})`;
     binds.push(...qpDays);
   }
-  // Course: an explicit search wins; otherwise default to the home course
-  // (unless the user asked to browse everything).
+  // Course: an explicit search is a hard filter. The home course is only a
+  // SOFT preference — home-course matches sort first, everything else follows.
+  // (It used to be a hard filter, which emptied the deck for anyone whose home
+  // course had few open matches while dozens existed elsewhere.)
+  let homePref: string | null = null;
   if (qpCourse) {
     sql += ' AND m.course_name LIKE ?';
     binds.push(`%${qpCourse}%`);
   } else if (!showAll && me?.home_course_id) {
     const home = await env.DB.prepare('SELECT name FROM courses WHERE id = ?')
       .bind(me.home_course_id).first<{ name: string }>();
-    if (home?.name) { sql += ' AND m.course_name = ?'; binds.push(home.name); }
+    homePref = home?.name ?? null;
   }
-  sql += ' ORDER BY m.play_date ASC, m.created_at DESC LIMIT 100';
+  if (homePref) {
+    sql += ' ORDER BY CASE WHEN m.course_name = ? THEN 0 ELSE 1 END, m.play_date ASC, m.created_at DESC LIMIT 100';
+    binds.push(homePref);
+  } else {
+    sql += ' ORDER BY m.play_date ASC, m.created_at DESC LIMIT 100';
+  }
 
   const { results } = await env.DB.prepare(sql).bind(...binds).all();
   return json({ matches: results });

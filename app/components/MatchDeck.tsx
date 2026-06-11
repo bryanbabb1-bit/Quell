@@ -229,42 +229,27 @@ function CardBody({ m }: { m: DiscoveryMatch }) {
         pointerEvents="none"
       />
 
-      {/* Top pills: handicap (left), when (right). */}
+      {/* Top row: understated handicap + date marks (member-card, not pills). */}
       <View style={styles.topRow}>
         <View style={styles.hcpPill}>
-          <Ionicons name="golf" size={13} color={colors.accent} />
           <Text style={styles.hcpText}>{formatHandicap(m.creator_handicap_index)} HCP</Text>
         </View>
         <View style={styles.whenPill}>
-          <Ionicons name="calendar-outline" size={12} color="#FFFFFF" />
           <Text style={styles.whenText}>{formatPlayWhen(m.play_date)}</Text>
         </View>
       </View>
 
-      {/* Bottom overlay: name, course, detail chips. */}
+      {/* Bottom overlay: editorial hierarchy — name, course, a gold hairline,
+          then one quiet detail line. No bubble chips. */}
       <View style={styles.overlay}>
         <Text style={styles.nameOverlay} numberOfLines={1}>{name}</Text>
-        <View style={styles.courseRow}>
-          <Ionicons name="location-sharp" size={15} color="rgba(255,255,255,0.9)" />
-          <Text style={styles.courseOverlay} numberOfLines={1}>{m.course_name}</Text>
-        </View>
-        <View style={styles.chips}>
-          <Chip icon="flag-outline" text={MATCH_TYPE_LABELS[m.match_type]} />
-          <Chip icon="golf-outline" text={`${m.tee_color} tees`} />
-          <Chip icon="people-outline" text={`Hcp ${m.hcp_range_min}–${m.hcp_range_max}`} />
-        </View>
+        <Text style={styles.courseOverlay} numberOfLines={1}>{m.course_name}</Text>
+        <View style={styles.rule} />
+        <Text style={styles.detailLine} numberOfLines={1}>
+          {MATCH_TYPE_LABELS[m.match_type]} · {m.tee_color} tees
+          {(m.hcp_range_min > 0 || m.hcp_range_max < 54) ? ` · seeks ${m.hcp_range_min}–${m.hcp_range_max} hcp` : ''}
+        </Text>
       </View>
-    </View>
-  );
-}
-
-function Chip({ icon, text }: { icon: any; text: string }) {
-  const colors = useColors();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
-  return (
-    <View style={styles.chip}>
-      <Ionicons name={icon} size={13} color="#FFFFFF" />
-      <Text style={styles.chipText}>{text}</Text>
     </View>
   );
 }
@@ -286,20 +271,17 @@ function makeStyles(colors: Palette) {
   fallbackAvatar: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 120, opacity: 0.92 },
 
   topRow: { position: 'absolute', top: spacing.md, left: spacing.md, right: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  // Near-solid dark chip + bright white text so the handicap is unmistakable over
-  // any photo OR the accent gradient fallback. The golf icon carries the accent.
-  hcpPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.86)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
-  hcpText: { ...typography.caption, color: '#FFFFFF', fontWeight: '800', letterSpacing: 0.4, fontSize: 13.5 },
-  whenPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  whenText: { ...typography.caption, color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  // Member-card marks: black glass with a champagne hairline + gold text.
+  hcpPill: { backgroundColor: 'rgba(10,10,12,0.72)', borderWidth: 1, borderColor: 'rgba(232,200,126,0.5)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  hcpText: { ...typography.caption, color: colors.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12.5 },
+  whenPill: { backgroundColor: 'rgba(10,10,12,0.55)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  whenText: { ...typography.caption, color: 'rgba(245,241,230,0.92)', fontWeight: '700', fontSize: 12, letterSpacing: 0.4 },
 
-  overlay: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg, gap: 7 },
+  overlay: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg, gap: 6 },
   nameOverlay: { ...typography.title, color: '#FFFFFF', fontSize: 34, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } },
-  courseRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  courseOverlay: { ...typography.body, color: 'rgba(255,255,255,0.95)', fontWeight: '600', flexShrink: 1 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 5 },
-  chipText: { ...typography.caption, color: '#FFFFFF', fontWeight: '600', fontSize: 12.5 },
+  courseOverlay: { ...typography.body, color: 'rgba(245,241,230,0.92)', fontWeight: '600' },
+  rule: { width: 44, height: 1.5, backgroundColor: colors.gold, opacity: 0.9, marginVertical: 3 },
+  detailLine: { ...typography.caption, color: 'rgba(245,241,230,0.78)', fontSize: 13, letterSpacing: 0.3 },
 
   // Solid FILLED badges (not outlines) so ACCEPT/PASS read instantly over a
   // photo while swiping.
