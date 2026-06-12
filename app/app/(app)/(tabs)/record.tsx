@@ -15,7 +15,7 @@ import { useFavorites } from '@/store/useFavoritesStore';
 import { SkeletonCard, Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import { formatHandicap } from '@/lib/format';
-import type { MyRecord, LeaderboardEntry, Outcome } from '@/types';
+import type { MyRecord, LeaderboardEntry, Outcome, Rival, CourseForm } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 export default function RecordScreen() {
@@ -146,7 +146,51 @@ export default function RecordScreen() {
               </View>
             )}
           </View>
+
+          {/* Career bests — only once there's something to brag about */}
+          {record && (record.played > 0) && (
+            <View style={styles.bestsRow}>
+              <View style={styles.bestCell}>
+                <Text style={styles.bestNum}>{record.played}</Text>
+                <Text style={styles.bestLabel}>Played</Text>
+              </View>
+              <View style={styles.bestDivider} />
+              <View style={styles.bestCell}>
+                <Text style={styles.bestNum}>{record.longest_win_streak ?? 0}</Text>
+                <Text style={styles.bestLabel}>Best streak</Text>
+              </View>
+              <View style={styles.bestDivider} />
+              <View style={styles.bestCell}>
+                <Text style={styles.bestNum} numberOfLines={1}>{record.best_win?.final_delta ?? '—'}</Text>
+                <Text style={styles.bestLabel}>Biggest win</Text>
+              </View>
+            </View>
+          )}
         </View>
+
+        {/* ── Milestones — earned in gold, the rest show what's next ── */}
+        {record && record.played > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgeRow}>
+            {milestonesFor(record).map((b) => (
+              <View key={b.key} style={[styles.badge, b.earned ? styles.badgeEarned : null]}>
+                <Ionicons name={b.icon as any} size={14} color={b.earned ? colors.gold : colors.muted} />
+                <Text style={[styles.badgeText, b.earned && styles.badgeTextEarned]}>{b.label}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* ── Rivalries — your most-played head-to-heads ── */}
+        {record && (record.rivals?.length ?? 0) > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Rivalries</Text>
+            <View style={styles.card}>
+              {record.rivals!.map((r, i) => (
+                <RivalRow key={r.user_id} rival={r} divider={i > 0} colors={colors} styles={styles} />
+              ))}
+            </View>
+          </>
+        )}
 
         {/* Recent results */}
         <Text style={styles.sectionTitle}>Recent results</Text>
@@ -170,6 +214,16 @@ export default function RecordScreen() {
           </View>
         ) : (
           <Text style={styles.emptyNote}>No completed matches yet — your results will show here.</Text>
+        )}
+
+        {/* ── Course form — where you win ── */}
+        {record && (record.courses?.length ?? 0) > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Course form</Text>
+            <View style={styles.card}>
+              {record.courses!.map((c, i) => <CourseFormRow key={c.course_name} c={c} divider={i > 0} colors={colors} styles={styles} />)}
+            </View>
+          </>
         )}
 
         {/* Favorites */}
@@ -255,6 +309,75 @@ export default function RecordScreen() {
   );
 }
 
+// Milestones — derived entirely from the record rollups; no extra requests.
+function milestonesFor(record: MyRecord): { key: string; label: string; icon: string; earned: boolean }[] {
+  const longest = record.longest_win_streak ?? 0;
+  const bestMargin = Number(record.best_win?.final_delta?.match(/^(\d+)/)?.[1] ?? 0);
+  const coursesPlayed = record.courses?.length ?? 0;
+  return [
+    { key: 'first_win', label: 'First win', icon: 'trophy-outline', earned: record.wins >= 1 },
+    { key: 'five_wins', label: '5 wins', icon: 'ribbon-outline', earned: record.wins >= 5 },
+    { key: 'regular', label: '10 played', icon: 'calendar-outline', earned: record.played >= 10 },
+    { key: 'streak3', label: '3-win streak', icon: 'flame-outline', earned: longest >= 3 },
+    { key: 'statement', label: 'Won by 4+', icon: 'flash-outline', earned: bestMargin >= 4 },
+    { key: 'traveler', label: '3 courses', icon: 'map-outline', earned: coursesPlayed >= 3 },
+  ];
+}
+
+// "You lead 3–1" / "Sam leads 2–1" / "All square 2–2", halves noted separately.
+function rivalrySeriesLine(r: Rival): string {
+  const first = r.name.split(' ')[0] || r.name;
+  const base = r.wins > r.losses ? `You lead ${r.wins}–${r.losses}`
+    : r.losses > r.wins ? `${first} leads ${r.losses}–${r.wins}`
+    : `All square ${r.wins}–${r.losses}`;
+  return r.ties > 0 ? `${base} · ${r.ties} halved` : base;
+}
+
+function RivalRow({ rival, divider, colors, styles }: {
+  rival: Rival; divider: boolean; colors: ReturnType<typeof useColors>; styles: ReturnType<typeof makeStyles>;
+}) {
+  const leading = rival.wins > rival.losses;
+  const trailing = rival.losses > rival.wins;
+  return (
+    <View style={[styles.favRow, divider && styles.rowDivider]}>
+      <TouchableOpacity style={styles.favTap} activeOpacity={0.7} onPress={() => { haptics.select(); router.push(`/(app)/player/${rival.user_id}`); }}>
+        <Avatar name={rival.name} size={36} photoUrl={rival.photo_url} />
+        <View style={styles.favMid}>
+          <Text style={styles.vsName}>{rival.name}</Text>
+          <Text style={[styles.rivalSeries, leading && { color: colors.win }, trailing && { color: colors.loss }]}>
+            {rivalrySeriesLine(rival)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.challengeBtn}
+        onPress={() => { haptics.select(); router.push(`/(app)/create?opponent_id=${rival.user_id}&opponent_name=${encodeURIComponent(rival.name)}`); }}
+      >
+        <Ionicons name="flash" size={14} color={colors.onAccent} />
+        <Text style={styles.challengeBtnText}>Rematch</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function CourseFormRow({ c, divider, colors, styles }: {
+  c: CourseForm; divider: boolean; colors: ReturnType<typeof useColors>; styles: ReturnType<typeof makeStyles>;
+}) {
+  const decided = c.wins + c.losses;
+  const pct = decided > 0 ? Math.round((c.wins / decided) * 100) : 0;
+  return (
+    <View style={[styles.courseRow, divider && styles.rowDivider]}>
+      <View style={styles.courseMid}>
+        <Text style={styles.vsName} numberOfLines={1}>{c.course_name}</Text>
+        <View style={styles.courseBarTrack}>
+          <View style={[styles.courseBarFill, { width: `${pct}%` }]} />
+        </View>
+      </View>
+      <Text style={styles.courseWl}>{c.wins}–{c.losses}–{c.ties}</Text>
+    </View>
+  );
+}
+
 function OutcomeChip({ outcome }: { outcome: Outcome }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -297,6 +420,33 @@ function makeStyles(colors: Palette) {
   streakChipText: { ...typography.caption, color: colors.text, fontWeight: '700' },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   formLabel: { ...typography.caption, color: colors.muted, marginRight: 2 },
+  // Career bests strip inside the hero
+  bestsRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md,
+  },
+  bestCell: { flex: 1, alignItems: 'center', gap: 2 },
+  bestDivider: { width: 1, height: 26, backgroundColor: colors.border },
+  bestNum: { ...typography.bodySemiBold, fontSize: 18, color: colors.text },
+  bestLabel: { ...typography.caption, fontSize: 11, color: colors.muted },
+  // Milestone badges
+  badgeRow: { gap: spacing.sm, paddingRight: spacing.lg },
+  badge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6,
+  },
+  badgeEarned: { backgroundColor: colors.goldGlow, borderColor: colors.gold },
+  badgeText: { ...typography.caption, fontSize: 12, color: colors.muted },
+  badgeTextEarned: { color: colors.text, fontWeight: '700' },
+  // Rivalries
+  rivalSeries: { ...typography.caption, fontWeight: '600' },
+  // Course form
+  courseRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  courseMid: { flex: 1, gap: 6 },
+  courseBarTrack: { height: 4, borderRadius: 2, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
+  courseBarFill: { height: '100%', borderRadius: 2, backgroundColor: colors.win },
+  courseWl: { ...typography.bodySemiBold, color: colors.text, fontVariant: ['tabular-nums'] },
   formChip: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', opacity: 0.75 },
   formChipLatest: { opacity: 1, transform: [{ scale: 1.15 }] },
   formChipText: { ...typography.caption, fontSize: 11, color: colors.bg, fontWeight: '800' },

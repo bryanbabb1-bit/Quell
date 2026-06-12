@@ -4,7 +4,7 @@ import { apiJson } from '@/lib/api';
 import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
   MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
-  CourseFeedMatch, Visibility,
+  CourseFeedMatch, Visibility, OpenInvite, CoursePulse,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -120,11 +120,14 @@ export function useApi() {
       setVisibility: (id: string, visibility: Visibility) =>
         call<Match>(`/matches/${id}/visibility`, { method: 'POST', body: JSON.stringify({ visibility }) }),
 
-      // Course feed (today's public activity at a course)
-      courseFeed: (course: string, date?: string) => {
+      // Course feed — the club board: the day's public activity, upcoming open
+      // invites, and the club pulse. `today` is the device's local date so
+      // invites anchor to the player's clock, not the Worker's UTC.
+      courseFeed: (course: string, date?: string, today?: string) => {
         const q = new URLSearchParams({ course });
         if (date) q.set('date', date);
-        return call<{ matches: CourseFeedMatch[] }>(`/matches/feed?${q.toString()}`);
+        if (today) q.set('today', today);
+        return call<{ matches: CourseFeedMatch[]; open?: OpenInvite[]; pulse?: CoursePulse }>(`/matches/feed?${q.toString()}`);
       },
 
       // Scorecards

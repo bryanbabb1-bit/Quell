@@ -120,6 +120,15 @@ export async function handleGetMyRecord(auth: AuthContext, env: Env): Promise<Re
   ).bind(auth.userId, auth.userId).all<Record<string, any>>();
 
   let wins = 0, losses = 0, ties = 0;
+  // Rolled up alongside the per-match mapping: head-to-head tallies per
+  // opponent (rivalries) and per course (course form).
+  type Tally = { wins: number; losses: number; ties: number };
+  const byOpponent = new Map<string, Tally & { name: string; photo_url: string | null; last_outcome: Outcome; last_at: string | null }>();
+  const byCourse = new Map<string, Tally>();
+  const bump = (t: Tally, o: Outcome) => {
+    if (o === 'win') t.wins++; else if (o === 'loss') t.losses++; else t.ties++;
+  };
+
   const recent = (results ?? []).map((m) => {
     const amCreator = m.creator_id === auth.userId;
     const outcome: Outcome = m.result === 'tie'
@@ -130,10 +139,24 @@ export async function handleGetMyRecord(auth: AuthContext, env: Env): Promise<Re
     let final_delta: string | null = null;
     try { final_delta = m.match_progression ? JSON.parse(m.match_progression).final_delta ?? null : null; } catch { /* ignore */ }
 
+    const opponent_id = (amCreator ? m.opponent_id : m.creator_id) as string | null;
     const opponent_name = amCreator
       ? fullName(m.opp_first, m.opp_last)
       : fullName(m.creator_first, m.creator_last);
     const opponent_photo_url = (amCreator ? m.opp_photo : m.creator_photo) ?? null;
+
+    if (opponent_id) {
+      // Rows arrive newest-first, so the first sighting IS the latest meeting.
+      let r = byOpponent.get(opponent_id);
+      if (!r) {
+        r = { wins: 0, losses: 0, ties: 0, name: opponent_name, photo_url: opponent_photo_url, last_outcome: outcome, last_at: m.completed_at ?? null };
+        byOpponent.set(opponent_id, r);
+      }
+      bump(r, outcome);
+    }
+    let c = byCourse.get(m.course_name);
+    if (!c) { c = { wins: 0, losses: 0, ties: 0 }; byCourse.set(m.course_name, c); }
+    bump(c, outcome);
 
     return { match_id: m.id, course_name: m.course_name, outcome, final_delta, completed_at: m.completed_at, opponent_name, opponent_photo_url };
   });
@@ -154,9 +177,58 @@ export async function handleGetMyRecord(auth: AuthContext, env: Env): Promise<Re
     } else break;
   }
 
+  // Longest CAREER win streak (vs current_streak, which only looks at the top
+  // of the list). Scan oldest→newest; ties and losses both break it.
+  let longest_win_streak = 0;
+  let run = 0;
+  for (let i = recent.length - 1; i >= 0; i--) {
+    run = recent[i].outcome === 'win' ? run + 1 : 0;
+    if (run > longest_win_streak) longest_win_streak = run;
+  }
+
+  // Best win — the largest margin of victory. "N & M" outranks "N Up" at the
+  // same N (closing it out early is the bigger statement); All Square never
+  // appears on a win.
+  const marginOf = (delta: string | null): [number, number] => {
+    if (!delta) return [0, 0];
+    const m = delta.match(/^(\d+)(?:\s*&\s*(\d+))?/);
+    return m ? [Number(m[1]), Number(m[2] ?? 0)] : [0, 0];
+  };
+  let best_win: { match_id: string; opponent_name: string; course_name: string; final_delta: string | null; completed_at: string | null } | null = null;
+  let bestMargin: [number, number] = [0, 0];
+  for (const r of recent) {
+    if (r.outcome !== 'win') continue;
+    const m = marginOf(r.final_delta);
+    if (!best_win || m[0] > bestMargin[0] || (m[0] === bestMargin[0] && m[1] > bestMargin[1])) {
+      best_win = { match_id: r.match_id, opponent_name: r.opponent_name, course_name: r.course_name, final_delta: r.final_delta, completed_at: r.completed_at };
+      bestMargin = m;
+    }
+  }
+
+  // Rivalries — most-played opponents first, recency breaks ties.
+  const rivals = [...byOpponent.entries()]
+    .map(([user_id, r]) => ({
+      user_id, name: r.name, photo_url: r.photo_url,
+      wins: r.wins, losses: r.losses, ties: r.ties,
+      played: r.wins + r.losses + r.ties,
+      last_outcome: r.last_outcome, last_at: r.last_at,
+    }))
+    .sort((a, b) => b.played - a.played || (b.last_at ?? '').localeCompare(a.last_at ?? ''))
+    .slice(0, 3);
+
+  // Course form — most-played courses first.
+  const courses = [...byCourse.entries()]
+    .map(([course_name, t]) => ({ course_name, ...t, played: t.wins + t.losses + t.ties }))
+    .sort((a, b) => b.played - a.played)
+    .slice(0, 5);
+
   return json({
     played, wins, losses, ties, win_pct,
     current_streak: { type: streakType, count },
+    longest_win_streak,
+    best_win,
+    rivals,
+    courses,
     recent: recent.slice(0, 20),
   });
 }

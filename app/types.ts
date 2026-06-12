@@ -105,6 +105,31 @@ export interface CourseFeedMatch {
   is_mine: boolean;
 }
 
+// An open invite on the course board (GET /matches/feed `open`) — a player at
+// this course looking for a game, today onward.
+export interface OpenInvite {
+  id: string;
+  play_date: string;
+  play_time: string | null;
+  match_type: MatchType;
+  stakes: number | null;
+  hcp_range_min: number;
+  hcp_range_max: number;
+  creator_id: string;
+  creator_name: string;
+  creator_photo_url: string | null;
+  creator_handicap_index: number | null;
+  is_mine: boolean;
+}
+
+// Aggregate club activity (GET /matches/feed `pulse`) — anonymous counts.
+export interface CoursePulse {
+  week_matches: number;
+  week_players: number;
+  live_now: number;
+  open_count: number;
+}
+
 export interface Message {
   id: string;
   match_id: string;
@@ -213,6 +238,36 @@ export interface RecentResult {
   opponent_photo_url: string | null;
 }
 
+// A head-to-head rivalry rollup (most-played opponents).
+export interface Rival {
+  user_id: string;
+  name: string;
+  photo_url: string | null;
+  wins: number;
+  losses: number;
+  ties: number;
+  played: number;
+  last_outcome: Outcome;
+  last_at: string | null;
+}
+
+// Per-course W–L–H rollup.
+export interface CourseForm {
+  course_name: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  played: number;
+}
+
+export interface BestWin {
+  match_id: string;
+  opponent_name: string;
+  course_name: string;
+  final_delta: string | null;
+  completed_at: string | null;
+}
+
 export interface MyRecord {
   played: number;
   wins: number;
@@ -220,6 +275,11 @@ export interface MyRecord {
   ties: number;
   win_pct: number;
   current_streak: { type: Outcome | 'none'; count: number };
+  // Optional until the Worker deploy lands — old responses simply omit them.
+  longest_win_streak?: number;
+  best_win?: BestWin | null;
+  rivals?: Rival[];
+  courses?: CourseForm[];
   recent: RecentResult[];
 }
 

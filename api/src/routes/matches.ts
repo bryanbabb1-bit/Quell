@@ -570,16 +570,26 @@ async function setVisibility(auth: AuthContext, env: Env, matchId: string, reque
 }
 
 // ── Course feed ──────────────────────────────────────────────────────────────
-// GET /matches/feed?course=<name>&date=<YYYY-MM-DD> — the day's PUBLIC activity
-// at a course: matches being played (accepted/in_progress) and finished
-// (completed). Live matches first, then completed; private matches never appear.
-// Open matches (no opponent yet) aren't "being played", so they're excluded.
+// GET /matches/feed?course=<name>&date=<YYYY-MM-DD>&today=<YYYY-MM-DD> — the
+// course's community board:
+//   matches  the selected DAY's public activity (live + completed)
+//   open     upcoming open invites at the course — players looking for a game.
+//            Anchored on the caller's local `today`, independent of the browsed
+//            day, so the board never looks dead while invites are out.
+//   pulse    aggregate club activity (this week / live now / open invites) —
+//            counts only, no identities, so private matches can contribute.
+// Private matches never appear as rows; open matches are inherently
+// discoverable (the deck already shows them to any eligible player).
 async function courseFeed(auth: AuthContext, env: Env, request: Request): Promise<Response> {
   const url = new URL(request.url);
   const course = (url.searchParams.get('course') ?? '').trim();
   if (!course) return error('course is required', 400);
   const dateParam = url.searchParams.get('date');
   const date = (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) ? dateParam : now().slice(0, 10);
+  // The caller's LOCAL today (same reasoning as discovery's ?from): open invites
+  // for "today" must not vanish in the evening when UTC has rolled over.
+  const todayParam = url.searchParams.get('today');
+  const today = (todayParam && /^\d{4}-\d{2}-\d{2}$/.test(todayParam)) ? todayParam : now().slice(0, 10);
 
   const { results } = await env.DB.prepare(
     `SELECT m.id, m.course_name, m.play_date, m.play_time, m.match_type, m.status,
@@ -629,7 +639,66 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
       is_mine: m.creator_id === auth.userId || m.opponent_id === auth.userId,
     };
   });
-  return json({ matches: rows });
+
+  // Open invites — players at this course looking for a game, today onward.
+  // Blocked players are invisible in both directions (same rule as discovery).
+  // No handicap-window filter here: the board shows the whole network; the
+  // accept endpoint still enforces eligibility.
+  const { results: openRows } = await env.DB.prepare(
+    `SELECT m.id, m.play_date, m.play_time, m.match_type, m.stakes,
+            m.hcp_range_min, m.hcp_range_max, m.creator_id,
+            u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+            u.profile_photo_url AS creator_photo_url, u.handicap AS creator_handicap_index
+       FROM matches m JOIN users u ON u.id = m.creator_id
+      WHERE m.status = 'open' AND m.course_name = ? AND m.play_date >= ?
+        AND m.creator_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?)
+        AND m.creator_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)
+      ORDER BY m.play_date ASC, m.play_time IS NULL, m.play_time ASC, m.created_at DESC
+      LIMIT 25`
+  ).bind(course, today, auth.userId, auth.userId).all<Record<string, any>>();
+
+  const open = (openRows ?? []).map((m) => ({
+    id: m.id,
+    play_date: m.play_date,
+    play_time: m.play_time,
+    match_type: m.match_type,
+    stakes: m.stakes ?? null,
+    hcp_range_min: m.hcp_range_min,
+    hcp_range_max: m.hcp_range_max,
+    creator_id: m.creator_id,
+    creator_name: name(m.creator_first_name, m.creator_last_name) ?? 'A golfer',
+    creator_photo_url: m.creator_photo_url ?? null,
+    creator_handicap_index: m.creator_handicap_index ?? null,
+    is_mine: m.creator_id === auth.userId,
+  }));
+
+  // Club pulse — anonymous aggregates over a rolling 7-day window ending today.
+  // Includes private matches (counts leak no identities) so the numbers reflect
+  // real club volume.
+  const [week, liveNow] = await Promise.all([
+    env.DB.prepare(
+      `SELECT creator_id, opponent_id FROM matches
+        WHERE course_name = ? AND status IN ('accepted','in_progress','completed')
+          AND play_date BETWEEN date(?, '-6 days') AND ?`
+    ).bind(course, today, today).all<{ creator_id: string; opponent_id: string | null }>(),
+    env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM matches
+        WHERE course_name = ? AND status IN ('accepted','in_progress') AND play_date = ?`
+    ).bind(course, today).first<{ n: number }>(),
+  ]);
+  const weekPlayers = new Set<string>();
+  for (const m of week.results ?? []) {
+    weekPlayers.add(m.creator_id);
+    if (m.opponent_id) weekPlayers.add(m.opponent_id);
+  }
+  const pulse = {
+    week_matches: (week.results ?? []).length,
+    week_players: weekPlayers.size,
+    live_now: liveNow?.n ?? 0,
+    open_count: open.length,
+  };
+
+  return json({ matches: rows, open, pulse });
 }
 
 // Guarded transition: only fires while the row is still in one of
