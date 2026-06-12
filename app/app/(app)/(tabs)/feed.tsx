@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
@@ -10,11 +10,13 @@ import { useColors } from '@/store/useThemeStore';
 import { useCourses } from '@/store/useCourseStore';
 import { useUserStore } from '@/store/useUserStore';
 import { CourseSelect } from '@/components/CourseSelect';
+import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
+import { AcceptCelebration } from '@/components/AcceptCelebration';
 import { Avatar, EmptyState } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import { formatHandicap } from '@/lib/format';
 import { MATCH_TYPE_LABELS } from '@/types';
-import type { CourseFeedMatch, CourseSummary, OpenInvite, CoursePulse } from '@/types';
+import type { CourseFeedMatch, CourseSummary, OpenInvite, CoursePulse, ClubSummary } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 // Local YYYY-MM-DD (the player's clock, not UTC) so "today" lines up with the
@@ -59,11 +61,17 @@ export default function FeedScreen() {
   const [rows, setRows] = useState<CourseFeedMatch[]>([]);
   const [open, setOpen] = useState<OpenInvite[]>([]);
   const [pulse, setPulse] = useState<CoursePulse | null>(null);
+  const [club, setClub] = useState<ClubSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
   const [showAllOpen, setShowAllOpen] = useState(false);
+  // Accept-from-feed (same choreography as the Discovery deck): confirm the
+  // index first — it's locked onto the match — then accept + celebrate.
+  const [pendingAccept, setPendingAccept] = useState<OpenInvite | null>(null);
+  const [sheetBusy, setSheetBusy] = useState(false);
+  const [celebrate, setCelebrate] = useState<string | null>(null);
 
   // Default the feed to the player's home course (once the catalog resolves).
   const { courses, load: loadCourses } = useCourses();
@@ -83,6 +91,7 @@ export default function FeedScreen() {
       setRows(r.matches);
       setOpen(r.open ?? []);
       setPulse(r.pulse ?? null);
+      setClub(r.club ?? null);
     } catch (e: any) {
       setError(e?.message ?? 'Could not load the feed.');
     } finally {
@@ -106,6 +115,32 @@ export default function FeedScreen() {
     setSwitching(false);
   };
 
+  const doAccept = async (iv: OpenInvite) => {
+    try {
+      await api.acceptMatch(iv.id);
+      setCelebrate(iv.id); // flourish, then navigate (see onDone)
+    } catch (e: any) {
+      // Most common failure: someone else just claimed it. Refresh the board.
+      Alert.alert('Could not accept', e?.message ?? 'Please try again.');
+      load();
+    }
+  };
+
+  const confirmIndexAndAccept = async (index: number) => {
+    setSheetBusy(true);
+    try {
+      const updated = await api.updateMe({ handicap: index });
+      useUserStore.setState({ user: updated });
+      const iv = pendingAccept;
+      setPendingAccept(null);
+      if (iv) await doAccept(iv);
+    } catch (e: any) {
+      Alert.alert('Could not save your index', e?.message ?? 'Please try again.');
+    } finally {
+      setSheetBusy(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       {/* Course header + switcher */}
@@ -115,6 +150,12 @@ export default function FeedScreen() {
           <Text style={styles.courseTitle} numberOfLines={1}>{course ?? 'Pick a course'}</Text>
           <Ionicons name={switching ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
         </TouchableOpacity>
+        {club?.status === 'network' && (
+          <View style={styles.networkBadge}>
+            <Ionicons name="shield-checkmark" size={12} color={colors.gold} />
+            <Text style={styles.networkBadgeText}>Foretera Club</Text>
+          </View>
+        )}
       </View>
       {(switching || !course) && (
         <View style={styles.switcher}>
@@ -163,7 +204,12 @@ export default function FeedScreen() {
             </View>
             {open.length > 0 ? (
               <View style={styles.card}>
-                {visibleOpen.map((iv, i) => <InviteRow key={iv.id} iv={iv} divider={i > 0} colors={colors} styles={styles} />)}
+                {visibleOpen.map((iv, i) => (
+                  <InviteRow
+                    key={iv.id} iv={iv} divider={i > 0} colors={colors} styles={styles}
+                    onAccept={() => { haptics.select(); setPendingAccept(iv); }}
+                  />
+                ))}
                 {open.length > 4 && (
                   <TouchableOpacity
                     style={[styles.moreRow, styles.rowDivider]}
@@ -250,14 +296,29 @@ export default function FeedScreen() {
           </>
         )}
       </ScrollView>
+
+      <ConfirmIndexSheet
+        visible={!!pendingAccept}
+        handicap={user?.handicap ?? null}
+        updatedAt={user?.handicap_updated_at ?? null}
+        actionLabel="Accept match"
+        busy={sheetBusy}
+        onCancel={() => setPendingAccept(null)}
+        onConfirm={confirmIndexAndAccept}
+      />
+
+      {celebrate ? (
+        <AcceptCelebration onDone={() => { const id = celebrate; setCelebrate(null); router.push(`/(app)/match/${id}`); }} />
+      ) : null}
     </SafeAreaView>
   );
 }
 
-// One open invite — a member of the network asking for a game. Tapping opens
-// the match detail, where Accept lives.
-function InviteRow({ iv, divider, colors, styles }: {
+// One open invite — a member of the network asking for a game. The Accept pill
+// runs the confirm-index → accept flow; the card body opens the match detail.
+function InviteRow({ iv, divider, colors, styles, onAccept }: {
   iv: OpenInvite; divider: boolean; colors: Palette; styles: ReturnType<typeof makeStyles>;
+  onAccept: () => void;
 }) {
   const time = timeLabel(iv.play_time);
   const when = [dateLabel(iv.play_date), time].filter(Boolean).join(' · ');
@@ -286,10 +347,10 @@ function InviteRow({ iv, divider, colors, styles }: {
         </View>
       </View>
       {!iv.is_mine && (
-        <View style={styles.inviteCta}>
-          <Text style={styles.inviteCtaText}>View</Text>
-          <Ionicons name="chevron-forward" size={14} color={colors.accent} />
-        </View>
+        <TouchableOpacity style={styles.acceptBtn} activeOpacity={0.8} onPress={onAccept} hitSlop={6}>
+          <Ionicons name="flash" size={13} color={colors.onAccent} />
+          <Text style={styles.acceptBtnText}>Accept</Text>
+        </TouchableOpacity>
       )}
     </TouchableOpacity>
   );
@@ -393,8 +454,19 @@ function makeStyles(colors: Palette) {
     invitePillRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
     invitePill: { backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
     invitePillText: { ...typography.caption, fontSize: 11, color: colors.muted },
-    inviteCta: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-    inviteCtaText: { ...typography.caption, color: colors.accent, fontWeight: '700' },
+    acceptBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: colors.accent, borderRadius: radius.pill,
+      paddingHorizontal: spacing.md, paddingVertical: 6,
+    },
+    acceptBtnText: { ...typography.caption, fontSize: 12, color: colors.onAccent, fontWeight: '700' },
+    networkBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+      backgroundColor: colors.goldGlow, borderWidth: 1, borderColor: colors.gold,
+      borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2,
+      marginTop: spacing.xs, marginLeft: 26,
+    },
+    networkBadgeText: { ...typography.caption, fontSize: 11, color: colors.gold, fontWeight: '700' },
     moreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.sm },
     moreText: { ...typography.caption, color: colors.accent, fontWeight: '600' },
     openEmpty: {

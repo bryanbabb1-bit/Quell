@@ -4,7 +4,7 @@ import { apiJson } from '@/lib/api';
 import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
   MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
-  CourseFeedMatch, Visibility, OpenInvite, CoursePulse,
+  CourseFeedMatch, Visibility, OpenInvite, CoursePulse, ClubSummary,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -127,7 +127,7 @@ export function useApi() {
         const q = new URLSearchParams({ course });
         if (date) q.set('date', date);
         if (today) q.set('today', today);
-        return call<{ matches: CourseFeedMatch[]; open?: OpenInvite[]; pulse?: CoursePulse }>(`/matches/feed?${q.toString()}`);
+        return call<{ matches: CourseFeedMatch[]; open?: OpenInvite[]; pulse?: CoursePulse; club?: ClubSummary | null }>(`/matches/feed?${q.toString()}`);
       },
 
       // Scorecards

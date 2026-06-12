@@ -672,6 +672,15 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
     is_mine: m.creator_id === auth.userId,
   }));
 
+  // The club behind this course — drives the network badge today, the A2
+  // join-the-network prompt and A3 branded board next. Null when the course
+  // isn't in the catalog (free-text course names).
+  const clubPromise = env.DB.prepare(
+    `SELECT cl.id, cl.name, cl.status, cl.crest_url, cl.primary_color
+       FROM courses co JOIN clubs cl ON cl.id = co.club_id
+      WHERE co.name = ? LIMIT 1`
+  ).bind(course).first<Record<string, unknown>>();
+
   // Club pulse — anonymous aggregates over a rolling 7-day window ending today.
   // Includes private matches (counts leak no identities) so the numbers reflect
   // real club volume.
@@ -698,7 +707,9 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
     open_count: open.length,
   };
 
-  return json({ matches: rows, open, pulse });
+  const club = await clubPromise.catch(() => null);
+
+  return json({ matches: rows, open, pulse, club: club ?? null });
 }
 
 // Guarded transition: only fires while the row is still in one of

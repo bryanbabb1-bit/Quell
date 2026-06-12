@@ -1,6 +1,9 @@
 # Foretera — Store assets
 
-Generated from the Foretera logo (`fortera.png`). Brand navy `#050E1B`.
+Black + Gold "Members" brand: rich black `#0C0C0E`, champagne gold ramp
+`#EBCF8E → #A7803A` (matches `app/constants/theme.ts`). Regenerate any time
+with `powershell -ExecutionPolicy Bypass -File store-assets\generate_black_gold.ps1`
+(recolors `app/assets/*` in place and rebuilds the three store files).
 See `docs/RELEASE.md` for exactly where each goes.
 
 | File | Size | Use |

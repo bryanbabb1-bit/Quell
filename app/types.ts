@@ -130,6 +130,16 @@ export interface CoursePulse {
   open_count: number;
 }
 
+// The club behind a course (GET /matches/feed `club`). 'network' = a paying
+// Foretera club (gold badge, branded board); 'prospect' = unclaimed.
+export interface ClubSummary {
+  id: string;
+  name: string;
+  status: 'network' | 'prospect';
+  crest_url: string | null;
+  primary_color: string | null;
+}
+
 export interface Message {
   id: string;
   match_id: string;
