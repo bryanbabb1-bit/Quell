@@ -96,7 +96,7 @@ export default function LiveMatchScreen() {
   // Running scoreline, player-named (creator perspective delta).
   const standing = !r || r.creator_delta === 0 ? 'All Square'
     : r.creator_delta > 0 ? `${cFirst} ${r.creator_delta} Up` : `${oFirst} ${-r.creator_delta} Up`;
-  const standingColor = !r || r.creator_delta === 0 ? colors.halve : r.creator_delta > 0 ? colors.live : colors.accent;
+  const standingColor = !r || r.creator_delta === 0 ? colors.halve : r.creator_delta > 0 ? colors.live : colors.liveAlt;
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
@@ -129,7 +129,7 @@ export default function LiveMatchScreen() {
           <View style={styles.playerCol}>
             <Avatar name={state.opponent_name ?? 'Opponent'} size={52} photoUrl={state.opponent_photo_url} />
             <Text style={styles.playerName} numberOfLines={1}>{oFirst}</Text>
-            <View style={[styles.dot, { backgroundColor: colors.accent }]} />
+            <View style={[styles.dot, { backgroundColor: colors.liveAlt }]} />
           </View>
         </View>
 
@@ -137,7 +137,7 @@ export default function LiveMatchScreen() {
         {r && r.holes.length > 0 && (
           <View style={styles.timeline}>
             {r.holes.map((h) => {
-              const tone = h.winner === 'creator' ? colors.live : h.winner === 'opponent' ? colors.accent : colors.surfaceRaised;
+              const tone = h.winner === 'creator' ? colors.live : h.winner === 'opponent' ? colors.liveAlt : colors.surfaceRaised;
               const on = h.winner !== 'tie';
               return (
                 <View key={h.hole} style={[styles.holeChip, { backgroundColor: tone }]}>
@@ -167,7 +167,7 @@ export default function LiveMatchScreen() {
                   <Ionicons name="add" size={22} color={colors.text} />
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.postBtn} onPress={postHole} disabled={posting} accessibilityRole="button">
+              <TouchableOpacity style={styles.postBtn} onPress={postHole} disabled={posting} accessibilityRole="button" accessibilityLabel={`Post hole ${entryHole ?? nextHole}, score ${entryGross}`}>
                 {posting ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.postText}>Post hole {entryHole ?? nextHole}</Text>}
               </TouchableOpacity>
             </View>
@@ -179,7 +179,7 @@ export default function LiveMatchScreen() {
           <Text style={styles.note}>Following live — updates every few seconds.</Text>
         )}
         {state.completed && (
-          <TouchableOpacity style={styles.recapBtn} onPress={() => router.replace(`/(app)/match/${id}/reveal`)} accessibilityRole="button">
+          <TouchableOpacity style={styles.recapBtn} onPress={() => router.replace(`/(app)/match/${id}/reveal`)} accessibilityRole="button" accessibilityLabel="See the full recap">
             <Ionicons name="trophy-outline" size={18} color={colors.onAccent} />
             <Text style={styles.recapText}>See the full recap</Text>
           </TouchableOpacity>

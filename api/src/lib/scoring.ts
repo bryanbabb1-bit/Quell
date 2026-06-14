@@ -26,6 +26,9 @@ export interface MatchResult {
   final_result: 'creator_wins' | 'opponent_wins' | 'tie';
   final_delta: string;       // "3 & 2", "2 Up", "All Square", ...
   decided_on_hole: number | null; // hole the match closed out, or null if it went the distance
+  // Creator's win probability (0..100) at each point: index 0 = pre-round, then
+  // one per hole played. Powers the ESPN-style win-prob graph on the reveal.
+  win_prob: number[];
 }
 
 // WHS Course Handicap = Index × (Slope / 113) + (Course Rating − Par), rounded.
@@ -80,6 +83,34 @@ export function allocateStrokes(strokes: number, holes: HoleSpec[]): number[] {
 function deltaLabel(delta: number): string {
   if (delta === 0) return 'All Square';
   return delta > 0 ? `${delta} Up` : `${Math.abs(delta)} Down`;
+}
+
+// ESPN-style win probability: the creator's chance of winning the match given
+// the current lead (`delta`, creator holes-up) and holes left to play. A flat
+// per-hole match-play model — creator wins the hole 25%, halves 50%, loses 25%
+// — propagated by DP, with closeout clamping (once the lead exceeds the holes
+// remaining, it's 1 or 0). A halved match counts as NOT a win for the creator.
+function winProb(delta: number, remaining: number, memo = new Map<string, number>()): number {
+  if (Math.abs(delta) > remaining) return delta > 0 ? 1 : 0; // clinched
+  if (remaining === 0) return delta > 0 ? 1 : 0;              // final: tie ≠ win
+  const key = `${delta}:${remaining}`;
+  const hit = memo.get(key);
+  if (hit !== undefined) return hit;
+  const p = 0.25 * winProb(delta + 1, remaining - 1, memo)
+          + 0.50 * winProb(delta, remaining - 1, memo)
+          + 0.25 * winProb(delta - 1, remaining - 1, memo);
+  memo.set(key, p);
+  return p;
+}
+
+// The win-probability series for a finished match: pre-round (50-ish) then the
+// creator's P(win) after each hole, from the running deltas. 0..100 integers.
+export function winProbabilitySeries(deltas: number[], total: number): number[] {
+  const memo = new Map<string, number>();
+  const pct = (d: number, rem: number) => Math.round(winProb(d, rem, memo) * 100);
+  const series = [pct(0, total)];
+  for (let i = 0; i < deltas.length; i++) series.push(pct(deltas[i], total - (i + 1)));
+  return series;
 }
 
 // Compute the full hole-by-hole match-play result.
@@ -161,7 +192,8 @@ export function computeMatch(
     final_delta = resultDelta === 0 ? 'All Square' : `${Math.abs(resultDelta)} Up`;
   }
 
-  return { holes: out, final_result, final_delta, decided_on_hole: decidedOnHole };
+  const win_prob = winProbabilitySeries(out.map((h) => h.creator_delta), total);
+  return { holes: out, final_result, final_delta, decided_on_hole: decidedOnHole, win_prob };
 }
 
 // The running match state for a LIVE (playing-together) match — the same

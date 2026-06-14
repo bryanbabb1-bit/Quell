@@ -264,6 +264,7 @@ export default function CreateMatchScreen() {
         <View style={styles.segment}>
           <TouchableOpacity
             style={[styles.segBtn, styles.segRow, !playingTogether && styles.segBtnActive]}
+            accessibilityRole="button" accessibilityState={{ selected: !playingTogether }}
             onPress={() => { haptics.select(); setPlayingTogether(false); }}
           >
             <Ionicons name="git-branch-outline" size={15} color={!playingTogether ? colors.surface : colors.muted} />
@@ -271,6 +272,7 @@ export default function CreateMatchScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.segBtn, styles.segRow, playingTogether && styles.segBtnActive]}
+            accessibilityRole="button" accessibilityState={{ selected: playingTogether }}
             onPress={() => { haptics.select(); setPlayingTogether(true); }}
           >
             <Ionicons name="people-outline" size={15} color={playingTogether ? colors.surface : colors.muted} />
@@ -289,7 +291,9 @@ export default function CreateMatchScreen() {
             <TouchableOpacity
               key={t}
               style={[styles.segBtn, matchType === t && styles.segBtnActive]}
-              onPress={() => setMatchType(t)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: matchType === t }}
+              onPress={() => { haptics.select(); setMatchType(t); }}
             >
               <Text style={[styles.segText, matchType === t && styles.segTextActive]}>{MATCH_TYPE_LABELS[t]}</Text>
             </TouchableOpacity>

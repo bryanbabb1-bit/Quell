@@ -172,7 +172,8 @@ export default function FeedScreen() {
     }
   }, [api]);
 
-  const live = rows.filter((m) => m.status === 'accepted' || m.status === 'in_progress');
+  const live = rows.filter((m) => m.status === 'in_progress');     // actually being played
+  const scheduled = rows.filter((m) => m.status === 'accepted');   // teed up, not started
   const done = rows.filter((m) => m.status === 'completed');
   const onToday = date === isoToday();
   // Matches can only be posted 14 days out — navigating past that is dead air.
@@ -443,6 +444,15 @@ export default function FeedScreen() {
           </>
         )}
 
+        {scheduled.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Teed up today</Text>
+            <View style={styles.card}>
+              {scheduled.map((m, i) => <FeedRow key={m.id} m={m} divider={i > 0} colors={colors} styles={styles} onToggleFollow={toggleFollow} />)}
+            </View>
+          </>
+        )}
+
         {done.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Final results</Text>
@@ -650,7 +660,7 @@ function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
         {isLive && !m.is_mine && onToggleFollow && (
           <TouchableOpacity style={styles.watchBtn} onPress={onWatch} hitSlop={6} accessibilityRole="button" accessibilityLabel={follow.following ? 'Stop watching' : 'Watch this match'}>
             <Ionicons name={follow.following ? 'eye' : 'eye-outline'} size={13} color={follow.following ? colors.live : colors.muted} />
-            <Text style={[styles.watchText, follow.following && { color: colors.live }]}>{follow.count > 0 ? follow.count : ''} {follow.following ? 'Watching' : 'Watch'}</Text>
+            <Text style={[styles.watchText, follow.following && { color: colors.live }]}>{follow.count > 0 ? `${follow.count} ` : ''}{follow.following ? 'Watching' : 'Watch'}</Text>
           </TouchableOpacity>
         )}
         {isLive && (m.is_mine || (follow.count > 0 && !onToggleFollow)) && (
@@ -799,6 +809,6 @@ function makeStyles(colors: Palette) {
     watchBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
     watchText: { ...typography.caption, fontSize: 11, color: colors.muted, fontFamily: fonts.bodySemi },
     meta: { ...typography.caption, color: colors.muted, textAlign: 'right' },
-    mineTag: { ...typography.caption, color: colors.live, fontSize: 11 },
+    mineTag: { ...typography.caption, color: colors.muted, fontSize: 11 },
   });
 }

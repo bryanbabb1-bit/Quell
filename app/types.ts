@@ -295,6 +295,9 @@ export interface MatchProgression {
   final_result: 'creator_wins' | 'opponent_wins' | 'tie';
   final_delta: string; // "3 & 2", "2 Up", "All Square"
   decided_on_hole: number | null;
+  // Creator's win probability (0..100) at each point: index 0 = pre-round, then
+  // one per hole. Absent on matches settled before this shipped.
+  win_prob?: number[];
 }
 
 export interface RevealResponse {

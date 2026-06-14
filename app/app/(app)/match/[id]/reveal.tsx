@@ -144,8 +144,12 @@ export default function RevealScreen() {
     const isCloseout = data?.progression?.decided_on_hole === current.hole;
     const leadFlip = prevDelta !== 0 && curDelta !== 0 && Math.sign(prevDelta) !== Math.sign(curDelta);
     const backToSquare = prevDelta !== 0 && curDelta === 0;
+    // A natural birdie-or-better is its own beat — it should feel like a moment.
+    const par = parByHole[current.hole];
+    const birdie = par != null && (current.creator_gross < par || current.opponent_gross < par);
     if (isCloseout) haptics.heavy();
     else if (leadFlip) haptics.heavy();
+    else if (birdie) haptics.heavy();
     else if (backToSquare) haptics.medium();
     // "Your hole" emphasis is a participant feeling — spectators get the drama
     // beats (above) and a light tick otherwise.
@@ -357,6 +361,24 @@ export default function RevealScreen() {
                   : current.winner === mySide ? (isSpectator ? `${myName} wins the hole` : 'You win the hole')
                   : `${theirName} wins the hole`}
               </Text>
+              {/* Birdie-or-better flourish — a natural gross under par lands. */}
+              {(() => {
+                const par = parByHole[current.hole];
+                if (par == null) return null;
+                const cL = subParLabel(current.creator_gross, par);
+                const oL = subParLabel(current.opponent_gross, par);
+                const best = !cL && !oL ? null
+                  : !oL || (cL && current.creator_gross <= current.opponent_gross)
+                    ? { label: cL!, who: meIsCreator ? myName : theirName }
+                    : { label: oL!, who: meIsCreator ? theirName : myName };
+                if (!best) return null;
+                return (
+                  <Animated.View key={`bird-${step}`} entering={FadeInUp.duration(360)} style={styles.birdie}>
+                    <Ionicons name="sparkles" size={16} color={colors.gold} />
+                    <Text style={styles.birdieText}>{best.label} — {best.who.split(' ')[0]}</Text>
+                  </Animated.View>
+                );
+              })()}
               <Text style={styles.tapHint}>Tap to advance · tap a hole above to revisit</Text>
             </Animated.View>
           </Pressable>
@@ -375,6 +397,12 @@ export default function RevealScreen() {
               </Animated.View>
             )}
             <DramaCard holes={holes} decidedOn={data.progression.decided_on_hole} colors={colors} styles={styles} />
+            {data.progression.win_prob && data.progression.win_prob.length > 1 && (
+              <WinProbGraph
+                series={data.progression.win_prob} meIsCreator={meIsCreator} isSpectator={isSpectator}
+                myName={myName} theirName={theirName} colors={colors} styles={styles}
+              />
+            )}
             <RoundStats
               holes={holes} parByHole={parByHole} mySide={mySide} isSpectator={isSpectator}
               myName={myName} theirName={theirName}
@@ -597,6 +625,52 @@ function StatCell({ label, value, tone, styles }: {
   );
 }
 
+// A natural gross under par → the celebration word. Null at par or worse.
+function subParLabel(gross: number, par: number): string | null {
+  const under = par - gross;
+  if (under <= 0) return null;
+  if (under === 1) return 'Birdie';
+  if (under === 2) return 'Eagle';
+  if (under === 3) return 'Albatross';
+  return 'Hole-out'; // 4+ under (e.g. ace on a par 5)
+}
+
+// ESPN-style win-probability area. Each column is split: the creator's share
+// (live blue) from the bottom, the opponent's (accent) on top — the boundary
+// traces the win-prob curve across the round. Oriented to the viewer's side so
+// a participant watches THEIR line climb.
+function WinProbGraph({ series, meIsCreator, isSpectator, myName, theirName, colors, styles }: {
+  series: number[]; meIsCreator: boolean; isSpectator: boolean;
+  myName: string; theirName: string; colors: Palette; styles: ReturnType<typeof makeStyles>;
+}) {
+  // Viewer perspective: a participant sees their own probability rise.
+  const mine = meIsCreator ? series : series.map((p) => 100 - p);
+  // Match the established broadcast palette: spectator creator=live, opponent=
+  // liveAlt; a participant sees their own win green vs loss red.
+  const myColor = isSpectator ? colors.live : colors.win;
+  const theirColor = isSpectator ? colors.liveAlt : colors.loss;
+  const end = mine[mine.length - 1];
+  const lead = end >= 50 ? myName : theirName;
+  return (
+    <Animated.View entering={FadeIn.duration(450)} style={styles.wpCard}>
+      <Text style={styles.wpTitle}>Win probability</Text>
+      <View style={styles.wpGraph}>
+        {/* 50% reference line */}
+        <View style={styles.wpMidline} pointerEvents="none" />
+        {mine.map((p, i) => (
+          <View key={i} style={styles.wpCol}>
+            <View style={{ flex: Math.max(0, 100 - p), backgroundColor: theirColor, opacity: 0.55 }} />
+            <View style={{ flex: Math.max(0, p), backgroundColor: myColor }} />
+          </View>
+        ))}
+      </View>
+      <Text style={styles.wpCaption}>
+        {isSpectator ? `${lead.split(' ')[0]} was most likely to win` : end >= 50 ? 'You were favored down the stretch' : 'You fought from behind'}
+      </Text>
+    </Animated.View>
+  );
+}
+
 function finalHeadline(o: Outcome): string {
   return o === 'win' ? 'You win' : o === 'loss' ? 'You lost' : 'All Square';
 }
@@ -661,7 +735,20 @@ function makeStyles(c: Palette) {
     dots: { flexDirection: 'row', gap: 3 },
     dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent },
     holeOutcome: { ...t.subheading, textAlign: 'center' },
+    birdie: {
+      flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 6,
+      backgroundColor: c.goldGlow, borderWidth: 1, borderColor: c.gold,
+      borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 4,
+    },
+    birdieText: { ...t.bodySemiBold, color: c.gold, fontSize: 14 },
     tapHint: { ...t.caption, color: c.muted, textAlign: 'center' },
+    // Win-probability graph
+    wpCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+    wpTitle: { ...t.overline, color: c.muted },
+    wpGraph: { flexDirection: 'row', height: 88, borderRadius: radius.sm, overflow: 'hidden', backgroundColor: c.bg },
+    wpCol: { flex: 1, flexDirection: 'column' },
+    wpMidline: { position: 'absolute', left: 0, right: 0, top: '50%', height: 1, backgroundColor: c.border, zIndex: 1 },
+    wpCaption: { ...t.caption, color: c.muted, textAlign: 'center' },
     finalScroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xl },
     statsWrap: { gap: spacing.md },
     decided: { ...t.body, color: c.muted, textAlign: 'center' },

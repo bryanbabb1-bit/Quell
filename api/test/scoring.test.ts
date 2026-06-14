@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   courseHandicap, allocateStrokes, computeMatch, strokeDifferenceForHoles,
-  segmentCourseHandicap, computeRunning,
+  segmentCourseHandicap, computeRunning, winProbabilitySeries,
   type HoleSpec,
 } from '../src/lib/scoring';
 
@@ -19,6 +19,29 @@ describe('courseHandicap (WHS)', () => {
   });
   it('handles a plus handicap (negative index)', () => {
     expect(courseHandicap(-2, 113, 72, 72)).toBe(-2);
+  });
+});
+
+describe('winProbabilitySeries (ESPN-style)', () => {
+  it('starts near 50% and ends at 100% for a win, 0% for a loss', () => {
+    // Creator leads by 1 every hole over 18 → wins.
+    const deltas = Array.from({ length: 18 }, (_, i) => 1);
+    const s = winProbabilitySeries(deltas, 18);
+    expect(s.length).toBe(19);          // pre-round + 18 holes
+    expect(s[0]).toBeGreaterThan(30);
+    expect(s[0]).toBeLessThan(70);      // pre-round is a coin-flip-ish
+    expect(s[18]).toBe(100);            // 1 up after 18 = win
+  });
+  it('hits 100% at the closeout hole and stays', () => {
+    // 5 up after 5 holes of a front nine (4 to play) = clinched.
+    const deltas = [1, 2, 3, 4, 5, 5, 5, 5, 5];
+    const s = winProbabilitySeries(deltas, 9);
+    expect(s[5]).toBe(100); // after hole 5, 5 up with 4 to play → clinched
+  });
+  it('reads 0% when the creator is buried', () => {
+    const deltas = [-1, -2, -3, -4, -5, -5, -5, -5, -5];
+    const s = winProbabilitySeries(deltas, 9);
+    expect(s[5]).toBe(0);
   });
 });
 

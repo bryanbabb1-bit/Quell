@@ -76,6 +76,11 @@ a club that's loud on Saturday and silent on Tuesday.
    order; nine-hole matches use the nine's segment ratings).
 4. **Full-round settle** — the engine plays all holes (true gross totals) but
    locks result/`final_delta` at the closeout hole ("3 & 2").
+4a. **Live scoring is gated to `playing_together`** — same-group players already
+   see each other's cards, so hole-by-hole live scoring + spectating spoils
+   nothing. **Apart matches never expose live scores** (the hidden-card lock
+   holds; only no-score presence + the 👁 follower count is public). The
+   `/matches/:id/live` endpoint enforces this.
 5. **Guarded transitions** — status changes are conditional UPDATEs
    (`WHERE status IN (...)`), so races (double-accept, cancel-vs-settle,
    cron-vs-player) can't stomp a terminal state.
@@ -166,7 +171,8 @@ a later anti-cheat option, GHIN auto-lookup.
 
 | Date | HEAD | What changed |
 |---|---|---|
-| 2026-06-13 | (this push) | **Network value tier (A3)**: monthly champions (migration 0016 `club_champions` + `lib/champions.ts` + month-end cron), staff pulse dashboard (`lib/dashboard.ts`, `club_staff` gating, engagement/churn/demand), club identity (crest upload, color, pinned note); in-app champions strip + hall-of-fame + staff dashboard screens; `staff_club_id` on `/me` |
+| 2026-06-14 | (this push) | **Live & Together** (migration 0017): `matches.playing_together` + `match_followers`. P1 enrichedMatch() fix (no more Creator/You flash) + My Matches result line (seen-gated) + tee-time/same-group create. P2 follow/👁 watcher count. P3 live scoring for same-group matches (`computeRunning`, `routes/live.ts` live-score/live, `match/[id]/live.tsx`, settles live). P4 reveal revamp: ESPN win-probability graph (`winProbabilitySeries` DP, `win_prob` in progression), birdie-or-better flourish. 27 engine tests. |
+| 2026-06-13 | `7639c55` | **Network value tier (A3)**: monthly champions (migration 0016 `club_champions` + `lib/champions.ts` + month-end cron), staff pulse dashboard (`lib/dashboard.ts`, `club_staff` gating, engagement/churn/demand), club identity (crest upload, color, pinned note); in-app champions strip + hall-of-fame + staff dashboard screens; `staff_club_id` on `/me` |
 | 2026-06-12 | `d66f437` | **A2 demand engine**: `club_interest` (migration 0015) + `/clubs/:id` + `/clubs/:id/interest`; prospect "ask your pro" card on home boards (share flow, 14-day snooze); claim pager screen with live demand count + pricing; feed course-picker clear fix |
 | 2026-06-12 | `2afb2aa` | **Spectator broadcast mode** on the reveal (named deltas, per-player colors `live`/`liveAlt`, neutral backdrop, legend — no more creator-POV for bystanders); **club masthead** on the Feed (crest/monogram, network lockup, gold-trimmed pulse); first agent-gated release (release-qa PASS + ux-audit findings fixed pre-push) |
 | 2026-06-12 | `d7a7847` | Tabs 6→5 (Settings behind the header menu); testing agents (`.claude/agents/` + `AGENTS.md`); `PRICING.md`; white paper v1.1; this doc rewritten as-built |

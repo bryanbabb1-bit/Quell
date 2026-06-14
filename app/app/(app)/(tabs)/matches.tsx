@@ -15,7 +15,7 @@ import { SkeletonCard, EmptyState, ErrorState } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import type { Match } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
-import { spacing, radius, typography, type Palette } from '@/constants/theme';
+import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 import { formatPlayWhen, STATUS_LABELS } from '@/lib/format';
 
 // Matches that can be archived out of the list (the record keeps them).
@@ -216,9 +216,9 @@ function makeStyles(colors: Palette) {
     course: { ...typography.bodySemiBold },
     sub: { ...typography.caption },
     badge: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
-    badgeText: { fontSize: 12, fontWeight: '700' },
+    badgeText: { fontSize: 12, fontFamily: fonts.bodyBold },
     resultChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3, maxWidth: 130 },
-    resultText: { ...typography.caption, fontSize: 12, fontWeight: '700' },
+    resultText: { ...typography.caption, fontSize: 12, fontFamily: fonts.bodyBold, fontVariant: ['tabular-nums'] },
     archiveToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, marginBottom: spacing.xs },
     archiveToggleText: { ...typography.caption, color: colors.muted },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingTop: spacing.xl * 2 },
