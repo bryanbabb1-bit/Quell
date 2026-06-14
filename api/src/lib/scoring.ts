@@ -164,6 +164,70 @@ export function computeMatch(
   return { holes: out, final_result, final_delta, decided_on_hole: decidedOnHole };
 }
 
+// The running match state for a LIVE (playing-together) match — the same
+// determination as computeMatch, but over only the holes BOTH players have
+// entered so far. Handicap strokes are allocated over the FULL hole set (the
+// match will be played out), so the running net is correct from the first hole.
+// Holes not yet completed by both (gross ≤ 0 on either side) are skipped.
+export interface RunningResult {
+  holes: HoleResult[];          // completed holes only, in order
+  creator_delta: number;        // running, creator perspective
+  cumulative: string;           // "2 Up" / "All Square" / "1 Down"
+  holes_played: number;         // holes both have entered
+  holes_remaining: number;
+  decided_on_hole: number | null; // closed out already?
+  final_delta: string | null;   // set once decided
+}
+
+export function computeRunning(
+  holes: HoleSpec[],
+  creatorGross: number[],
+  opponentGross: number[],
+  strokeDifference: number,
+  opponentHoles: HoleSpec[] = holes
+): RunningResult {
+  const creatorStrokes = strokeDifference > 0 ? allocateStrokes(strokeDifference, holes) : holes.map(() => 0);
+  const opponentStrokes = strokeDifference < 0 ? allocateStrokes(-strokeDifference, opponentHoles) : opponentHoles.map(() => 0);
+
+  const total = holes.length;
+  let delta = 0, played = 0;
+  let decidedOnHole: number | null = null;
+  let closeoutDelta = 0, closeoutRemaining = 0;
+  const out: HoleResult[] = [];
+
+  for (let i = 0; i < total; i++) {
+    const cg = creatorGross[i] ?? 0;
+    const og = opponentGross[i] ?? 0;
+    if (cg <= 0 || og <= 0) continue; // not yet completed by both
+    const cNet = cg - creatorStrokes[i];
+    const oNet = og - opponentStrokes[i];
+    let winner: HoleResult['winner'] = 'tie';
+    if (cNet < oNet) { winner = 'creator'; delta++; }
+    else if (oNet < cNet) { winner = 'opponent'; delta--; }
+    played++;
+    out.push({
+      hole: holes[i].hole,
+      creator_gross: cg, creator_strokes: creatorStrokes[i], creator_net: cNet,
+      opponent_gross: og, opponent_strokes: opponentStrokes[i], opponent_net: oNet,
+      winner, creator_delta: delta, cumulative: deltaLabel(delta),
+    });
+    const remaining = total - played;
+    if (decidedOnHole === null && Math.abs(delta) > remaining) {
+      decidedOnHole = holes[i].hole; closeoutDelta = delta; closeoutRemaining = remaining;
+    }
+  }
+
+  const final_delta = decidedOnHole !== null
+    ? (closeoutRemaining > 0 ? `${Math.abs(closeoutDelta)} & ${closeoutRemaining}` : `${Math.abs(closeoutDelta)} Up`)
+    : null;
+
+  return {
+    holes: out, creator_delta: delta, cumulative: deltaLabel(delta),
+    holes_played: played, holes_remaining: total - played,
+    decided_on_hole: decidedOnHole, final_delta,
+  };
+}
+
 // Net strokes the creator receives over a set of holes, given both 18-hole
 // course handicaps. Scaled for the number of holes actually played (a 9-hole
 // match uses ~half the difference — a documented approximation; see PUNCHLIST).

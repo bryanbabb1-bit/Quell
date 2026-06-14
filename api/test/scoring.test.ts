@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   courseHandicap, allocateStrokes, computeMatch, strokeDifferenceForHoles,
-  segmentCourseHandicap,
+  segmentCourseHandicap, computeRunning,
   type HoleSpec,
 } from '../src/lib/scoring';
 
@@ -19,6 +19,37 @@ describe('courseHandicap (WHS)', () => {
   });
   it('handles a plus handicap (negative index)', () => {
     expect(courseHandicap(-2, 113, 72, 72)).toBe(-2);
+  });
+});
+
+describe('computeRunning (live, playing-together)', () => {
+  // Scratch match: gross = net. Only holes both have entered count.
+  it('counts only holes both players have entered', () => {
+    const c = [4, 5, 0, 0, ...Array(14).fill(0)]; // creator thru 2
+    const o = [5, 5, 0, 0, ...Array(14).fill(0)]; // opponent thru 2
+    const r = computeRunning(HOLES_18, c, o, 0);
+    expect(r.holes_played).toBe(2);
+    expect(r.creator_delta).toBe(1); // won hole 1, halved hole 2
+    expect(r.cumulative).toBe('1 Up');
+    expect(r.holes_remaining).toBe(16);
+    expect(r.decided_on_hole).toBeNull();
+  });
+  it('skips a hole where only one player has posted', () => {
+    const c = [4, 4, ...Array(16).fill(0)]; // creator thru 2
+    const o = [5, 0, ...Array(16).fill(0)]; // opponent thru 1
+    const r = computeRunning(HOLES_18, c, o, 0);
+    expect(r.holes_played).toBe(1);    // only hole 1 is complete for both
+    expect(r.creator_delta).toBe(1);
+  });
+  it('flags closeout once the lead exceeds holes remaining', () => {
+    // Front nine, creator wins the first 5 → 5 up with 4 to play = closed out.
+    const front = HOLES_18.slice(0, 9);
+    const c = [3, 3, 3, 3, 3, 0, 0, 0, 0];
+    const o = [5, 5, 5, 5, 5, 0, 0, 0, 0];
+    const r = computeRunning(front, c, o, 0);
+    expect(r.creator_delta).toBe(5);
+    expect(r.decided_on_hole).toBe(5);
+    expect(r.final_delta).toBe('5 & 4');
   });
 });
 

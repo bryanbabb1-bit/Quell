@@ -209,6 +209,34 @@ export interface ClubDashboard {
   demand: { total: number; last_30d: number };
 }
 
+// ── Live (playing-together) match state ─────────────────────────────────────
+export interface LiveRunning {
+  holes: HoleResult[];           // completed holes only, in order
+  creator_delta: number;
+  cumulative: string;            // "2 Up" / "All Square" / "1 Down"
+  holes_played: number;
+  holes_remaining: number;
+  decided_on_hole: number | null;
+  final_delta: string | null;
+}
+
+export interface LiveState {
+  match_id: string;
+  status: MatchStatus | null;
+  playing_together: number;
+  follower_count: number;
+  creator_name: string;
+  opponent_name: string | null;
+  creator_photo_url: string | null;
+  opponent_photo_url: string | null;
+  viewer_is_creator: boolean;
+  viewer_is_participant: boolean;
+  your_holes: number[];          // holes the viewer has posted
+  match_type: MatchType | null;
+  completed: boolean;
+  running: LiveRunning | null;   // null for apart / no-course / spectator-of-apart
+}
+
 export interface Message {
   id: string;
   match_id: string;

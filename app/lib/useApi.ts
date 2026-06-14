@@ -5,7 +5,7 @@ import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
   MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
   CourseFeedMatch, Visibility, OpenInvite, CoursePulse, ClubSummary, ClubDetail,
-  ClubChampions, ClubDashboard,
+  ClubChampions, ClubDashboard, LiveState,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -78,11 +78,14 @@ export function useApi() {
       getClub: (id: string) => call<ClubDetail>(`/clubs/${id}`),
       clubInterest: (id: string) =>
         call<{ recorded: boolean; count: number }>(`/clubs/${id}/interest`, { method: 'POST' }),
-      // Live spectating
+      // Live spectating + scoring
       followMatch: (id: string) =>
         call<{ following: boolean; count: number }>(`/matches/${id}/follow`, { method: 'POST' }),
       unfollowMatch: (id: string) =>
         call<{ following: boolean; count: number }>(`/matches/${id}/follow`, { method: 'DELETE' }),
+      getLive: (id: string) => call<LiveState>(`/matches/${id}/live`),
+      postLiveHole: (id: string, hole: number, gross: number) =>
+        call<LiveState>(`/matches/${id}/live-score`, { method: 'POST', body: JSON.stringify({ hole, gross }) }),
 
       getChampions: (id: string, month?: string) =>
         call<ClubChampions>(`/clubs/${id}/champions${month ? `?month=${month}` : ''}`),

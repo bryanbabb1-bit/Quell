@@ -4,13 +4,13 @@ import { json, error } from '../lib/response';
 import { newId, now } from '../lib/id';
 import { parseBody, ValidationError } from '../lib/validate';
 import {
-  computeMatch, allocateStrokes, segmentCourseHandicap,
-  type HoleSpec, type Segment,
+  computeMatch, computeRunning, allocateStrokes, segmentCourseHandicap,
+  type HoleSpec, type Segment, type RunningResult,
 } from '../lib/scoring';
 import { sendPush } from '../lib/push';
 
 // Holes a match type is played over.
-function holeRange(matchType: string): { min: number; max: number; count: number } {
+export function holeRange(matchType: string): { min: number; max: number; count: number } {
   if (matchType === 'front_nine') return { min: 1, max: 9, count: 9 };
   if (matchType === 'back_nine') return { min: 10, max: 18, count: 9 };
   return { min: 1, max: 18, count: 18 }; // eighteen
@@ -177,7 +177,7 @@ function grossFor(holes: HoleSpec[], json: string): number[] {
 // Run the determination engine and write result + progression onto the match.
 // Each player's course handicap + stroke allocation come from THEIR OWN tee
 // (they may play different tees — opponent_tee_id), per WHS.
-async function settle(env: Env, match: Record<string, any>): Promise<void> {
+export async function settle(env: Env, match: Record<string, any>): Promise<void> {
   if (!match.tee_id) {
     // No course linked → can't auto-compute. Leave the cards in place; reveal
     // will report that course data is needed. (Sample/seeded tees avoid this.)
@@ -212,6 +212,33 @@ async function settle(env: Env, match: Record<string, any>): Promise<void> {
     `UPDATE matches SET result = ?, match_progression = ?, status = 'completed', completed_at = ?, updated_at = ?
       WHERE id = ? AND status != 'completed'`
   ).bind(result.final_result, JSON.stringify(result), now(), now(), match.id).run();
+}
+
+// The running match state for a LIVE (playing-together) match, from whatever
+// holes each player has posted so far. Reuses the same tee + course-handicap
+// logic as settle(), so live and final agree. Returns null when no course/tee
+// is linked (can't compute net). Cards may be partial.
+export async function computeLiveState(env: Env, match: Record<string, any>): Promise<RunningResult | null> {
+  if (!match.tee_id) return null;
+  const range = holeRange(match.match_type);
+  const opponentTeeId = match.opponent_tee_id ?? match.tee_id;
+  const [creatorTee, opponentTee, creatorCard, opponentCard] = await Promise.all([
+    loadTee(env, match.tee_id, range),
+    loadTee(env, opponentTeeId, range),
+    match.creator_scorecard_id
+      ? env.DB.prepare('SELECT hole_scores FROM scorecards WHERE id = ?').bind(match.creator_scorecard_id).first<{ hole_scores: string }>()
+      : Promise.resolve(null),
+    match.opponent_scorecard_id
+      ? env.DB.prepare('SELECT hole_scores FROM scorecards WHERE id = ?').bind(match.opponent_scorecard_id).first<{ hole_scores: string }>()
+      : Promise.resolve(null),
+  ]);
+  if (!creatorTee || !opponentTee) return null;
+  const creatorCH = segmentCourseHandicap(match.creator_handicap ?? 0, segmentFor(creatorTee.tee, match.match_type));
+  const opponentCH = segmentCourseHandicap(match.opponent_handicap ?? 0, segmentFor(opponentTee.tee, match.match_type));
+  const diff = creatorCH - opponentCH;
+  const cGross = creatorCard ? grossFor(creatorTee.holes, creatorCard.hole_scores) : creatorTee.holes.map(() => 0);
+  const oGross = opponentCard ? grossFor(opponentTee.holes, opponentCard.hole_scores) : opponentTee.holes.map(() => 0);
+  return computeRunning(creatorTee.holes, cGross, oGross, diff, opponentTee.holes);
 }
 
 async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Response> {

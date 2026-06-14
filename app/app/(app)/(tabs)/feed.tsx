@@ -612,9 +612,13 @@ function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
     <TouchableOpacity
       style={[styles.row, divider && styles.rowDivider]}
       activeOpacity={0.7}
-      // Completed public matches → straight into the reveal (watch it play out, or
-      // "Skip to result"). Live matches → the read-only match detail.
-      onPress={() => router.push(m.status === 'completed' ? `/(app)/match/${m.id}/reveal` : `/(app)/match/${m.id}`)}
+      // Completed → the reveal. A live SAME-GROUP match → the live follow screen
+      // (running tally). Other live matches → read-only match detail (no scores).
+      onPress={() => router.push(
+        m.status === 'completed' ? `/(app)/match/${m.id}/reveal`
+          : (isLive && m.playing_together) ? `/(app)/match/${m.id}/live`
+          : `/(app)/match/${m.id}`,
+      )}
     >
       <View style={styles.players}>
         <View style={styles.playerLine}>

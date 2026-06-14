@@ -39,6 +39,7 @@ export default function AppLayout() {
       <Stack.Screen name="player/[id]" options={{ title: 'Player' }} />
       <Stack.Screen name="match/[id]/messages" options={{ title: 'Messages' }} />
       <Stack.Screen name="match/[id]/score" options={{ title: 'Enter Scores' }} />
+      <Stack.Screen name="match/[id]/live" options={{ title: 'Live' }} />
       <Stack.Screen name="match/[id]/reveal" options={{ headerShown: false }} />
       <Stack.Screen name="match/[id]/scorecard" options={{ headerShown: false }} />
     </Stack>

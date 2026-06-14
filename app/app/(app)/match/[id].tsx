@@ -347,7 +347,20 @@ export default function MatchDetailScreen() {
         </View>
       )}
 
-      {isParticipant && scoringStage && (
+      {/* Same-group live scoring — tap in holes as you play; both of you + any
+          followers watch the running tally. Only before it's settled. */}
+      {isParticipant && match.playing_together && (match.status === 'accepted' || match.status === 'in_progress') && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Live scoring</Text>
+          <Text style={styles.note}>You're playing together — post each hole as you go and follow the match live.</Text>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/(app)/match/${match.id}/live`)}>
+            <Ionicons name="pulse-outline" size={18} color={colors.surface} />
+            <Text style={styles.primaryText}>Open live scoring</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {isParticipant && scoringStage && !((match.status === 'accepted' || match.status === 'in_progress') && match.playing_together) && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Scores</Text>
 
