@@ -162,6 +162,16 @@ export default function FeedScreen() {
   // Staff of THIS club see a Manage entry into the pulse dashboard.
   const isStaff = !!club && user?.staff_club_id === club.id;
 
+  // Optimistic follow toggle for a live match (the 👁 count + Following state).
+  const toggleFollow = useCallback(async (matchId: string, follow: boolean) => {
+    try {
+      const r = follow ? await api.followMatch(matchId) : await api.unfollowMatch(matchId);
+      return r;
+    } catch {
+      return null;
+    }
+  }, [api]);
+
   const live = rows.filter((m) => m.status === 'accepted' || m.status === 'in_progress');
   const done = rows.filter((m) => m.status === 'completed');
   const onToday = date === isoToday();
@@ -428,7 +438,7 @@ export default function FeedScreen() {
               <Text style={styles.sectionTitle}>Now playing</Text>
             </View>
             <View style={styles.card}>
-              {live.map((m, i) => <FeedRow key={m.id} m={m} divider={i > 0} colors={colors} styles={styles} />)}
+              {live.map((m, i) => <FeedRow key={m.id} m={m} divider={i > 0} colors={colors} styles={styles} onToggleFollow={toggleFollow} />)}
             </View>
           </>
         )}
@@ -572,10 +582,23 @@ function InviteRow({ iv, divider, colors, styles, onAccept }: {
   );
 }
 
-function FeedRow({ m, divider, colors, styles }: {
+function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
   m: CourseFeedMatch; divider: boolean; colors: Palette; styles: ReturnType<typeof makeStyles>;
+  onToggleFollow?: (id: string, follow: boolean) => Promise<{ following: boolean; count: number } | null>;
 }) {
   const time = timeLabel(m.play_time);
+  const isLive = m.status === 'in_progress';
+  // Optimistic 👁 follow state, synced when the feed reloads.
+  const [follow, setFollow] = useState({ following: !!m.is_following, count: m.follower_count ?? 0 });
+  useEffect(() => { setFollow({ following: !!m.is_following, count: m.follower_count ?? 0 }); }, [m.is_following, m.follower_count]);
+  const onWatch = async () => {
+    if (!onToggleFollow) return;
+    haptics.select();
+    const next = !follow.following;
+    setFollow((s) => ({ following: next, count: Math.max(0, s.count + (next ? 1 : -1)) }));
+    const r = await onToggleFollow(m.id, next);
+    if (r) setFollow({ following: r.following, count: r.count });
+  };
   // Result line for a finished match (neutral, third-person).
   let resultText: string | null = null;
   if (m.status === 'completed') {
@@ -608,14 +631,27 @@ function FeedRow({ m, divider, colors, styles }: {
       <View style={styles.rowRight}>
         {m.status === 'completed' ? (
           <Text style={styles.resultText} numberOfLines={2}>{resultText}</Text>
+        ) : isLive ? (
+          <View style={styles.liveChip}>
+            <View style={styles.liveChipDot} />
+            <Text style={styles.liveChipText}>LIVE</Text>
+          </View>
         ) : (
-          <View style={[styles.statusChip, m.status === 'in_progress' && styles.statusChipLive]}>
-            <Text style={[styles.statusChipText, m.status === 'in_progress' && styles.statusChipTextLive]}>
-              {m.status === 'in_progress' ? 'In progress' : 'Scheduled'}
-            </Text>
+          <View style={styles.statusChip}>
+            <Text style={styles.statusChipText}>Scheduled</Text>
           </View>
         )}
         <Text style={styles.meta}>{[time, MATCH_TYPE_LABELS[m.match_type]].filter(Boolean).join(' · ')}</Text>
+        {/* 👁 watch — present on live matches; participants don't follow their own. */}
+        {isLive && !m.is_mine && onToggleFollow && (
+          <TouchableOpacity style={styles.watchBtn} onPress={onWatch} hitSlop={6} accessibilityRole="button" accessibilityLabel={follow.following ? 'Stop watching' : 'Watch this match'}>
+            <Ionicons name={follow.following ? 'eye' : 'eye-outline'} size={13} color={follow.following ? colors.live : colors.muted} />
+            <Text style={[styles.watchText, follow.following && { color: colors.live }]}>{follow.count > 0 ? follow.count : ''} {follow.following ? 'Watching' : 'Watch'}</Text>
+          </TouchableOpacity>
+        )}
+        {isLive && (m.is_mine || (follow.count > 0 && !onToggleFollow)) && (
+          <Text style={styles.meta}>👁 {follow.count} watching</Text>
+        )}
         {m.is_mine && <Text style={styles.mineTag}>Your match</Text>}
       </View>
     </TouchableOpacity>
@@ -752,9 +788,12 @@ function makeStyles(colors: Palette) {
     rowRight: { alignItems: 'flex-end', gap: 4, maxWidth: 130 },
     resultText: { ...typography.bodySemiBold, color: colors.ink, textAlign: 'right' },
     statusChip: { backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
-    statusChipLive: { backgroundColor: colors.live },
     statusChipText: { ...typography.caption, color: colors.muted },
-    statusChipTextLive: { color: colors.scheme === 'dark' ? colors.bg : colors.onAccent, fontFamily: fonts.bodySemi },
+    liveChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.live, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
+    liveChipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.scheme === 'dark' ? colors.bg : '#FFFFFF' },
+    liveChipText: { ...typography.caption, fontSize: 11, color: colors.scheme === 'dark' ? colors.bg : '#FFFFFF', fontFamily: fonts.bodyBold, letterSpacing: 0.5 },
+    watchBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    watchText: { ...typography.caption, fontSize: 11, color: colors.muted, fontFamily: fonts.bodySemi },
     meta: { ...typography.caption, color: colors.muted, textAlign: 'right' },
     mineTag: { ...typography.caption, color: colors.live, fontSize: 11 },
   });

@@ -78,6 +78,12 @@ export function useApi() {
       getClub: (id: string) => call<ClubDetail>(`/clubs/${id}`),
       clubInterest: (id: string) =>
         call<{ recorded: boolean; count: number }>(`/clubs/${id}/interest`, { method: 'POST' }),
+      // Live spectating
+      followMatch: (id: string) =>
+        call<{ following: boolean; count: number }>(`/matches/${id}/follow`, { method: 'POST' }),
+      unfollowMatch: (id: string) =>
+        call<{ following: boolean; count: number }>(`/matches/${id}/follow`, { method: 'DELETE' }),
+
       getChampions: (id: string, month?: string) =>
         call<ClubChampions>(`/clubs/${id}/champions${month ? `?month=${month}` : ''}`),
       getClubDashboard: (id: string) => call<ClubDashboard>(`/clubs/${id}/dashboard`),

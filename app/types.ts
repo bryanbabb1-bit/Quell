@@ -109,6 +109,8 @@ export interface CourseFeedMatch {
   creator_photo_url: string | null;
   opponent_photo_url: string | null;
   playing_together?: number; // 0/1 — same group (live-scorable) vs apart
+  follower_count?: number;   // 👁 spectators on a live match
+  is_following?: boolean;    // does the caller follow this match
   is_mine: boolean;
 }
 

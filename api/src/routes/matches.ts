@@ -630,6 +630,7 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
   const { results } = await env.DB.prepare(
     `SELECT m.id, m.course_name, m.play_date, m.play_time, m.match_type, m.status,
             m.result, m.match_progression, m.creator_id, m.opponent_id, m.playing_together,
+            (SELECT COUNT(*) FROM match_followers mf WHERE mf.match_id = m.id) AS follower_count,
             cu.first_name AS creator_first_name, cu.last_name AS creator_last_name,
             cu.profile_photo_url AS creator_photo_url,
             ou.first_name AS opponent_first_name, ou.last_name AS opponent_last_name,
@@ -672,10 +673,24 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
       creator_photo_url: m.creator_photo_url ?? null,
       opponent_photo_url: m.opponent_photo_url ?? null,
       playing_together: m.playing_together ?? 0,
+      follower_count: m.follower_count ?? 0,
+      is_following: false, // filled below for the caller
       // Whether the viewer is one of the two players (so the client can label it).
       is_mine: m.creator_id === auth.userId || m.opponent_id === auth.userId,
     };
   });
+
+  // Mark which live rows the caller already follows (so the Follow control shows
+  // the right state on load). One small lookup over just the visible rows.
+  const liveIds = rows.filter((r) => r.status !== 'completed').map((r) => r.id);
+  if (liveIds.length) {
+    const ph = liveIds.map(() => '?').join(',');
+    const { results: follows } = await env.DB.prepare(
+      `SELECT match_id FROM match_followers WHERE user_id = ? AND match_id IN (${ph})`
+    ).bind(auth.userId, ...liveIds).all<{ match_id: string }>();
+    const set = new Set((follows ?? []).map((f) => f.match_id));
+    for (const r of rows) if (set.has(r.id)) r.is_following = true;
+  }
 
   // Open invites — players at this course looking for a game, today onward.
   // Blocked players are invisible in both directions (same rule as discovery).

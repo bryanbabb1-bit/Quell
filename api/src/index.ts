@@ -9,6 +9,7 @@ import { handleLeaderboard } from './routes/leaderboard';
 import { handleMatches } from './routes/matches';
 import { handleScorecards } from './routes/scorecards';
 import { handleMessages } from './routes/messages';
+import { handleLive } from './routes/live';
 import { handleCourses } from './routes/courses';
 import { handleClubs } from './routes/clubs';
 import { handleFavorites } from './routes/favorites';
@@ -105,6 +106,8 @@ async function handleRequest(
       response = await handleScorecards(request, auth, env, segments);
     } else if (sub === 'messages') {
       response = await handleMessages(request, auth, env, segments);
+    } else if (sub === 'follow' || sub === 'live' || sub === 'live-score') {
+      response = await handleLive(request, auth, env, segments);
     } else {
       response = await handleMatches(request, auth, env, segments);
     }
