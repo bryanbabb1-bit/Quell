@@ -553,6 +553,12 @@ function InviteRow({ iv, divider, colors, styles, onAccept }: {
           <View style={styles.invitePill}>
             <Text style={styles.invitePillText}>Index {iv.hcp_range_min}–{iv.hcp_range_max}</Text>
           </View>
+          {iv.playing_together ? (
+            <View style={styles.groupPill}>
+              <Ionicons name="people" size={10} color={colors.live} />
+              <Text style={styles.groupPillText}>Same group</Text>
+            </View>
+          ) : null}
           {iv.is_mine && <Text style={styles.mineTag}>Your post</Text>}
         </View>
       </View>
@@ -663,6 +669,8 @@ function makeStyles(colors: Palette) {
     inviteMeta: { ...typography.caption, color: colors.muted },
     invitePillRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
     invitePill: { backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+    groupPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.liveGlow, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+    groupPillText: { ...typography.caption, fontSize: 11, color: colors.live, fontFamily: fonts.bodySemi },
     invitePillText: { ...typography.caption, fontSize: 11, color: colors.muted },
     acceptBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 4,

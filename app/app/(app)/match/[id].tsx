@@ -243,7 +243,12 @@ export default function MatchDetailScreen() {
 
       <View style={styles.card}>
         <Row icon="flag-outline" label="Format" value={MATCH_TYPE_LABELS[match.match_type]} />
-        <Row icon="calendar-outline" label="When" value={formatPlayWhen(match.play_date)} />
+        <Row icon="calendar-outline" label="When" value={`${formatPlayWhen(match.play_date)}${match.play_time ? ` · ${teeTimeLabel(match.play_time)}` : ''}`} />
+        <Row
+          icon={match.playing_together ? 'people-outline' : 'git-branch-outline'}
+          label="Playing"
+          value={match.playing_together ? 'Same group · live scoring' : 'Separate rounds'}
+        />
         {differentTees ? (
           <>
             <Row icon="golf-outline" label={`${firstName(match.creator_name)} tees`} value={match.tee_color} />
@@ -476,6 +481,15 @@ export default function MatchDetailScreen() {
       />
     </View>
   );
+}
+
+// "9:10 AM" from "HH:MM".
+function teeTimeLabel(t: string): string {
+  if (!/^\d{2}:\d{2}$/.test(t)) return t;
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
 // "8.4 · CH 9" — the player's Index and the computed Course Handicap for this match.

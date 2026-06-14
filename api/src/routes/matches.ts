@@ -194,6 +194,10 @@ async function create(auth: AuthContext, request: Request, env: Env): Promise<Re
     ? 'private'
     : requireEnum(body.visibility, VISIBILITIES, 'visibility');
 
+  // Playing together (same group) vs apart (the default — the novel premise).
+  // Gates live scoring later. Coerced to 0/1.
+  const playing_together = body.playing_together === true || body.playing_together === 1 ? 1 : 0;
+
   // Direct challenge: when opponent_id is present the match is pre-addressed to
   // one player and starts as 'pending' (they accept/decline) instead of 'open'.
   const opponent_id = optionalString(body.opponent_id, 'opponent_id', 64);
@@ -220,11 +224,11 @@ async function create(auth: AuthContext, request: Request, env: Env): Promise<Re
   await env.DB.prepare(
     `INSERT INTO matches
        (id, creator_id, opponent_id, status, course_name, tee_color, tee_id, play_date, play_time,
-        match_type, stakes, hcp_range_min, hcp_range_max, creator_handicap, visibility, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        match_type, stakes, hcp_range_min, hcp_range_max, creator_handicap, visibility, playing_together, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     id, auth.userId, opponent_id ?? null, status, course_name, tee_color, tee_id, play_date, play_time,
-    match_type, stakes, hcp_range_min, hcp_range_max, creator?.handicap ?? null, visibility, ts, ts
+    match_type, stakes, hcp_range_min, hcp_range_max, creator?.handicap ?? null, visibility, playing_together, ts, ts
   ).run();
 
   if (opponent_id) {
@@ -232,8 +236,31 @@ async function create(auth: AuthContext, request: Request, env: Env): Promise<Re
     await sendPush(env, opponent_id, `${who} challenged you to a match`, `${course_name} · tap to accept or decline.`, { matchId: id });
   }
 
-  const match = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(id).first();
+  const match = await enrichedMatch(env, id);
   return json(match, 201);
+}
+
+// Fetch a match with derived display names + photos (the shape a participant
+// expects). Mutation endpoints return THIS so the client never flashes a
+// "Creator/Opponent" placeholder while waiting for the next poll to refetch.
+async function enrichedMatch(env: Env, matchId: string): Promise<Record<string, any> | null> {
+  const m = await env.DB.prepare(
+    `SELECT m.*,
+            cu.first_name AS creator_first_name, cu.last_name AS creator_last_name, cu.profile_photo_url AS creator_photo_url,
+            ou.first_name AS opponent_first_name, ou.last_name AS opponent_last_name, ou.profile_photo_url AS opponent_photo_url
+       FROM matches m
+       JOIN users cu ON cu.id = m.creator_id
+       LEFT JOIN users ou ON ou.id = m.opponent_id
+      WHERE m.id = ?`
+  ).bind(matchId).first<Record<string, any>>();
+  if (!m) return null;
+  const nm = (f: unknown, l: unknown): string | null => {
+    const n = [f, l].filter((s) => typeof s === 'string' && (s as string).trim()).join(' ').trim();
+    return n || null;
+  };
+  m.creator_name = nm(m.creator_first_name, m.creator_last_name) ?? 'A golfer';
+  m.opponent_name = m.opponent_id ? (nm(m.opponent_first_name, m.opponent_last_name) ?? 'Opponent') : null;
+  return m;
 }
 
 // ── Mine ─────────────────────────────────────────────────────────────────────
@@ -253,11 +280,25 @@ async function listMine(auth: AuthContext, env: Env): Promise<Response> {
     const n = [f, l].filter((s) => typeof s === 'string' && (s as string).trim()).join(' ').trim();
     return n || null;
   };
-  const matches = (results ?? []).map((m) => ({
-    ...m,
-    creator_name: name(m.creator_first_name, m.creator_last_name) ?? 'A golfer',
-    opponent_name: m.opponent_id ? (name(m.opponent_first_name, m.opponent_last_name) ?? 'Opponent') : null,
-  }));
+  const matches = (results ?? []).map((m) => {
+    // Viewer-perspective outcome + scoreline, so the list can show "Won 3 & 2"
+    // (the client still gates it behind "have you seen the reveal" to avoid
+    // spoilers). A completed match missing a card was a forfeit.
+    let outcome: 'win' | 'loss' | 'tie' | null = null;
+    let final_delta: string | null = null;
+    const is_forfeit = m.status === 'completed' && (!m.creator_scorecard_id || !m.opponent_scorecard_id);
+    if (m.status === 'completed' && m.result) {
+      const amCreator = m.creator_id === auth.userId;
+      outcome = m.result === 'tie' ? 'tie' : (m.result === 'creator_wins') === amCreator ? 'win' : 'loss';
+      try { final_delta = m.match_progression ? JSON.parse(m.match_progression).final_delta ?? null : null; } catch { /* ignore */ }
+    }
+    return {
+      ...m,
+      creator_name: name(m.creator_first_name, m.creator_last_name) ?? 'A golfer',
+      opponent_name: m.opponent_id ? (name(m.opponent_first_name, m.opponent_last_name) ?? 'Opponent') : null,
+      outcome, final_delta, is_forfeit,
+    };
+  });
   return json({ matches });
 }
 
@@ -368,8 +409,7 @@ async function accept(auth: AuthContext, env: Env, matchId: string): Promise<Res
     await sendPush(env, match.creator_id, `${me?.first_name?.trim() || 'Your challenge'} accepted`, 'Your match is on — enter your scores after you play.', { matchId });
   }
 
-  const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
-  return json(updated);
+  return json(await enrichedMatch(env, matchId));
 }
 
 // ── Tees on a match's course ─────────────────────────────────────────────────
@@ -437,8 +477,7 @@ async function setTee(auth: AuthContext, env: Env, matchId: string, request: Req
     await env.DB.prepare('UPDATE matches SET opponent_tee_id = ?, opponent_tee_color = ?, updated_at = ? WHERE id = ?')
       .bind(tee.id, tee.name, ts, matchId).run();
   }
-  const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
-  return json(updated);
+  return json(await enrichedMatch(env, matchId));
 }
 
 // ── Nudge (remind the other player to enter their scores) ────────────────────
@@ -498,8 +537,7 @@ async function cancel(auth: AuthContext, env: Env, matchId: string): Promise<Res
     await sendPush(env, match.opponent_id, 'Match cancelled',
       `${me?.first_name?.trim() || 'Your opponent'} cancelled your match at ${match.course_name}.`, { matchId });
   }
-  const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
-  return json(updated);
+  return json(await enrichedMatch(env, matchId));
 }
 
 // ── Decline (opponent backs out of an accepted match) ────────────────────────
@@ -521,8 +559,7 @@ async function decline(auth: AuthContext, env: Env, matchId: string): Promise<Re
     .bind(auth.userId).first<{ first_name: string | null }>();
   await sendPush(env, match.creator_id, okChallenge ? 'Challenge declined' : 'Opponent backed out',
     `${me?.first_name?.trim() || 'Your opponent'} ${okChallenge ? 'declined your challenge' : 'backed out of your match'} at ${match.course_name}.`, { matchId });
-  const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
-  return json(updated);
+  return json(await enrichedMatch(env, matchId));
 }
 
 // ── Scoring started (pre-Settle tension) ─────────────────────────────────────
@@ -565,8 +602,7 @@ async function setVisibility(auth: AuthContext, env: Env, matchId: string, reque
   const visibility = requireEnum(body.visibility, VISIBILITIES, 'visibility');
   await env.DB.prepare('UPDATE matches SET visibility = ?, updated_at = ? WHERE id = ?')
     .bind(visibility, now(), matchId).run();
-  const updated = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first();
-  return json(updated);
+  return json(await enrichedMatch(env, matchId));
 }
 
 // ── Course feed ──────────────────────────────────────────────────────────────
@@ -593,7 +629,7 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
 
   const { results } = await env.DB.prepare(
     `SELECT m.id, m.course_name, m.play_date, m.play_time, m.match_type, m.status,
-            m.result, m.match_progression, m.creator_id, m.opponent_id,
+            m.result, m.match_progression, m.creator_id, m.opponent_id, m.playing_together,
             cu.first_name AS creator_first_name, cu.last_name AS creator_last_name,
             cu.profile_photo_url AS creator_photo_url,
             ou.first_name AS opponent_first_name, ou.last_name AS opponent_last_name,
@@ -635,6 +671,7 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
       opponent_name: name(m.opponent_first_name, m.opponent_last_name) ?? 'Opponent',
       creator_photo_url: m.creator_photo_url ?? null,
       opponent_photo_url: m.opponent_photo_url ?? null,
+      playing_together: m.playing_together ?? 0,
       // Whether the viewer is one of the two players (so the client can label it).
       is_mine: m.creator_id === auth.userId || m.opponent_id === auth.userId,
     };
@@ -645,7 +682,7 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
   // No handicap-window filter here: the board shows the whole network; the
   // accept endpoint still enforces eligibility.
   const { results: openRows } = await env.DB.prepare(
-    `SELECT m.id, m.play_date, m.play_time, m.match_type, m.stakes,
+    `SELECT m.id, m.play_date, m.play_time, m.match_type, m.stakes, m.playing_together,
             m.hcp_range_min, m.hcp_range_max, m.creator_id,
             u.first_name AS creator_first_name, u.last_name AS creator_last_name,
             u.profile_photo_url AS creator_photo_url, u.handicap AS creator_handicap_index
@@ -669,6 +706,7 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
     creator_name: name(m.creator_first_name, m.creator_last_name) ?? 'A golfer',
     creator_photo_url: m.creator_photo_url ?? null,
     creator_handicap_index: m.creator_handicap_index ?? null,
+    playing_together: m.playing_together ?? 0,
     is_mine: m.creator_id === auth.userId,
   }));
 

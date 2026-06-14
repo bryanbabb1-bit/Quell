@@ -17,6 +17,19 @@ import { spacing, radius, typography, type Palette } from '@/constants/theme';
 
 const TYPES: MatchType[] = ['front_nine', 'back_nine', 'eighteen'];
 
+// Half-hour tee-time slots, 6:00 AM–4:00 PM, stored as "HH:MM" (24h).
+const TEE_TIMES: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 6; h <= 16; h++) for (const m of ['00', '30']) out.push(`${String(h).padStart(2, '0')}:${m}`);
+  return out;
+})();
+function timeLabel(t: string): string {
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 type Day = { iso: string; weekday: string; day: number; month: string };
 
 // Next N days as pickable chips — no raw date typing.
@@ -51,6 +64,8 @@ export default function CreateMatchScreen() {
   const [playDate, setPlayDate] = useState(isoToday());
   const days = useMemo(() => nextDays(14), []);
   const [matchType, setMatchType] = useState<MatchType>('eighteen');
+  const [playTime, setPlayTime] = useState<string | null>(null);
+  const [playingTogether, setPlayingTogether] = useState(false);
   const [visibility, setVisibility] = useState<Visibility>('private');
   const [hcpMin, setHcpMin] = useState('');
   const [hcpMax, setHcpMax] = useState('');
@@ -105,13 +120,14 @@ export default function CreateMatchScreen() {
       tee_color: teeColor.trim(),
       tee_id: teeId,
       play_date: playDate,
-      play_time: null,
+      play_time: playTime,
       match_type: matchType,
       visibility,
       stakes: null,
       hcp_range_min: min,
       hcp_range_max: max,
       opponent_id: isChallenge ? opponent_id : null,
+      playing_together: playingTogether,
     };
   };
 
@@ -218,6 +234,54 @@ export default function CreateMatchScreen() {
             })}
           </ScrollView>
         </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Tee time</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow} keyboardShouldPersistTaps="handled">
+            <TouchableOpacity
+              onPress={() => { haptics.select(); setPlayTime(null); }}
+              style={[styles.timeChip, playTime === null && styles.timeChipActive]}
+              accessibilityRole="button" accessibilityState={{ selected: playTime === null }}
+            >
+              <Text style={[styles.timeText, playTime === null && styles.dateTextActive]}>Flexible</Text>
+            </TouchableOpacity>
+            {TEE_TIMES.map((t) => {
+              const active = t === playTime;
+              return (
+                <TouchableOpacity
+                  key={t} onPress={() => { haptics.select(); setPlayTime(t); }}
+                  style={[styles.timeChip, active && styles.timeChipActive]}
+                  accessibilityRole="button" accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.timeText, active && styles.dateTextActive]}>{timeLabel(t)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <Text style={styles.label}>How you'll play</Text>
+        <View style={styles.segment}>
+          <TouchableOpacity
+            style={[styles.segBtn, styles.segRow, !playingTogether && styles.segBtnActive]}
+            onPress={() => { haptics.select(); setPlayingTogether(false); }}
+          >
+            <Ionicons name="git-branch-outline" size={15} color={!playingTogether ? colors.surface : colors.muted} />
+            <Text style={[styles.segText, !playingTogether && styles.segTextActive]}>Separate rounds</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segBtn, styles.segRow, playingTogether && styles.segBtnActive]}
+            onPress={() => { haptics.select(); setPlayingTogether(true); }}
+          >
+            <Ionicons name="people-outline" size={15} color={playingTogether ? colors.surface : colors.muted} />
+            <Text style={[styles.segText, playingTogether && styles.segTextActive]}>Same group</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.note}>
+          {playingTogether
+            ? 'You’ll play together — live scoring is on, and others can follow the match hole by hole.'
+            : 'You’ll each play your own round; scores stay sealed until both are in, then the reveal.'}
+        </Text>
 
         <Text style={styles.label}>Match type</Text>
         <View style={styles.segment}>
@@ -327,6 +391,12 @@ function makeStyles(colors: Palette) {
   dateDay: { ...typography.heading, fontSize: 20, color: colors.text },
   dateMonth: { ...typography.caption, fontSize: 11, color: colors.muted },
   dateTextActive: { color: colors.accent },
+  timeChip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+  },
+  timeChipActive: { backgroundColor: colors.accentGlow, borderColor: colors.accent },
+  timeText: { ...typography.bodySemiBold, fontSize: 14, color: colors.ink },
   modeRow: { flexDirection: 'row', gap: spacing.sm },
   modeBtn: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   modeActive: { backgroundColor: colors.accentGlow, borderColor: colors.accent },

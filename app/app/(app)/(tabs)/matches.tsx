@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { useArchiveStore } from '@/store/useArchiveStore';
+import { useResultsStore } from '@/store/useResultsStore';
 import { SkeletonCard, EmptyState, ErrorState } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import type { Match } from '@/types';
@@ -37,12 +38,55 @@ function opponentOf(m: Match, userId: string | null | undefined): string | null 
   return (m.creator_id === userId ? m.opponent_name : m.creator_name) ?? null;
 }
 
+// The trailing chip on a match row. Completed matches show the RESULT once the
+// player has watched the reveal ("Won 3 & 2" / "Lost 2 & 1" / "Halved"); before
+// that, an accent "Reveal ready" prompt that doesn't spoil it. Everything else
+// shows the status badge.
+function renderTrailing(
+  m: Match, userId: string | null | undefined, seen: string[],
+  colors: Palette, styles: ReturnType<typeof makeStyles>,
+) {
+  if (m.status === 'completed') {
+    if (m.is_forfeit) {
+      const won = m.outcome === 'win';
+      return (
+        <View style={[styles.resultChip, { backgroundColor: won ? colors.winGlow : colors.lossGlow }]}>
+          <Text style={[styles.resultText, { color: won ? colors.win : colors.loss }]}>{won ? 'Won' : 'Lost'} · forfeit</Text>
+        </View>
+      );
+    }
+    if (!seen.includes(m.id)) {
+      return (
+        <View style={[styles.resultChip, { backgroundColor: colors.accentGlow }]}>
+          <Ionicons name="play-circle" size={13} color={colors.accent} />
+          <Text style={[styles.resultText, { color: colors.accent }]}>Reveal ready</Text>
+        </View>
+      );
+    }
+    const o = m.outcome;
+    const tone = o === 'win' ? colors.win : o === 'loss' ? colors.loss : colors.halve;
+    const glow = o === 'win' ? colors.winGlow : o === 'loss' ? colors.lossGlow : colors.halveGlow;
+    const label = o === 'tie' ? `Halved${m.final_delta ? ` ${m.final_delta}` : ''}`
+      : `${o === 'win' ? 'Won' : 'Lost'}${m.final_delta ? ` ${m.final_delta}` : ''}`;
+    return (
+      <View style={[styles.resultChip, { backgroundColor: glow }]}>
+        <Text style={[styles.resultText, { color: tone }]} numberOfLines={1}>{label}</Text>
+      </View>
+    );
+  }
+  const tint: Record<string, string> = statusTint(colors);
+  return (
+    <View style={[styles.badge, { borderColor: tint[m.status] ?? colors.muted }]}>
+      <Text style={[styles.badgeText, { color: tint[m.status] ?? colors.muted }]}>{STATUS_LABELS[m.status]}</Text>
+    </View>
+  );
+}
+
 export default function MyMatchesScreen() {
   const api = useApi();
   const { userId } = useAuth();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const tint = useMemo(() => statusTint(colors), [colors]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,6 +97,12 @@ export default function MyMatchesScreen() {
   const toggleArchive = useArchiveStore((s) => s.toggle);
   const hydrateArchive = useArchiveStore((s) => s.hydrate);
   useEffect(() => { hydrateArchive(); }, [hydrateArchive]);
+
+  // Whether the player has watched a match's reveal yet — gates the result line
+  // so the list never spoils a result they haven't seen unfold.
+  const seen = useResultsStore((s) => s.seen);
+  const hydrateSeen = useResultsStore((s) => s.hydrate);
+  useEffect(() => { hydrateSeen(); }, [hydrateSeen]);
 
   const load = useCallback(async () => {
     try {
@@ -145,11 +195,7 @@ export default function MyMatchesScreen() {
                   : `Open · ${formatPlayWhen(item.play_date)} · ${MATCH_TYPE_LABELS[item.match_type]}`}
               </Text>
             </View>
-            <View style={[styles.badge, { borderColor: tint[item.status] ?? colors.muted }]}>
-              <Text style={[styles.badgeText, { color: tint[item.status] ?? colors.muted }]}>
-                {STATUS_LABELS[item.status]}
-              </Text>
-            </View>
+            {renderTrailing(item, userId, seen, colors, styles)}
           </TouchableOpacity>
         )}
       />
@@ -171,6 +217,8 @@ function makeStyles(colors: Palette) {
     sub: { ...typography.caption },
     badge: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
     badgeText: { fontSize: 12, fontWeight: '700' },
+    resultChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3, maxWidth: 130 },
+    resultText: { ...typography.caption, fontSize: 12, fontWeight: '700' },
     archiveToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, marginBottom: spacing.xs },
     archiveToggleText: { ...typography.caption, color: colors.muted },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingTop: spacing.xl * 2 },

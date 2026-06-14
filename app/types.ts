@@ -58,6 +58,7 @@ export interface Match {
   stakes: number | null;    // display only
   hcp_range_min: number;
   hcp_range_max: number;
+  playing_together?: number; // 0/1 — same group (gates live scoring) vs apart
   creator_scorecard_id: string | null;
   opponent_scorecard_id: string | null;
   creator_handicap: number | null;
@@ -75,6 +76,11 @@ export interface Match {
   opponent_name?: string | null;
   creator_photo_url?: string | null;
   opponent_photo_url?: string | null;
+  // Present on My Matches (listMine) rows — viewer-perspective result, so the
+  // list can show "Won 3 & 2" (gated behind the seen-reveal check, no spoiler).
+  outcome?: 'win' | 'loss' | 'tie' | null;
+  final_delta?: string | null;
+  is_forfeit?: boolean;
 }
 
 // Discovery rows join the creator's name + index onto the match.
@@ -102,6 +108,7 @@ export interface CourseFeedMatch {
   opponent_name: string;
   creator_photo_url: string | null;
   opponent_photo_url: string | null;
+  playing_together?: number; // 0/1 — same group (live-scorable) vs apart
   is_mine: boolean;
 }
 
@@ -119,6 +126,7 @@ export interface OpenInvite {
   creator_name: string;
   creator_photo_url: string | null;
   creator_handicap_index: number | null;
+  playing_together?: number; // 0/1 — same group vs separate rounds
   is_mine: boolean;
 }
 

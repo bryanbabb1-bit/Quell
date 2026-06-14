@@ -20,6 +20,7 @@ export interface CreateMatchInput {
   hcp_range_min: number;
   hcp_range_max: number;
   opponent_id?: string | null; // present → a direct challenge (status 'pending')
+  playing_together?: boolean;  // same group (gates live scoring) vs apart
 }
 
 // Binds the API client to the current Clerk session: every call mints a fresh
