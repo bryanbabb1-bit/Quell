@@ -29,6 +29,12 @@ export async function runReminders(env: Env): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const since = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10);
 
+  // Retention: client_logs is append-only (every console.error from every
+  // client). Trim anything older than 30 days each tick so it can't grow
+  // unbounded into the D1 size ceiling. Best-effort — never block reminders.
+  await env.DB.prepare(`DELETE FROM client_logs WHERE created_at < datetime('now','-30 days')`)
+    .run().catch(() => {});
+
   const { results } = await env.DB.prepare(
     `SELECT m.id, m.course_name, m.play_date, m.creator_id, m.opponent_id,
             m.creator_scorecard_id, m.opponent_scorecard_id,
