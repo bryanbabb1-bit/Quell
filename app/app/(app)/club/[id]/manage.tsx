@@ -7,8 +7,8 @@ import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
-import { shareClubInvite } from '@/lib/invite';
-import type { ClubDashboard, ClubDetail } from '@/types';
+import { shareClubInvite, shareIntro } from '@/lib/invite';
+import type { ClubDashboard, ClubDetail, ClubIntros } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
 // The staff Pulse Dashboard — the ROI artifact a club pays for. Engagement +
@@ -27,6 +27,7 @@ export default function ClubManageScreen() {
 
   const [data, setData] = useState<ClubDashboard | null>(null);
   const [club, setClub] = useState<ClubDetail | null>(null);
+  const [intros, setIntros] = useState<ClubIntros | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +39,12 @@ export default function ClubManageScreen() {
     if (!id) return;
     try {
       setError(null);
-      const [d, c] = await Promise.all([api.getClubDashboard(id), api.getClub(id)]);
+      const [d, c, ix] = await Promise.all([
+        api.getClubDashboard(id), api.getClub(id), api.getClubIntros(id).catch(() => null),
+      ]);
       setData(d);
       setClub(c);
+      setIntros(ix);
       setPinned(c.pinned_message ?? '');
     } catch (e: any) {
       setError(e?.message ?? 'Could not load the dashboard.');
@@ -235,6 +239,36 @@ export default function ClubManageScreen() {
           </View>
         )}
 
+        {/* Suggested intros — the club as matchmaker */}
+        {intros && intros.suggestions.length > 0 && (
+          <View style={styles.panel}>
+            <View style={styles.panelHeadRow}>
+              <Ionicons name="people-outline" size={16} color={colors.gold} />
+              <Text style={styles.panelTitle}>Suggested intros</Text>
+            </View>
+            <Text style={styles.hint}>Members who’d click but haven’t played. Make the match.</Text>
+            {intros.suggestions.map((s, i) => (
+              <View key={i} style={styles.introRow}>
+                <View style={styles.introFaces}>
+                  <Avatar name={s.a.name} size={30} photoUrl={s.a.photo_url} />
+                  <View style={styles.introFaceB}><Avatar name={s.b.name} size={30} photoUrl={s.b.photo_url} /></View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.introNames} numberOfLines={1}>{s.a.name} & {s.b.name}</Text>
+                  <Text style={styles.introReason} numberOfLines={2}>{s.reason}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.introBtn} activeOpacity={0.85} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                  accessibilityRole="button" accessibilityLabel={`Suggest ${s.a.name} and ${s.b.name} play`}
+                  onPress={() => { haptics.select(); shareIntro(s.a.name, s.b.name, club?.name ?? ''); }}
+                >
+                  <Ionicons name="paper-plane-outline" size={16} color={colors.onAccent} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Demand */}
         <View style={styles.panel}>
           <Text style={styles.panelTitle}>Member demand</Text>
@@ -334,6 +368,12 @@ function makeStyles(c: Palette) {
     hint: { ...typography.caption, color: c.muted, fontStyle: 'italic' },
     demandLine: { ...typography.body, color: c.text },
     demandNum: { fontFamily: fonts.bodyBold, color: c.gold },
+    introRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44, marginTop: spacing.xs },
+    introFaces: { flexDirection: 'row', alignItems: 'center', width: 52 },
+    introFaceB: { marginLeft: -10, borderWidth: 2, borderColor: c.surface, borderRadius: 17 },
+    introNames: { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 19, color: c.text },
+    introReason: { ...typography.caption, color: c.muted, marginTop: 1 },
+    introBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.accent, alignItems: 'center', justifyContent: 'center' },
     sectionRule: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 1, color: c.gold, marginTop: spacing.md },
     crestRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     crestPreview: { width: 56, height: 56, borderRadius: 28, borderWidth: 1.5, borderColor: c.gold },

@@ -233,6 +233,12 @@ export interface ClubMemberDetail {
   looking_now: boolean;
 }
 
+// GET /clubs/:id/intros — staff-only matchmaker: members who'd click but
+// haven't played each other.
+export interface IntroPlayer extends DashboardPlayer { handicap: number | null; }
+export interface IntroSuggestion { a: IntroPlayer; b: IntroPlayer; reason: string; }
+export interface ClubIntros { suggestions: IntroSuggestion[]; }
+
 // ── Live gamecast (playing-together match) ──────────────────────────────────
 export type ToParName = 'eagle' | 'birdie' | 'par' | 'bogey' | 'double' | 'other';
 

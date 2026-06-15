@@ -24,3 +24,14 @@ export async function shareClubInvite(clubName: string): Promise<void> {
     });
   } catch { /* dismissed */ }
 }
+
+// Club staff → forward a suggested intro between two members. The pro sends it
+// to whichever of the two they're in touch with; it names both so it's clear.
+export async function shareIntro(aName: string, bName: string, clubName: string): Promise<void> {
+  const club = clubName?.trim() || 'the club';
+  try {
+    await Share.share({
+      message: `${aName} & ${bName} — you two should get a game in. Both regulars at ${club} and you haven't played yet. Set it up on Foretera: ${FORETERA_URL}`,
+    });
+  } catch { /* dismissed */ }
+}
