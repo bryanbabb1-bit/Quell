@@ -6,6 +6,7 @@ import type {
   MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
   CourseFeedMatch, Visibility, OpenInvite, CoursePulse, ClubSummary, ClubDetail,
   ClubChampions, ClubDashboard, ClubMemberDetail, ClubIntros, LiveState, CheerKind,
+  CheerResult, Reactors,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -90,7 +91,8 @@ export function useApi() {
       confirmCard: (id: string) =>
         call<LiveState>(`/matches/${id}/confirm`, { method: 'POST' }),
       sendCheer: (id: string, kind: CheerKind) =>
-        call<{ ok: boolean }>(`/matches/${id}/cheer`, { method: 'POST', body: JSON.stringify({ kind }) }),
+        call<CheerResult>(`/matches/${id}/cheer`, { method: 'POST', body: JSON.stringify({ kind }) }),
+      getReactors: (id: string) => call<{ reactors: Reactors }>(`/matches/${id}/reactors`),
 
       getChampions: (id: string, month?: string) =>
         call<ClubChampions>(`/clubs/${id}/champions${month ? `?month=${month}` : ''}`),

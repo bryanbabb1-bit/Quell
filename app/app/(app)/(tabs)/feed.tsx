@@ -253,6 +253,15 @@ export default function FeedScreen() {
       >
         {error && <Text style={styles.error}>{error}</Text>}
 
+        {/* Pinned note from the club's staff — set in Club Control, shown to
+            everyone on the board. */}
+        {club?.pinned_message ? (
+          <View style={styles.pinnedCard}>
+            <Ionicons name="pin" size={15} color={colors.gold} />
+            <Text style={styles.pinnedText}>{club.pinned_message}</Text>
+          </View>
+        ) : null}
+
         {/* ── A2: the join-the-network prompt — home board, prospect clubs
             only. Gentle, dismissible, never gates anything. ── */}
         {club?.status === 'prospect' && isHomeBoard && !prospectHidden && (
@@ -741,9 +750,15 @@ function makeStyles(colors: Palette) {
     crownValue: { ...typography.caption, fontSize: 11, color: colors.muted, textAlign: 'center', fontVariant: ['tabular-nums'] },
     crownEmptyDot: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceRaised },
     crownEmpty: { ...typography.caption, fontSize: 11, color: colors.muted, marginTop: 2 },
-    // Prospect (join-the-network) card
-    // Standard border — the GOLD trim is the network's earned mark; a prospect
-    // card wearing it would dilute what the paid tier looks like.
+    // Pinned note — gold trim because it's an official note from a network club.
+    pinnedCard: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      backgroundColor: colors.goldGlow, borderRadius: radius.lg,
+      borderWidth: 1, borderColor: colors.gold, padding: spacing.md,
+    },
+    pinnedText: { ...typography.body, fontSize: 14, color: colors.text, flex: 1 },
+    // Prospect (join-the-network) card — standard border. The GOLD trim is the
+    // network's earned mark; a prospect card wearing it would dilute the paid tier.
     prospectCard: {
       backgroundColor: colors.surface, borderRadius: radius.lg,
       borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.sm,

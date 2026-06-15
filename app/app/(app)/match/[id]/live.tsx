@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
@@ -8,7 +8,7 @@ import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
-import type { LiveState, Gamecast, GamecastEvent, GamecastHole, CheerKind } from '@/types';
+import type { LiveState, Gamecast, GamecastEvent, GamecastHole, CheerKind, Reactors } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
 // The live GAMECAST for a same-group match — built to be watched. Participants
@@ -51,6 +51,8 @@ export default function LiveMatchScreen() {
   const [entry, setEntry] = useState<{ hole: number; creator: number; opponent: number } | null>(null);
   const [posting, setPosting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [reactorsOpen, setReactorsOpen] = useState(false);
+  const [reactors, setReactors] = useState<Reactors | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -101,11 +103,34 @@ export default function LiveMatchScreen() {
     finally { setConfirming(false); }
   };
 
+  // Toggle: tapping a reaction you've already given removes it. Optimistic, then
+  // reconciled to the server's exact tallies.
   const onCheer = (kind: CheerKind) => {
     if (!id) return;
     haptics.select();
-    setState((s) => s ? { ...s, reactions: { ...s.reactions, [kind]: (s.reactions[kind] ?? 0) + 1 } } : s);
-    api.sendCheer(id, kind).catch(() => {});
+    setState((s) => {
+      if (!s) return s;
+      const active = s.your_reactions.includes(kind);
+      const cur = s.reactions[kind] ?? 0;
+      return {
+        ...s,
+        reactions: { ...s.reactions, [kind]: Math.max(0, cur + (active ? -1 : 1)) },
+        your_reactions: active ? s.your_reactions.filter((k) => k !== kind) : [...s.your_reactions, kind],
+      };
+    });
+    api.sendCheer(id, kind)
+      .then((res) => setState((s) => s ? { ...s, reactions: res.reactions, your_reactions: res.your_reactions } : s))
+      .catch(() => {});
+  };
+
+  // Long-press a reaction (participants only) → who reacted.
+  const openReactors = async () => {
+    if (!id || !state?.viewer_is_participant) return;
+    haptics.select();
+    setReactors(null);
+    setReactorsOpen(true);
+    try { setReactors((await api.getReactors(id)).reactors); }
+    catch { setReactorsOpen(false); }
   };
 
   if (loading) return <SafeAreaView style={styles.center}><ActivityIndicator color={colors.accent} size="large" /></SafeAreaView>;
@@ -144,6 +169,7 @@ export default function LiveMatchScreen() {
         {/* Hero */}
         <View style={styles.hero}>
           <PlayerCol name={cName} photo={state.creator_photo_url} toPar={r?.creator_to_par ?? null}
+            courseHcp={r?.creator_course_handicap ?? null}
             side={colors.sideA} leading={r?.leader === 'creator'} colors={colors} styles={styles} />
           <View style={styles.heroMid}>
             <Text style={[styles.standing, { color: standingColor }]} numberOfLines={1}>{standing}</Text>
@@ -156,6 +182,7 @@ export default function LiveMatchScreen() {
             )}
           </View>
           <PlayerCol name={oName} photo={state.opponent_photo_url} toPar={r?.opponent_to_par ?? null}
+            courseHcp={r?.opponent_course_handicap ?? null}
             side={colors.sideB} leading={r?.leader === 'opponent'} colors={colors} styles={styles} />
         </View>
 
@@ -195,10 +222,10 @@ export default function LiveMatchScreen() {
           </View>
         )}
 
-        {/* Scorecard */}
-        {r && r.holes_played > 0 && (
+        {/* Full scorecard */}
+        {r && r.holes.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Scorecard</Text>
+            <Text style={styles.sectionTitle}>Scorecard · full match</Text>
             <ScoreGrid r={r} cName={cName} oName={oName} colors={colors} styles={styles} />
           </View>
         )}
@@ -213,13 +240,18 @@ export default function LiveMatchScreen() {
       </ScrollView>
 
       {/* Cheers bar (spectators + players) */}
-      {!state.completed && <CheerBar reactions={state.reactions} onCheer={onCheer} colors={colors} styles={styles} />}
+      {!state.completed && (
+        <CheerBar reactions={state.reactions} active={state.your_reactions} onCheer={onCheer}
+          canLongPress={state.viewer_is_participant} onLongPress={openReactors} colors={colors} styles={styles} />
+      )}
+
+      <ReactorsModal visible={reactorsOpen} reactors={reactors} onClose={() => setReactorsOpen(false)} colors={colors} styles={styles} />
     </SafeAreaView>
   );
 }
 
-function PlayerCol({ name, photo, toPar, side, leading, colors, styles }: {
-  name: string; photo: string | null; toPar: number | null; side: string; leading: boolean;
+function PlayerCol({ name, photo, toPar, courseHcp, side, leading, colors, styles }: {
+  name: string; photo: string | null; toPar: number | null; courseHcp: number | null; side: string; leading: boolean;
   colors: Palette; styles: ReturnType<typeof makeStyles>;
 }) {
   return (
@@ -228,6 +260,9 @@ function PlayerCol({ name, photo, toPar, side, leading, colors, styles }: {
         <Avatar name={name} size={50} photoUrl={photo} />
       </View>
       <Text style={styles.playerName} numberOfLines={1}>{name}</Text>
+      {courseHcp != null && (
+        <View style={styles.hcpPill}><Text style={styles.hcpText}>HCP {courseHcp}</Text></View>
+      )}
       <View style={styles.playerMetaRow}>
         <View style={[styles.sideDot, { backgroundColor: side }]} />
         {toPar != null && <Text style={[styles.toPar, toPar < 0 && { color: colors.gold }]}>{toParStr(toPar)}</Text>}
@@ -370,64 +405,83 @@ function PlayByPlayRow({ e, holes, cName, oName, divider, colors, styles }: {
   );
 }
 
+// The FULL card — every hole, played or not. A pop dot marks where each player
+// gets a handicap stroke, so you can see pops coming before they're played.
 function ScoreGrid({ r, cName, oName, colors, styles }: {
   r: Gamecast; cName: string; oName: string; colors: Palette; styles: ReturnType<typeof makeStyles>;
 }) {
-  const played = r.holes.filter((h) => h.winner != null);
+  const holes = r.holes;
   const cell = (gh: GamecastHole, who: 'creator' | 'opponent') => {
     const g = who === 'creator' ? gh.creator_gross : gh.opponent_gross;
     const net = who === 'creator' ? gh.creator_net : gh.opponent_net;
     const strokes = who === 'creator' ? gh.creator_strokes : gh.opponent_strokes;
     const tp = who === 'creator' ? gh.creator_to_par : gh.opponent_to_par;
     const won = gh.winner === who;
-    const showNet = strokes > 0 && net != null && g != null; // a stroke fell here
+    const pop = strokes > 0;                       // a stroke falls on this hole
+    const showNet = pop && net != null && g != null;
     return (
       <View key={gh.hole} style={[styles.gCell, won && styles.gCellWon]}>
-        <Text style={[styles.gScore, tp != null && tp < 0 && { color: colors.gold }, won && styles.gScoreWon]}>{g ?? '–'}</Text>
+        {pop && <View style={styles.popDot} />}
+        <Text style={[styles.gScore, g == null && styles.gScoreEmpty, tp != null && tp < 0 && { color: colors.gold }, won && styles.gScoreWon]}>{g ?? '·'}</Text>
         {showNet && <Text style={styles.gNet}>({net})</Text>}
       </View>
     );
   };
-  return (
-    <View style={styles.gridWrap}>
-      <View style={styles.gridLabels}>
-        <View style={styles.gRow}><Text style={styles.gLabel}>Hole</Text></View>
-        <View style={styles.gRow}><Text style={styles.gLabel}>Par</Text></View>
-        <View style={styles.gRow}><View style={[styles.sideDot, { backgroundColor: colors.sideA }]} /><Text style={styles.gLabelName} numberOfLines={1}>{cName}</Text></View>
-        <View style={styles.gRow}><View style={[styles.sideDot, { backgroundColor: colors.sideB }]} /><Text style={styles.gLabelName} numberOfLines={1}>{oName}</Text></View>
-        <View style={styles.gRow}><Text style={styles.gLabel}>Match</Text></View>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View>
-          <View style={styles.gRow}>{played.map((h) => <View key={h.hole} style={styles.gCell}><Text style={styles.gHead}>{h.hole}</Text></View>)}</View>
-          <View style={styles.gRow}>{played.map((h) => <View key={h.hole} style={styles.gCell}><Text style={styles.gPar}>{h.par ?? '–'}</Text></View>)}</View>
-          <View style={styles.gRow}>{played.map((h) => cell(h, 'creator'))}</View>
-          <View style={styles.gRow}>{played.map((h) => cell(h, 'opponent'))}</View>
-          <View style={styles.gRow}>{played.map((h) => (
-            <View key={h.hole} style={styles.gCell}>
-              <Text style={styles.gMatch}>{h.creator_delta === 0 ? 'AS' : `${Math.abs(h.creator_delta ?? 0)}${(h.creator_delta ?? 0) > 0 ? '↑' : '↓'}`}</Text>
-            </View>
-          ))}</View>
-        </View>
-      </ScrollView>
+  const matchCell = (gh: GamecastHole) => (
+    <View key={gh.hole} style={styles.gCell}>
+      <Text style={styles.gMatch}>{gh.winner == null ? '' : gh.creator_delta === 0 ? 'AS' : `${Math.abs(gh.creator_delta ?? 0)}${(gh.creator_delta ?? 0) > 0 ? '↑' : '↓'}`}</Text>
     </View>
+  );
+  return (
+    <>
+      <View style={styles.gridWrap}>
+        <View style={styles.gridLabels}>
+          <View style={styles.gRow}><Text style={styles.gLabel}>Hole</Text></View>
+          <View style={styles.gRow}><Text style={styles.gLabel}>Par</Text></View>
+          <View style={styles.gRow}><View style={[styles.sideDot, { backgroundColor: colors.sideA }]} /><Text style={styles.gLabelName} numberOfLines={1}>{cName}</Text></View>
+          <View style={styles.gRow}><View style={[styles.sideDot, { backgroundColor: colors.sideB }]} /><Text style={styles.gLabelName} numberOfLines={1}>{oName}</Text></View>
+          <View style={styles.gRow}><Text style={styles.gLabel}>Match</Text></View>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View>
+            <View style={styles.gRow}>{holes.map((h) => (
+              <View key={h.hole} style={[styles.gCell, h.hole === r.current_hole && styles.gCellCurrent]}>
+                <Text style={[styles.gHead, h.hole === r.current_hole && styles.gHeadCurrent]}>{h.hole}</Text>
+              </View>
+            ))}</View>
+            <View style={styles.gRow}>{holes.map((h) => <View key={h.hole} style={styles.gCell}><Text style={styles.gPar}>{h.par ?? '–'}</Text></View>)}</View>
+            <View style={styles.gRow}>{holes.map((h) => cell(h, 'creator'))}</View>
+            <View style={styles.gRow}>{holes.map((h) => cell(h, 'opponent'))}</View>
+            <View style={styles.gRow}>{holes.map(matchCell)}</View>
+          </View>
+        </ScrollView>
+      </View>
+      <View style={styles.legendRow}>
+        <View style={styles.popDotStatic} />
+        <Text style={styles.legendText}>marks a handicap stroke (pop)</Text>
+      </View>
+    </>
   );
 }
 
-function CheerBar({ reactions, onCheer, colors, styles }: {
-  reactions: Partial<Record<CheerKind, number>>; onCheer: (k: CheerKind) => void;
-  colors: Palette; styles: ReturnType<typeof makeStyles>;
+function CheerBar({ reactions, active, onCheer, canLongPress, onLongPress, colors, styles }: {
+  reactions: Partial<Record<CheerKind, number>>; active: CheerKind[]; onCheer: (k: CheerKind) => void;
+  canLongPress: boolean; onLongPress: () => void; colors: Palette; styles: ReturnType<typeof makeStyles>;
 }) {
   return (
     <View style={styles.cheerBar}>
       {CHEERS.map(({ kind, emoji }) => (
-        <Floating key={kind} emoji={emoji} count={reactions[kind] ?? 0} onPress={() => onCheer(kind)} styles={styles} />
+        <Floating key={kind} emoji={emoji} count={reactions[kind] ?? 0} active={active.includes(kind)}
+          onPress={() => onCheer(kind)} onLongPress={canLongPress ? onLongPress : undefined} colors={colors} styles={styles} />
       ))}
     </View>
   );
 }
 
-function Floating({ emoji, count, onPress, styles }: { emoji: string; count: number; onPress: () => void; styles: ReturnType<typeof makeStyles> }) {
+function Floating({ emoji, count, active, onPress, onLongPress, colors, styles }: {
+  emoji: string; count: number; active: boolean; onPress: () => void; onLongPress?: () => void;
+  colors: Palette; styles: ReturnType<typeof makeStyles>;
+}) {
   const y = useSharedValue(0);
   const op = useSharedValue(0);
   const aStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }], opacity: op.value }));
@@ -437,11 +491,55 @@ function Floating({ emoji, count, onPress, styles }: { emoji: string; count: num
     op.value = withSequence(withTiming(1, { duration: 80 }), withTiming(0, { duration: 820 }));
   };
   return (
-    <TouchableOpacity style={styles.cheerBtn} hitSlop={8} onPress={() => { fire(); onPress(); }} accessibilityRole="button" accessibilityLabel={`React ${emoji}`}>
+    <TouchableOpacity
+      style={[styles.cheerBtn, active && styles.cheerBtnActive]} hitSlop={8}
+      onPress={() => { if (!active) fire(); onPress(); }}
+      onLongPress={onLongPress} delayLongPress={300}
+      accessibilityRole="button" accessibilityLabel={`React ${emoji}${active ? ', remove' : ''}${onLongPress ? '. Long-press to see who reacted' : ''}`}
+    >
       <Animated.Text style={[styles.cheerFloat, aStyle]}>{emoji}</Animated.Text>
       <Text style={styles.cheerEmoji}>{emoji}</Text>
-      {count > 0 && <Text style={styles.cheerCount}>{count}</Text>}
+      {count > 0 && <Text style={[styles.cheerCount, active && { color: colors.accent, fontFamily: fonts.bodyBold }]}>{count}</Text>}
     </TouchableOpacity>
+  );
+}
+
+function ReactorsModal({ visible, reactors, onClose, colors, styles }: {
+  visible: boolean; reactors: Reactors | null; onClose: () => void; colors: Palette; styles: ReturnType<typeof makeStyles>;
+}) {
+  const empty = reactors != null && CHEERS.every(({ kind }) => (reactors[kind]?.length ?? 0) === 0);
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={() => {}}>
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>Who reacted</Text>
+          {reactors == null ? (
+            <ActivityIndicator color={colors.accent} style={{ marginVertical: spacing.md }} />
+          ) : empty ? (
+            <Text style={styles.note}>No reactions yet.</Text>
+          ) : (
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              {CHEERS.map(({ kind, emoji }) => {
+                const list = reactors[kind] ?? [];
+                if (!list.length) return null;
+                return (
+                  <View key={kind} style={styles.reactKindBlock}>
+                    <Text style={styles.reactKindHead}>{emoji}  {list.length}</Text>
+                    {list.map((p, i) => (
+                      <View key={i} style={styles.reactPersonRow}>
+                        <Avatar name={p.name} size={26} photoUrl={p.photo_url} />
+                        <Text style={styles.reactPersonName} numberOfLines={1}>{p.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -470,6 +568,8 @@ function makeStyles(c: Palette) {
     avatarRing: { borderWidth: 2, borderRadius: 30, padding: 2 },
     avatarRingLead: { borderWidth: 2.5 },
     playerName: { ...typography.bodySemiBold, fontSize: 14 },
+    hcpPill: { backgroundColor: c.surfaceRaised, borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 1 },
+    hcpText: { ...typography.caption, fontSize: 10, color: c.muted, fontVariant: ['tabular-nums'], letterSpacing: 0.3 },
     playerMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     sideDot: { width: 8, height: 8, borderRadius: 4 },
     toPar: { ...typography.caption, color: c.text, fontVariant: ['tabular-nums'] },
@@ -521,21 +621,38 @@ function makeStyles(c: Palette) {
     gLabelName: { ...typography.caption, fontSize: 12, color: c.text, width: 60, paddingLeft: 4 },
     gCell: { width: 30, alignItems: 'center', justifyContent: 'center' },
     gCellWon: { backgroundColor: c.surfaceRaised },
+    gCellCurrent: { backgroundColor: c.surfaceRaised },
+    popDot: { position: 'absolute', top: 2, right: 4, width: 4, height: 4, borderRadius: 2, backgroundColor: c.gold },
     gHead: { ...typography.caption, fontSize: 11, color: c.muted, fontFamily: fonts.bodySemi },
+    gHeadCurrent: { color: c.accent, fontFamily: fonts.bodyBold },
+    gScoreEmpty: { color: c.muted },
     gPar: { ...typography.caption, fontSize: 11, color: c.muted },
     gScore: { ...typography.body, fontSize: 13, lineHeight: 15, color: c.text, fontVariant: ['tabular-nums'] },
     gScoreWon: { fontFamily: fonts.bodyBold },
     gNet: { ...typography.caption, fontSize: 9, lineHeight: 10, color: c.muted, fontVariant: ['tabular-nums'] },
     gMatch: { ...typography.caption, fontSize: 11, color: c.muted, fontVariant: ['tabular-nums'] },
+    legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.xs, paddingLeft: 4 },
+    popDotStatic: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: c.gold },
+    legendText: { ...typography.caption, fontSize: 11, color: c.muted },
     // Recap
     recapBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: c.accent, borderRadius: radius.md, paddingVertical: spacing.md, marginTop: spacing.sm },
     recapText: { ...typography.bodySemiBold, color: c.onAccent },
     // Cheers
     cheerBar: { position: 'absolute', bottom: spacing.lg, left: spacing.lg, right: spacing.lg, flexDirection: 'row', justifyContent: 'space-around', backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.pill, paddingVertical: spacing.sm, ...elevationFloating() },
-    cheerBtn: { alignItems: 'center', flexDirection: 'row', gap: 4, paddingHorizontal: spacing.sm },
+    cheerBtn: { alignItems: 'center', flexDirection: 'row', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: 4, borderRadius: radius.pill },
+    cheerBtnActive: { backgroundColor: c.surfaceRaised },
     cheerEmoji: { fontSize: 22 },
     cheerCount: { ...typography.caption, color: c.muted, fontVariant: ['tabular-nums'] },
     cheerFloat: { position: 'absolute', top: -6, alignSelf: 'center', fontSize: 22 },
+    // Who-reacted modal
+    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalCard: { backgroundColor: c.surface, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.sm },
+    modalHandle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, backgroundColor: c.border, marginBottom: spacing.sm },
+    modalTitle: { ...typography.heading, fontSize: 18, color: c.text },
+    reactKindBlock: { gap: spacing.xs, marginBottom: spacing.sm },
+    reactKindHead: { ...typography.bodySemiBold, fontSize: 15, color: c.text },
+    reactPersonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 36 },
+    reactPersonName: { ...typography.body, color: c.text, flex: 1 },
   });
 }
 

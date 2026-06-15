@@ -309,6 +309,11 @@ export interface Gamecast {
   win_prob: number[];                    // creator P(win) at each completed hole (+pre-round)
   current_hole: number | null;           // next hole not complete by both
   events: GamecastEvent[];               // oldest → newest (client reverses for the feed)
+  // Each player's course handicap for the segment played (attached by
+  // computeLiveState; pure buildGamecast leaves these undefined). Lets the live
+  // header show "Marcus (12)" so players and spectators know who's getting pops.
+  creator_course_handicap?: number | null;
+  opponent_course_handicap?: number | null;
 }
 
 function toParName(toPar: number): ToParName {

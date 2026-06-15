@@ -238,8 +238,10 @@ export async function computeLiveState(env: Env, match: Record<string, any>): Pr
   const diff = creatorCH - opponentCH;
   const cGross = creatorCard ? grossFor(creatorTee.holes, creatorCard.hole_scores) : creatorTee.holes.map(() => 0);
   const oGross = opponentCard ? grossFor(opponentTee.holes, opponentCard.hole_scores) : opponentTee.holes.map(() => 0);
-  // The rich gamecast (per-hole to-par, momentum, win-prob, play-by-play).
-  return buildGamecast(creatorTee.holes, cGross, oGross, diff, opponentTee.holes);
+  // The rich gamecast (per-hole to-par, momentum, win-prob, play-by-play), plus
+  // each player's course handicap so the live header can show who gets pops.
+  const gc = buildGamecast(creatorTee.holes, cGross, oGross, diff, opponentTee.holes);
+  return { ...gc, creator_course_handicap: creatorCH, opponent_course_handicap: opponentCH };
 }
 
 async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Response> {

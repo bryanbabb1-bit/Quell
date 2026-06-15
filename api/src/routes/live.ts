@@ -29,6 +29,7 @@ export async function handleLive(
   if (action === 'live-score' && request.method === 'POST') return liveScore(auth, env, matchId, request);
   if (action === 'confirm' && request.method === 'POST') return confirmCard(auth, env, matchId);
   if (action === 'cheer' && request.method === 'POST') return cheer(auth, env, matchId, request);
+  if (action === 'reactors' && request.method === 'GET') return reactors(auth, env, matchId);
   if (action === 'live' && request.method === 'GET') return liveState(auth, env, matchId);
   return error('Not found', 404);
 }
@@ -143,10 +144,14 @@ async function confirmCard(auth: AuthContext, env: Env, matchId: string): Promis
   return json(await buildLiveState(env, matchId, auth.userId));
 }
 
-const CHEER_KINDS = new Set(['fire', 'clap', 'flag', 'shock']);
+const CHEER_KINDS = ['fire', 'clap', 'flag', 'shock'] as const;
+const CHEER_SET = new Set<string>(CHEER_KINDS);
+const fullName = (f: any, l: any, fb: string) => [f, l].filter((s) => typeof s === 'string' && s.trim()).join(' ').trim() || fb;
 
-// POST /matches/:id/cheer { kind } — a spectator (or player) reaction. Rate-
-// limited by the global per-user limiter; one row per tap, aggregated on read.
+// POST /matches/:id/cheer { kind } — a spectator (or player) reaction, now a
+// TOGGLE: tapping again removes your reaction (one per person per kind, enforced
+// by the unique index). Count per kind = distinct people. Returns the fresh
+// tallies + the caller's active reactions so the client can reconcile.
 async function cheer(auth: AuthContext, env: Env, matchId: string, request: Request): Promise<Response> {
   const match = await env.DB.prepare('SELECT visibility, creator_id, opponent_id FROM matches WHERE id = ?')
     .bind(matchId).first<Record<string, any>>();
@@ -155,10 +160,51 @@ async function cheer(auth: AuthContext, env: Env, matchId: string, request: Requ
   if (match.visibility !== 'public' && !isParticipant) return error('Not your match', 403);
   const body = await parseBody(request);
   const kind = String(body.kind ?? '');
-  if (!CHEER_KINDS.has(kind)) return error('Unknown reaction', 400);
-  await env.DB.prepare('INSERT INTO match_reactions (id, match_id, user_id, kind, created_at) VALUES (?, ?, ?, ?, ?)')
-    .bind(newId(), matchId, auth.userId, kind, now()).run();
-  return json({ ok: true });
+  if (!CHEER_SET.has(kind)) return error('Unknown reaction', 400);
+
+  const existing = await env.DB.prepare('SELECT id FROM match_reactions WHERE match_id = ? AND user_id = ? AND kind = ?')
+    .bind(matchId, auth.userId, kind).first();
+  let reacted: boolean;
+  if (existing) {
+    await env.DB.prepare('DELETE FROM match_reactions WHERE match_id = ? AND user_id = ? AND kind = ?')
+      .bind(matchId, auth.userId, kind).run();
+    reacted = false;
+  } else {
+    await env.DB.prepare('INSERT OR IGNORE INTO match_reactions (id, match_id, user_id, kind, created_at) VALUES (?, ?, ?, ?, ?)')
+      .bind(newId(), matchId, auth.userId, kind, now()).run();
+    reacted = true;
+  }
+
+  const [agg, mine] = await Promise.all([
+    env.DB.prepare('SELECT kind, COUNT(*) AS n FROM match_reactions WHERE match_id = ? GROUP BY kind').bind(matchId).all<{ kind: string; n: number }>(),
+    env.DB.prepare('SELECT kind FROM match_reactions WHERE match_id = ? AND user_id = ?').bind(matchId, auth.userId).all<{ kind: string }>(),
+  ]);
+  return json({
+    reacted,
+    reactions: Object.fromEntries((agg.results ?? []).map((r) => [r.kind, r.n])),
+    your_reactions: (mine.results ?? []).map((r) => r.kind),
+  });
+}
+
+// GET /matches/:id/reactors — who reacted, grouped by kind. PARTICIPANT-ONLY
+// (it names people; spectators just see counts). Powers the long-press sheet.
+async function reactors(auth: AuthContext, env: Env, matchId: string): Promise<Response> {
+  const match = await env.DB.prepare('SELECT creator_id, opponent_id FROM matches WHERE id = ?')
+    .bind(matchId).first<Record<string, any>>();
+  if (!match) return error('Match not found', 404);
+  const isParticipant = match.creator_id === auth.userId || match.opponent_id === auth.userId;
+  if (!isParticipant) return error('Only players can see who reacted', 403);
+
+  const { results } = await env.DB.prepare(
+    `SELECT r.kind AS kind, u.first_name AS f, u.last_name AS l, u.profile_photo_url AS p
+       FROM match_reactions r JOIN users u ON u.id = r.user_id
+      WHERE r.match_id = ? ORDER BY r.created_at DESC`
+  ).bind(matchId).all<Record<string, any>>();
+  const byKind: Record<string, { name: string; photo_url: string | null }[]> = { fire: [], clap: [], flag: [], shock: [] };
+  for (const row of results ?? []) {
+    (byKind[row.kind] ??= []).push({ name: fullName(row.f, row.l, 'A golfer'), photo_url: row.p ?? null });
+  }
+  return json({ reactors: byKind });
 }
 
 // GET /matches/:id/live — the running state. Participants always; spectators
@@ -197,6 +243,7 @@ async function buildLiveState(env: Env, matchId: string, viewerId: string, inclu
     showScores ? computeLiveState(env, match) : Promise.resolve(null),
   ]);
   const fcRow = await env.DB.prepare('SELECT COUNT(*) AS n FROM match_followers WHERE match_id = ?').bind(matchId).first<{ n: number }>();
+  const myReact = await env.DB.prepare('SELECT kind FROM match_reactions WHERE match_id = ? AND user_id = ?').bind(matchId, viewerId).all<{ kind: string }>();
 
   // Viewer's own posted holes (participants) → the entry UI's next hole.
   let your_holes: number[] = [];
@@ -220,6 +267,7 @@ async function buildLiveState(env: Env, matchId: string, viewerId: string, inclu
     follower_count: fcRow?.n ?? 0,
     followers: (followers.results ?? []).map((u) => ({ name: nm(u.f, u.l, 'A golfer'), photo_url: u.p ?? null })),
     reactions: Object.fromEntries((reactions.results ?? []).map((r) => [r.kind, r.n])),
+    your_reactions: (myReact.results ?? []).map((r) => r.kind),
     creator_name: nm(match?.cf, match?.cl, 'A golfer'),
     opponent_name: match?.opponent_id ? nm(match?.of, match?.ol, 'Opponent') : null,
     creator_photo_url: match?.cp ?? null,

@@ -148,6 +148,8 @@ export interface ClubSummary {
   status: 'network' | 'prospect';
   crest_url: string | null;
   primary_color: string | null;
+  // A note the club's staff pin to the board (e.g. "Men's league Saturday").
+  pinned_message?: string | null;
   // Member demand signals for this club (prospects) — social proof shown on
   // the prospect card before the viewer has tapped anything.
   interest_count?: number;
@@ -281,10 +283,15 @@ export interface Gamecast {
   win_prob: number[];
   current_hole: number | null;
   events: GamecastEvent[];
+  creator_course_handicap?: number | null;   // shown by each name in the live header
+  opponent_course_handicap?: number | null;
 }
 
 export interface LiveFollower { name: string; photo_url: string | null }
 export type CheerKind = 'fire' | 'clap' | 'flag' | 'shock';
+export interface Reactor { name: string; photo_url: string | null }
+export type Reactors = Record<CheerKind, Reactor[]>;
+export interface CheerResult { reacted: boolean; reactions: Partial<Record<CheerKind, number>>; your_reactions: CheerKind[] }
 
 export interface LiveState {
   match_id: string;
@@ -293,6 +300,7 @@ export interface LiveState {
   follower_count: number;
   followers: LiveFollower[];
   reactions: Partial<Record<CheerKind, number>>;
+  your_reactions: CheerKind[];   // the viewer's own active reactions (toggle state)
   creator_name: string;
   opponent_name: string | null;
   creator_photo_url: string | null;
