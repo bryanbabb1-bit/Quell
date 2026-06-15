@@ -5,7 +5,7 @@ import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
   MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
   CourseFeedMatch, Visibility, OpenInvite, CoursePulse, ClubSummary, ClubDetail,
-  ClubChampions, ClubDashboard, LiveState, CheerKind,
+  ClubChampions, ClubDashboard, ClubMemberDetail, LiveState, CheerKind,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -95,6 +95,7 @@ export function useApi() {
       getChampions: (id: string, month?: string) =>
         call<ClubChampions>(`/clubs/${id}/champions${month ? `?month=${month}` : ''}`),
       getClubDashboard: (id: string) => call<ClubDashboard>(`/clubs/${id}/dashboard`),
+      getClubMember: (id: string, userId: string) => call<ClubMemberDetail>(`/clubs/${id}/member/${userId}`),
       updateClub: (id: string, patch: { primary_color?: string | null; pinned_message?: string | null }) =>
         call<ClubDetail>(`/clubs/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
       // Crest upload — staff only; mirrors uploadPhoto but targets the club.

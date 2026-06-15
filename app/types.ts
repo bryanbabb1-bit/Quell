@@ -209,6 +209,30 @@ export interface ClubDashboard {
   demand: { total: number; last_30d: number };
 }
 
+// GET /clubs/:id/member/:uid — staff-only member engagement detail. Win/loss is
+// deliberately absent; clubs care about engagement, not who beat whom.
+export type MemberStatus = 'new' | 'active' | 'cooling' | 'lapsed';
+
+export interface ClubMemberDetail {
+  user_id: string;
+  name: string;
+  photo_url: string | null;
+  handicap: number | null;
+  status: MemberStatus;
+  headline: string;
+  member_since: string | null;
+  total_matches: number;
+  matches_30d: number;
+  last_played: string | null;
+  days_since: number | null;
+  per_week: number;
+  trend: { week: string; matches: number }[];
+  momentum: 'rising' | 'steady' | 'cooling';
+  partners_count: number;
+  top_partners: (DashboardPlayer & { matches: number })[];
+  looking_now: boolean;
+}
+
 // ── Live gamecast (playing-together match) ──────────────────────────────────
 export type ToParName = 'eagle' | 'birdie' | 'par' | 'bogey' | 'double' | 'other';
 

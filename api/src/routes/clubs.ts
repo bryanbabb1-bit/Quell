@@ -5,12 +5,14 @@ import { newId, now } from '../lib/id';
 import { monthKey, isValidMonth } from '../lib/date';
 import { computeChampions, readCrowned } from '../lib/champions';
 import { buildDashboard } from '../lib/dashboard';
+import { buildMemberDetail } from '../lib/memberDetail';
 
 // Clubs — the network layer (strategy doc A2/A3/A4).
 //   GET   /clubs/:id             summary + demand count (claim screen)
 //   POST  /clubs/:id/interest    record the caller's "I want my club in" signal
 //   GET   /clubs/:id/champions   monthly champions (live current / crowned past)
 //   GET   /clubs/:id/dashboard   STAFF-ONLY pulse dashboard (engagement + churn)
+//   GET   /clubs/:id/member/:uid STAFF-ONLY member engagement detail (no win/loss)
 //   POST  /clubs/:id/crest       STAFF-ONLY crest upload (raw image bytes -> R2)
 //   PATCH /clubs/:id             STAFF-ONLY club settings (color, pinned note)
 export async function handleClubs(
@@ -73,7 +75,7 @@ export async function handleClubs(
   }
 
   // ── Staff-only surfaces ──
-  if (action === 'dashboard' || action === 'crest' || (!action && method === 'PATCH')) {
+  if (action === 'dashboard' || action === 'member' || action === 'crest' || (!action && method === 'PATCH')) {
     const staff = await env.DB.prepare('SELECT 1 FROM club_staff WHERE club_id = ? AND user_id = ?')
       .bind(clubId, auth.userId).first();
     if (!staff) return error('Not authorized for this club', 403);
@@ -81,6 +83,15 @@ export async function handleClubs(
     if (action === 'dashboard' && method === 'GET') {
       if (!course) return error('Club has no course linked', 409);
       return json(await buildDashboard(env, clubId, course.name));
+    }
+
+    if (action === 'member' && method === 'GET') {
+      if (!course) return error('Club has no course linked', 409);
+      const memberId = segments[3];
+      if (!memberId) return error('Member id required', 400);
+      const detail = await buildMemberDetail(env, course.name, memberId);
+      if (!detail) return error('Member not found', 404);
+      return json(detail);
     }
 
     if (action === 'crest' && method === 'POST') {

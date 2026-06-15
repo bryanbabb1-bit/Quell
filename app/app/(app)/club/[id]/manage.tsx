@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
@@ -20,8 +20,10 @@ const COLOR_SWATCHES = ['#1E5B3E', '#0B3D6B', '#7A1F2B', '#3B2A66', '#5A4A1F', '
 export default function ClubManageScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const api = useApi();
+  const router = useRouter();
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const openMember = (userId: string) => { haptics.select(); router.push(`/(app)/club/${id}/member/${userId}`); };
 
   const [data, setData] = useState<ClubDashboard | null>(null);
   const [club, setClub] = useState<ClubDetail | null>(null);
@@ -198,13 +200,18 @@ export default function ClubManageScreen() {
               <Text style={styles.panelTitle}>Lapsing — {data.churn.count} quiet 30+ days</Text>
             </View>
             {data.churn.players.slice(0, 6).map((p) => (
-              <View key={p.user_id} style={styles.personRow}>
+              <TouchableOpacity
+                key={p.user_id} style={styles.personRow} activeOpacity={0.7}
+                accessibilityRole="button" accessibilityLabel={`Open ${p.name}'s engagement`}
+                onPress={() => openMember(p.user_id)}
+              >
                 <Avatar name={p.name} size={28} photoUrl={p.photo_url} />
                 <Text style={styles.personName} numberOfLines={1}>{p.name}</Text>
                 <Text style={styles.personMeta}>last {p.last_played}</Text>
-              </View>
+                <Ionicons name="chevron-forward" size={14} color={colors.muted} />
+              </TouchableOpacity>
             ))}
-            <Text style={styles.hint}>Win them back with a club event or a nudge.</Text>
+            <Text style={styles.hint}>Tap a member to see their engagement — then win them back.</Text>
           </View>
         )}
 
@@ -213,12 +220,17 @@ export default function ClubManageScreen() {
           <View style={styles.panel}>
             <Text style={styles.panelTitle}>Most active this month</Text>
             {data.most_active.map((p, i) => (
-              <View key={p.user_id} style={styles.personRow}>
+              <TouchableOpacity
+                key={p.user_id} style={styles.personRow} activeOpacity={0.7}
+                accessibilityRole="button" accessibilityLabel={`Open ${p.name}'s engagement`}
+                onPress={() => openMember(p.user_id)}
+              >
                 <Text style={styles.rank}>{i + 1}</Text>
                 <Avatar name={p.name} size={28} photoUrl={p.photo_url} />
                 <Text style={styles.personName} numberOfLines={1}>{p.name}</Text>
                 <Text style={styles.personMeta}>{p.matches} matches</Text>
-              </View>
+                <Ionicons name="chevron-forward" size={14} color={colors.muted} />
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -315,7 +327,7 @@ function makeStyles(c: Palette) {
     flowRow: { flexDirection: 'row' },
     flowCell: { flex: 1, alignItems: 'center', gap: 2 },
     flowNum: { ...typography.title, fontSize: 26, color: c.text, fontVariant: ['tabular-nums'] },
-    personRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    personRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 44 },
     rank: { width: 16, textAlign: 'center', ...typography.caption, color: c.muted },
     personName: { flex: 1, ...typography.body },
     personMeta: { ...typography.caption, color: c.muted },

@@ -159,9 +159,6 @@ export default function FeedScreen() {
     try { await Share.share({ message: msg }); } catch { /* dismissed */ }
   };
 
-  // Staff of THIS club see a Manage entry into the pulse dashboard.
-  const isStaff = !!club && user?.staff_club_id === club.id;
-
   // Optimistic follow toggle for a live match (the 👁 count + Following state).
   const toggleFollow = useCallback(async (matchId: string, follow: boolean) => {
     try {
@@ -243,19 +240,6 @@ export default function FeedScreen() {
           </View>
           <Ionicons name={switching ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
         </TouchableOpacity>
-        {isStaff && (
-          <TouchableOpacity
-            style={styles.manageBar}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Open Club Control"
-            onPress={() => { haptics.select(); router.push(`/(app)/club/${club!.id}/manage`); }}
-          >
-            <Ionicons name="speedometer-outline" size={14} color={colors.gold} />
-            <Text style={styles.manageText}>Club Control · pulse dashboard</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.gold} />
-          </TouchableOpacity>
-        )}
       </View>
       {(switching || !course) && (
         <View style={styles.switcher}>
@@ -744,13 +728,6 @@ function makeStyles(colors: Palette) {
     crestMono: { alignItems: 'center', justifyContent: 'center' },
     crestText: { ...typography.bodySemiBold, fontSize: 15, letterSpacing: 0.5 },
     pulseCardNetwork: { borderColor: colors.gold },
-    // Staff manage bar
-    manageBar: {
-      flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm,
-      backgroundColor: colors.goldGlow, borderWidth: 1, borderColor: colors.gold,
-      borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    },
-    manageText: { fontFamily: fonts.bodySemi, fontSize: 13, color: colors.gold, flex: 1 },
     seeAll: { ...typography.caption, color: colors.gold, fontFamily: fonts.bodySemi },
     // Champions strip
     champRow: { flexDirection: 'row', gap: spacing.sm },
