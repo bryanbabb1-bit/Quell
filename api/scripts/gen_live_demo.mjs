@@ -44,21 +44,24 @@ function matchSql(m) {
   const v = (x) => (x == null ? 'NULL' : typeof x === 'number' ? x : `'${esc(x)}'`);
   return `INSERT INTO matches (id, creator_id, opponent_id, status, course_name, tee_color, tee_id, opponent_tee_id, opponent_tee_color, play_date, play_time, match_type, stakes, hcp_range_min, hcp_range_max, creator_scorecard_id, opponent_scorecard_id, creator_handicap, opponent_handicap, result, match_progression, visibility, playing_together, created_at, updated_at, completed_at) VALUES (` +
     [m.id, m.creator, m.opponent, 'in_progress', m.course, m.color, m.tee, m.tee, m.color,
-     today(), m.time, 'eighteen', null, 0, 54, m.c_card, m.o_card, 0, 0,
+     today(), m.time, 'eighteen', null, 0, 54, m.c_card, m.o_card, m.c_hcp, m.o_hcp,
      null, null, 'public', 1, iso(0, 8), iso(0, 12), null].map(v).join(',') + `);\n`;
 }
 
-// (course, tee, color, creator, opponent, creatorThru, opponentThru, time)
+// (course, tee, color, creator, opponent, creatorThru, opponentThru, time, creatorHcp, opponentHcp)
+// Handicaps are INDEXES; a plus handicap (better than scratch) is stored NEGATIVE
+// (-2 renders "+2"). Varied so each match allocates real strokes / pops.
 const MATCHES = [
-  ['m_live_01', 'Falcon Ridge Golf Club', 'tee_api_18074_bluem', 'Blue (M)', 'user_demo_03', 'user_demo_09', 6, 6, '08:00'],
-  ['m_live_02', 'Prairie Highlands Golf Course', 'tee_api_10516_blue', 'Blue', 'user_demo_05', 'user_demo_12', 9, 8, '08:40'],
-  ['m_live_03', 'Ironhorse Golf Club', 'tee_api_17985_blue', 'Blue', 'user_demo_07', 'user_demo_16', 4, 4, '09:10'],
-  // Bryan participates — his side is a few holes behind so he can post live.
-  ['m_live_bryan', 'Prairie Highlands Golf Course', 'tee_api_10516_blue', 'Blue', BRYAN, 'user_demo_08', 3, 5, '07:30'],
+  // +1 creator vs a 9 → the higher player gets pops; tests the "+1" display.
+  ['m_live_01', 'Falcon Ridge Golf Club', 'tee_api_18074_bluem', 'Blue (M)', 'user_demo_03', 'user_demo_09', 6, 6, '08:00', -1, 9],
+  ['m_live_02', 'Prairie Highlands Golf Course', 'tee_api_10516_blue', 'Blue', 'user_demo_05', 'user_demo_12', 9, 8, '08:40', 2, 16],
+  ['m_live_03', 'Ironhorse Golf Club', 'tee_api_17985_blue', 'Blue', 'user_demo_07', 'user_demo_16', 4, 4, '09:10', 12, 5],
+  // Bryan (10) vs a +2 — the +2 gives up ~12 strokes; tests big pops + "+2".
+  ['m_live_bryan', 'Prairie Highlands Golf Course', 'tee_api_10516_blue', 'Blue', BRYAN, 'user_demo_08', 3, 5, '07:30', 10, -2],
 ];
 
 const range = Array.from({ length: 18 }, (_, i) => i + 1);
-for (const [id, course, tee, color, creator, opponent, cThru, oThru, time] of MATCHES) {
+for (const [id, course, tee, color, creator, opponent, cThru, oThru, time, cHcp, oHcp] of MATCHES) {
   const cCard = card(range.slice(0, cThru), 'low');
   const oCard = card(range.slice(0, oThru), 'high');
   if (cThru > 0) out += cardSql(`sc_${id}_c`, id, creator, cCard, iso(0, 11));
@@ -67,6 +70,7 @@ for (const [id, course, tee, color, creator, opponent, cThru, oThru, time] of MA
     id, course, tee, color, creator, opponent, time,
     c_card: cThru > 0 ? `sc_${id}_c` : null,
     o_card: oThru > 0 ? `sc_${id}_o` : null,
+    c_hcp: cHcp, o_hcp: oHcp,
   });
   out += '\n';
 }

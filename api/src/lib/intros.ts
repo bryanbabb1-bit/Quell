@@ -10,7 +10,8 @@ import type { DashboardPlayer } from './dashboard';
 
 const DAY = 86_400_000;
 const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
-const fmtH = (h: number) => h.toFixed(1);
+// Plus handicaps (better than scratch) are stored negative and read as "+2.0".
+const fmtH = (h: number) => (h < 0 ? `+${Math.abs(h).toFixed(1)}` : h.toFixed(1));
 
 export interface IntroPlayer extends DashboardPlayer { handicap: number | null; }
 export interface IntroSuggestion { a: IntroPlayer; b: IntroPlayer; reason: string; }

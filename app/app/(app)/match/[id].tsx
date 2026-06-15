@@ -15,7 +15,7 @@ import { haptics } from '@/lib/haptics';
 import type { Match, HolesSetup, TeeSummary, Visibility } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
 import { spacing, radius, typography, type Palette } from '@/constants/theme';
-import { formatHandicap, formatPlayWhen, STATUS_LABELS } from '@/lib/format';
+import { formatHandicap, formatCourseHandicap, formatPlayWhen, STATUS_LABELS } from '@/lib/format';
 
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -508,7 +508,7 @@ function teeTimeLabel(t: string): string {
 // "8.4 · CH 9" — the player's Index and the computed Course Handicap for this match.
 function withCourseHcp(index: number | null, courseHcp: number | null | undefined): string {
   const idx = formatHandicap(index);
-  return courseHcp != null ? `${idx}  ·  CH ${courseHcp}` : idx;
+  return courseHcp != null ? `${idx}  ·  CH ${formatCourseHandicap(courseHcp)}` : idx;
 }
 
 // Scorecard-style preview of where each player receives handicap strokes. Frozen
@@ -609,7 +609,7 @@ function PlayerLine({ userId, name, photoUrl, you, index, ch, isFav, onStar }: {
         <Avatar name={name} size={38} photoUrl={photoUrl} />
         <View style={styles.playerMid}>
           <Text style={styles.playerName} numberOfLines={1}>{name}{you ? ' (You)' : ''}</Text>
-          <Text style={styles.playerSub}>Index {formatHandicap(index)}{ch != null ? `  ·  CH ${ch}` : ''}</Text>
+          <Text style={styles.playerSub}>Index {formatHandicap(index)}{ch != null ? `  ·  CH ${formatCourseHandicap(ch)}` : ''}</Text>
         </View>
       </TouchableOpacity>
       {!you ? (

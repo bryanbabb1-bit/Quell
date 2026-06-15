@@ -8,6 +8,7 @@ import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
+import { formatCourseHandicap } from '@/lib/format';
 import type { LiveState, Gamecast, GamecastEvent, GamecastHole, CheerKind, Reactors } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
@@ -261,7 +262,7 @@ function PlayerCol({ name, photo, toPar, courseHcp, side, leading, colors, style
       </View>
       <Text style={styles.playerName} numberOfLines={1}>{name}</Text>
       {courseHcp != null && (
-        <View style={styles.hcpPill}><Text style={styles.hcpText}>HCP {courseHcp}</Text></View>
+        <View style={styles.hcpPill}><Text style={styles.hcpText}>HCP {formatCourseHandicap(courseHcp)}</Text></View>
       )}
       <View style={styles.playerMetaRow}>
         <View style={[styles.sideDot, { backgroundColor: side }]} />

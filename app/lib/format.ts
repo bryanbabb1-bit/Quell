@@ -6,6 +6,15 @@ export function formatHandicap(h: number | null | undefined): string {
   return h < 0 ? `+${Math.abs(h).toFixed(1)}` : h.toFixed(1);
 }
 
+// A course handicap is a whole number of strokes. Same plus convention as the
+// index: a player better than the course (stored negative) shows "+2"; scratch
+// is "0". There is no negative course handicap — minus reads as plus.
+export function formatCourseHandicap(ch: number | null | undefined): string {
+  if (ch == null) return '—';
+  const n = Math.round(ch);
+  return n < 0 ? `+${Math.abs(n)}` : `${n}`;
+}
+
 // Parse a typed Handicap Index. Golf convention: a "+1.2" handicap is BETTER
 // than scratch and is stored NEGATIVE (-1.2); a plain "8.4" is stored positive.
 // Returns null for blank/non-numeric. Does NOT range-check — the caller decides.

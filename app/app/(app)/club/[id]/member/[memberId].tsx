@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
+import { formatHandicap } from '@/lib/format';
 import type { ClubMemberDetail, MemberStatus } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
@@ -83,7 +84,7 @@ export default function ClubMemberScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.name} numberOfLines={1}>{data.name}</Text>
             <Text style={styles.sub}>
-              {data.handicap != null ? `${data.handicap.toFixed(1)} index` : 'No index'} · member since {monthYear(data.member_since)}
+              {data.handicap != null ? `${formatHandicap(data.handicap)} index` : 'No index'} · member since {monthYear(data.member_since)}
             </Text>
           </View>
           <View style={[styles.statusChip, { borderColor: sm.color }]}>
