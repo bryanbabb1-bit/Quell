@@ -34,7 +34,7 @@ export default function AppLayout() {
       <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       <Stack.Screen name="club-claim" options={{ title: 'Foretera for Clubs' }} />
       <Stack.Screen name="club/[id]" options={{ title: 'Champions' }} />
-      <Stack.Screen name="club/[id]/manage" options={{ title: 'Manage Club' }} />
+      <Stack.Screen name="club/[id]/manage" options={{ title: 'Club Control' }} />
       <Stack.Screen name="match/[id]" options={{ title: 'Match' }} />
       <Stack.Screen name="player/[id]" options={{ title: 'Player' }} />
       <Stack.Screen name="match/[id]/messages" options={{ title: 'Messages' }} />

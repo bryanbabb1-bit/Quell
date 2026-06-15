@@ -7,6 +7,7 @@ import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
+import { shareClubInvite } from '@/lib/invite';
 import type { ClubDashboard, ClubDetail } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
@@ -137,8 +138,31 @@ export default function ClubManageScreen() {
           <View style={styles.statCard}>
             <Text style={styles.statNum}>{data.this_week.players}</Text>
             <Text style={styles.statLabel}>golfers this week</Text>
-            <Text style={styles.deltaMuted}>{data.live_now} live · {data.open_invites} looking</Text>
+            <Text style={styles.deltaMuted}>{data.live_now} on the course · {data.open_invites} looking</Text>
           </View>
+        </View>
+
+        {/* Grow your board — the recruit CTA. Turns the dashboard from a
+            read-only report into something a pro can act on: hand a new member
+            a branded invite, or send it to anyone who should be on the board. */}
+        <View style={styles.recruitPanel}>
+          <View style={styles.panelHeadRow}>
+            <Ionicons name="megaphone-outline" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Grow your board</Text>
+          </View>
+          <Text style={styles.recruitBody}>
+            New member signing up? Share Foretera so they join your board, find games, and meet members.
+          </Text>
+          <TouchableOpacity
+            style={styles.recruitBtn}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Share a club invite"
+            onPress={() => { haptics.select(); shareClubInvite(club?.name ?? ''); }}
+          >
+            <Ionicons name="share-outline" size={16} color={colors.onAccent} />
+            <Text style={styles.recruitBtnText}>Share club invite</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 8-week trend */}
@@ -277,6 +301,10 @@ function makeStyles(c: Palette) {
     deltaDown: { color: c.loss },
     deltaMuted: { ...typography.caption, fontSize: 11, color: c.muted, marginTop: 2 },
     panel: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+    recruitPanel: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.gold, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+    recruitBody: { ...typography.body, color: c.text },
+    recruitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: c.accent, borderRadius: radius.pill, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 44, alignSelf: 'flex-start' },
+    recruitBtnText: { fontFamily: fonts.bodySemi, fontSize: 13, color: c.onAccent },
     panelHeadRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     panelTitle: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5, color: c.text },
     trendRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 80, gap: 4 },

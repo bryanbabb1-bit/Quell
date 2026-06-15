@@ -248,11 +248,11 @@ export default function FeedScreen() {
             style={styles.manageBar}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Manage this club"
+            accessibilityLabel="Open Club Control"
             onPress={() => { haptics.select(); router.push(`/(app)/club/${club!.id}/manage`); }}
           >
             <Ionicons name="speedometer-outline" size={14} color={colors.gold} />
-            <Text style={styles.manageText}>Manage club · pulse dashboard</Text>
+            <Text style={styles.manageText}>Club Control · pulse dashboard</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.gold} />
           </TouchableOpacity>
         )}

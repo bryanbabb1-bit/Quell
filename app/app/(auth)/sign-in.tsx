@@ -271,7 +271,7 @@ export default function SignInScreen() {
       >
         <Image source={require('../../assets/icon.png')} style={styles.logo} />
         <Text style={styles.brand}>Foretera</Text>
-        <Text style={styles.tagline}>Post a match. Settle the score.</Text>
+        <Text style={styles.tagline}>Find a match. Settle the score.</Text>
 
         <TextInput
           style={styles.input}
