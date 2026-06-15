@@ -36,6 +36,12 @@ export interface Palette {
   liveGlow: string;      // translucent live wash
   liveAlt: string;       // broadcast SECOND player (spectator reveal) — must stay
   liveAltGlow: string;   //   distinct from accent/gold/win/loss on both palettes
+  // Live GAMECAST two-side identity (Ryder-Cup red vs blue) — the two players in
+  // a same-group live match. sideA = creator (red), sideB = opponent (blue).
+  sideA: string;
+  sideAGlow: string;
+  sideB: string;
+  sideBGlow: string;
   onAccent: string;      // text/icon on top of an accent fill
 
   // ── Legacy golf aliases (back-compat — point at the dark tokens above) ──
@@ -84,6 +90,8 @@ export const PALETTES: { id: string; name: string; colors: Palette }[] = [
       gold: '#E8C87E', goldGlow: 'rgba(232,200,126,0.15)',
       live: '#8FB3CC', liveGlow: 'rgba(143,179,204,0.13)',
       liveAlt: '#B49BC9', liveAltGlow: 'rgba(180,155,201,0.14)',
+      sideA: '#E25C54', sideAGlow: 'rgba(226,92,84,0.15)',
+      sideB: '#4E93D6', sideBGlow: 'rgba(78,147,214,0.15)',
     }),
   },
   {
@@ -101,6 +109,8 @@ export const PALETTES: { id: string; name: string; colors: Palette }[] = [
       gold: '#8E6F1F', goldGlow: 'rgba(142,111,31,0.13)',
       live: '#3E6E8E', liveGlow: 'rgba(62,110,142,0.12)',
       liveAlt: '#75589B', liveAltGlow: 'rgba(117,88,155,0.12)',
+      sideA: '#C0392B', sideAGlow: 'rgba(192,57,43,0.12)',
+      sideB: '#2E6DA4', sideBGlow: 'rgba(46,109,164,0.12)',
     }),
   },
 ];

@@ -5,7 +5,7 @@ import type {
   DiscoveryMatch, Match, Message, HoleEntry, RevealResponse, SubmitScoresResponse, HolesSetup,
   MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
   CourseFeedMatch, Visibility, OpenInvite, CoursePulse, ClubSummary, ClubDetail,
-  ClubChampions, ClubDashboard, LiveState,
+  ClubChampions, ClubDashboard, LiveState, CheerKind,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -84,8 +84,13 @@ export function useApi() {
       unfollowMatch: (id: string) =>
         call<{ following: boolean; count: number }>(`/matches/${id}/follow`, { method: 'DELETE' }),
       getLive: (id: string) => call<LiveState>(`/matches/${id}/live`),
-      postLiveHole: (id: string, hole: number, gross: number) =>
-        call<LiveState>(`/matches/${id}/live-score`, { method: 'POST', body: JSON.stringify({ hole, gross }) }),
+      // Either participant may post EITHER side (one card-keeper).
+      postLiveHole: (id: string, hole: number, scores: { creator_gross?: number; opponent_gross?: number }) =>
+        call<LiveState>(`/matches/${id}/live-score`, { method: 'POST', body: JSON.stringify({ hole, ...scores }) }),
+      confirmCard: (id: string) =>
+        call<LiveState>(`/matches/${id}/confirm`, { method: 'POST' }),
+      sendCheer: (id: string, kind: CheerKind) =>
+        call<{ ok: boolean }>(`/matches/${id}/cheer`, { method: 'POST', body: JSON.stringify({ kind }) }),
 
       getChampions: (id: string, month?: string) =>
         call<ClubChampions>(`/clubs/${id}/champions${month ? `?month=${month}` : ''}`),

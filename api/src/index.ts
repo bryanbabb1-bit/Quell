@@ -107,7 +107,7 @@ async function handleRequest(
       response = await handleScorecards(request, auth, env, segments);
     } else if (sub === 'messages') {
       response = await handleMessages(request, auth, env, segments);
-    } else if (sub === 'follow' || sub === 'live' || sub === 'live-score') {
+    } else if (sub === 'follow' || sub === 'live' || sub === 'live-score' || sub === 'confirm' || sub === 'cheer') {
       response = await handleLive(request, auth, env, segments);
     } else {
       response = await handleMatches(request, auth, env, segments);

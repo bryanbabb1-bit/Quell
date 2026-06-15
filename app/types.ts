@@ -209,32 +209,70 @@ export interface ClubDashboard {
   demand: { total: number; last_30d: number };
 }
 
-// ── Live (playing-together) match state ─────────────────────────────────────
-export interface LiveRunning {
-  holes: HoleResult[];           // completed holes only, in order
-  creator_delta: number;
-  cumulative: string;            // "2 Up" / "All Square" / "1 Down"
+// ── Live gamecast (playing-together match) ──────────────────────────────────
+export type ToParName = 'eagle' | 'birdie' | 'par' | 'bogey' | 'double' | 'other';
+
+export interface GamecastHole {
+  hole: number;
+  par: number | null;
+  creator_gross: number | null;
+  opponent_gross: number | null;
+  creator_to_par: number | null;
+  opponent_to_par: number | null;
+  winner: 'creator' | 'opponent' | 'tie' | null;
+  creator_delta: number | null;
+  status_label: string | null;
+}
+
+export interface GamecastEvent {
+  hole: number;
+  kind: 'win' | 'halve' | 'lead_change' | 'closeout';
+  side: 'creator' | 'opponent' | null;
+  score_name: ToParName | null;
+  text: string;
+}
+
+export interface Gamecast {
+  holes: GamecastHole[];
   holes_played: number;
   holes_remaining: number;
+  creator_delta: number;
+  cumulative: string;
+  leader: 'creator' | 'opponent' | 'tie';
   decided_on_hole: number | null;
   final_delta: string | null;
+  creator_to_par: number | null;
+  opponent_to_par: number | null;
+  momentum: { side: 'creator' | 'opponent' | null; won: number; of: number };
+  win_prob: number[];
+  current_hole: number | null;
+  events: GamecastEvent[];
 }
+
+export interface LiveFollower { name: string; photo_url: string | null }
+export type CheerKind = 'fire' | 'clap' | 'flag' | 'shock';
 
 export interface LiveState {
   match_id: string;
   status: MatchStatus | null;
   playing_together: number;
   follower_count: number;
+  followers: LiveFollower[];
+  reactions: Partial<Record<CheerKind, number>>;
   creator_name: string;
   opponent_name: string | null;
   creator_photo_url: string | null;
   opponent_photo_url: string | null;
   viewer_is_creator: boolean;
   viewer_is_participant: boolean;
-  your_holes: number[];          // holes the viewer has posted
+  your_holes: number[];
   match_type: MatchType | null;
+  creator_confirmed: boolean;
+  opponent_confirmed: boolean;
+  round_complete: boolean;
+  awaiting_confirmation: boolean;
   completed: boolean;
-  running: LiveRunning | null;   // null for apart / no-course / spectator-of-apart
+  running: Gamecast | null;   // null for apart / no-course / spectator-of-apart
 }
 
 export interface Message {

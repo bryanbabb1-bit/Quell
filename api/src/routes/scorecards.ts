@@ -4,8 +4,8 @@ import { json, error } from '../lib/response';
 import { newId, now } from '../lib/id';
 import { parseBody, ValidationError } from '../lib/validate';
 import {
-  computeMatch, computeRunning, allocateStrokes, segmentCourseHandicap,
-  type HoleSpec, type Segment, type RunningResult,
+  computeMatch, buildGamecast, allocateStrokes, segmentCourseHandicap,
+  type HoleSpec, type Segment, type Gamecast,
 } from '../lib/scoring';
 import { sendPush } from '../lib/push';
 
@@ -218,7 +218,7 @@ export async function settle(env: Env, match: Record<string, any>): Promise<void
 // holes each player has posted so far. Reuses the same tee + course-handicap
 // logic as settle(), so live and final agree. Returns null when no course/tee
 // is linked (can't compute net). Cards may be partial.
-export async function computeLiveState(env: Env, match: Record<string, any>): Promise<RunningResult | null> {
+export async function computeLiveState(env: Env, match: Record<string, any>): Promise<Gamecast | null> {
   if (!match.tee_id) return null;
   const range = holeRange(match.match_type);
   const opponentTeeId = match.opponent_tee_id ?? match.tee_id;
@@ -238,7 +238,8 @@ export async function computeLiveState(env: Env, match: Record<string, any>): Pr
   const diff = creatorCH - opponentCH;
   const cGross = creatorCard ? grossFor(creatorTee.holes, creatorCard.hole_scores) : creatorTee.holes.map(() => 0);
   const oGross = opponentCard ? grossFor(opponentTee.holes, opponentCard.hole_scores) : opponentTee.holes.map(() => 0);
-  return computeRunning(creatorTee.holes, cGross, oGross, diff, opponentTee.holes);
+  // The rich gamecast (per-hole to-par, momentum, win-prob, play-by-play).
+  return buildGamecast(creatorTee.holes, cGross, oGross, diff, opponentTee.holes);
 }
 
 async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Response> {

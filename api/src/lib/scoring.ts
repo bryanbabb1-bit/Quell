@@ -260,6 +260,158 @@ export function computeRunning(
   };
 }
 
+// ── Gamecast — the rich live/spectator view ─────────────────────────────────
+// Everything the live screen needs to be WATCHABLE: per-hole score-to-par, each
+// player's round to-par, the running status, momentum, a live win-prob series,
+// and a server-generated play-by-play. Pure (no I/O) → unit-tested.
+
+export type ToParName = 'eagle' | 'birdie' | 'par' | 'bogey' | 'double' | 'other';
+
+export interface GamecastHole {
+  hole: number;
+  par: number | null;
+  creator_gross: number | null;
+  opponent_gross: number | null;
+  creator_to_par: number | null;   // gross − par (null until played)
+  opponent_to_par: number | null;
+  winner: 'creator' | 'opponent' | 'tie' | null;
+  creator_delta: number | null;    // running, after this hole
+  status_label: string | null;     // "2 Up" / "All Square" (creator perspective)
+}
+
+export interface GamecastEvent {
+  hole: number;
+  kind: 'win' | 'halve' | 'lead_change' | 'closeout';
+  side: 'creator' | 'opponent' | null;   // who it's about
+  score_name: ToParName | null;          // birdie/eagle etc. on the deciding score
+  text: string;                          // play-by-play line (names filled by caller? no — neutral)
+}
+
+export interface Gamecast {
+  holes: GamecastHole[];                 // all holes of the match (played + pending)
+  holes_played: number;
+  holes_remaining: number;
+  creator_delta: number;
+  cumulative: string;                    // "2 Up" / "All Square"
+  leader: 'creator' | 'opponent' | 'tie';
+  decided_on_hole: number | null;
+  final_delta: string | null;
+  creator_to_par: number | null;         // round total vs par over completed holes
+  opponent_to_par: number | null;
+  momentum: { side: 'creator' | 'opponent' | null; won: number; of: number }; // last ≤3 decided
+  win_prob: number[];                    // creator P(win) at each completed hole (+pre-round)
+  current_hole: number | null;           // next hole not complete by both
+  events: GamecastEvent[];               // oldest → newest (client reverses for the feed)
+}
+
+function toParName(toPar: number): ToParName {
+  if (toPar <= -2) return 'eagle';
+  if (toPar === -1) return 'birdie';
+  if (toPar === 0) return 'par';
+  if (toPar === 1) return 'bogey';
+  if (toPar === 2) return 'double';
+  return 'other';
+}
+
+export function buildGamecast(
+  holes: HoleSpec[],
+  creatorGross: number[],
+  opponentGross: number[],
+  strokeDifference: number,
+  opponentHoles: HoleSpec[] = holes
+): Gamecast {
+  const creatorStrokes = strokeDifference > 0 ? allocateStrokes(strokeDifference, holes) : holes.map(() => 0);
+  const opponentStrokes = strokeDifference < 0 ? allocateStrokes(-strokeDifference, opponentHoles) : opponentHoles.map(() => 0);
+
+  const total = holes.length;
+  let delta = 0, played = 0, cToPar = 0, oToPar = 0;
+  let decidedOnHole: number | null = null, closeoutDelta = 0, closeoutRemaining = 0;
+  let prevLeadSign = 0, currentHole: number | null = null;
+  const out: GamecastHole[] = [];
+  const events: GamecastEvent[] = [];
+  const deltas: number[] = [];
+
+  for (let i = 0; i < total; i++) {
+    const cg = creatorGross[i] ?? 0;
+    const og = opponentGross[i] ?? 0;
+    const par = holes[i].par ?? null;
+    const both = cg > 0 && og > 0;
+
+    if (!both) {
+      // First incomplete hole = "happening now".
+      if (currentHole === null && (cg > 0 || og > 0 || played === i)) currentHole = holes[i].hole;
+      out.push({
+        hole: holes[i].hole, par,
+        creator_gross: cg > 0 ? cg : null, opponent_gross: og > 0 ? og : null,
+        creator_to_par: cg > 0 && par != null ? cg - par : null,
+        opponent_to_par: og > 0 && par != null ? og - par : null,
+        winner: null, creator_delta: null, status_label: null,
+      });
+      continue;
+    }
+
+    const cNet = cg - creatorStrokes[i];
+    const oNet = og - opponentStrokes[i];
+    let winner: 'creator' | 'opponent' | 'tie' = 'tie';
+    if (cNet < oNet) { winner = 'creator'; delta++; }
+    else if (oNet < cNet) { winner = 'opponent'; delta--; }
+    played++;
+    if (par != null) { cToPar += cg - par; oToPar += og - par; }
+    deltas.push(delta);
+
+    out.push({
+      hole: holes[i].hole, par,
+      creator_gross: cg, opponent_gross: og,
+      creator_to_par: par != null ? cg - par : null,
+      opponent_to_par: par != null ? og - par : null,
+      winner, creator_delta: delta, status_label: deltaLabel(delta),
+    });
+
+    // Play-by-play. Lead change first (it's the headline), then the hole result.
+    const sign = Math.sign(delta);
+    if (sign !== 0 && prevLeadSign !== 0 && sign !== prevLeadSign) {
+      events.push({ hole: holes[i].hole, kind: 'lead_change', side: sign > 0 ? 'creator' : 'opponent', score_name: null, text: 'lead_change' });
+    }
+    if (sign !== 0) prevLeadSign = sign;
+
+    const remaining = total - played;
+    if (winner === 'tie') {
+      events.push({ hole: holes[i].hole, kind: 'halve', side: null, score_name: par != null ? toParName(cg - par) : null, text: 'halve' });
+    } else {
+      const wSide = winner;
+      const wGross = wSide === 'creator' ? cg : og;
+      events.push({ hole: holes[i].hole, kind: 'win', side: wSide, score_name: par != null ? toParName(wGross - par) : null, text: 'win' });
+    }
+
+    if (decidedOnHole === null && Math.abs(delta) > remaining) {
+      decidedOnHole = holes[i].hole; closeoutDelta = delta; closeoutRemaining = remaining;
+      events.push({ hole: holes[i].hole, kind: 'closeout', side: delta > 0 ? 'creator' : 'opponent', score_name: null, text: 'closeout' });
+    }
+  }
+
+  // Momentum: of the last ≤3 DECIDED holes, who won more.
+  const decided = out.filter((h) => h.winner && h.winner !== 'tie').slice(-3);
+  let cWon = 0, oWon = 0;
+  for (const h of decided) { if (h.winner === 'creator') cWon++; else if (h.winner === 'opponent') oWon++; }
+  const momentum = { side: (cWon > oWon ? 'creator' : oWon > cWon ? 'opponent' : null) as 'creator' | 'opponent' | null, won: Math.max(cWon, oWon), of: decided.length };
+
+  const final_delta = decidedOnHole !== null
+    ? (closeoutRemaining > 0 ? `${Math.abs(closeoutDelta)} & ${closeoutRemaining}` : `${Math.abs(closeoutDelta)} Up`)
+    : null;
+
+  return {
+    holes: out, holes_played: played, holes_remaining: total - played,
+    creator_delta: delta, cumulative: deltaLabel(delta),
+    leader: delta > 0 ? 'creator' : delta < 0 ? 'opponent' : 'tie',
+    decided_on_hole: decidedOnHole, final_delta,
+    creator_to_par: played > 0 ? cToPar : null, opponent_to_par: played > 0 ? oToPar : null,
+    momentum,
+    win_prob: winProbabilitySeries(deltas, total),
+    current_hole: currentHole,
+    events,
+  };
+}
+
 // Net strokes the creator receives over a set of holes, given both 18-hole
 // course handicaps. Scaled for the number of holes actually played (a 9-hole
 // match uses ~half the difference — a documented approximation; see PUNCHLIST).

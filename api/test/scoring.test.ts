@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   courseHandicap, allocateStrokes, computeMatch, strokeDifferenceForHoles,
-  segmentCourseHandicap, computeRunning, winProbabilitySeries,
+  segmentCourseHandicap, computeRunning, winProbabilitySeries, buildGamecast,
   type HoleSpec,
 } from '../src/lib/scoring';
 
@@ -42,6 +42,43 @@ describe('winProbabilitySeries (ESPN-style)', () => {
     const deltas = [-1, -2, -3, -4, -5, -5, -5, -5, -5];
     const s = winProbabilitySeries(deltas, 9);
     expect(s[5]).toBe(0);
+  });
+});
+
+describe('buildGamecast', () => {
+  const front = HOLES_18.slice(0, 9); // par-4 nine
+  it('computes per-hole to-par, running status, and the current hole', () => {
+    const c = [3, 4, 0, 0, 0, 0, 0, 0, 0]; // birdie, par, then nothing
+    const o = [5, 4, 0, 0, 0, 0, 0, 0, 0]; // bogey, par
+    const g = buildGamecast(front, c, o, 0);
+    expect(g.holes_played).toBe(2);
+    expect(g.holes[0].creator_to_par).toBe(-1); // birdie on a par 4
+    expect(g.holes[0].winner).toBe('creator');
+    expect(g.creator_delta).toBe(1);
+    expect(g.cumulative).toBe('1 Up');
+    expect(g.creator_to_par).toBe(-1); // −1 then E
+    expect(g.current_hole).toBe(3);    // next incomplete
+    expect(g.leader).toBe('creator');
+  });
+  it('emits win/birdie events and flags a true lead change (sign flip)', () => {
+    // H1 opp wins (creator 1 down). H2 creator birdies to win (all square).
+    // H3 creator wins again → creator 1 UP = a real lead change from opp to creator.
+    const c = [5, 3, 4, 0, 0, 0, 0, 0, 0];
+    const o = [4, 5, 5, 0, 0, 0, 0, 0, 0];
+    const g = buildGamecast(front, c, o, 0);
+    expect(g.events.some((e) => e.kind === 'win')).toBe(true);
+    expect(g.events.some((e) => e.score_name === 'birdie')).toBe(true);
+    const lc = g.events.find((e) => e.kind === 'lead_change');
+    expect(lc?.hole).toBe(3);       // sign flips − → + on hole 3
+    expect(lc?.side).toBe('creator');
+  });
+  it('flags closeout with the final delta', () => {
+    const c = [3, 3, 3, 3, 3, 0, 0, 0, 0]; // win 5 straight → 5 up, 4 to play
+    const o = [5, 5, 5, 5, 5, 0, 0, 0, 0];
+    const g = buildGamecast(front, c, o, 0);
+    expect(g.decided_on_hole).toBe(5);
+    expect(g.final_delta).toBe('5 & 4');
+    expect(g.events.some((e) => e.kind === 'closeout')).toBe(true);
   });
 });
 
