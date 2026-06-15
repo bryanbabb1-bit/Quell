@@ -656,15 +656,16 @@ function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
           </View>
         )}
         <Text style={styles.meta}>{[time, MATCH_TYPE_LABELS[m.match_type]].filter(Boolean).join(' · ')}</Text>
-        {/* 👁 watch — present on live matches; participants don't follow their own. */}
+        {/* Watch — a "people" metaphor, never an eyeball. Participants don't
+            follow their own match; they just see the watcher count when there is one. */}
         {isLive && !m.is_mine && onToggleFollow && (
-          <TouchableOpacity style={styles.watchBtn} onPress={onWatch} hitSlop={6} accessibilityRole="button" accessibilityLabel={follow.following ? 'Stop watching' : 'Watch this match'}>
-            <Ionicons name={follow.following ? 'eye' : 'eye-outline'} size={13} color={follow.following ? colors.live : colors.muted} />
-            <Text style={[styles.watchText, follow.following && { color: colors.live }]}>{follow.count > 0 ? `${follow.count} ` : ''}{follow.following ? 'Watching' : 'Watch'}</Text>
+          <TouchableOpacity style={styles.watchBtn} onPress={onWatch} hitSlop={6} accessibilityRole="button" accessibilityLabel={follow.following ? 'Stop following' : 'Follow this match'}>
+            <Ionicons name={follow.following ? 'people' : 'people-outline'} size={13} color={follow.following ? colors.live : colors.muted} />
+            <Text style={[styles.watchText, follow.following && { color: colors.live }]}>{follow.count > 0 ? `${follow.count} ` : ''}{follow.following ? 'Following' : 'Follow'}</Text>
           </TouchableOpacity>
         )}
-        {isLive && (m.is_mine || (follow.count > 0 && !onToggleFollow)) && (
-          <Text style={styles.meta}>👁 {follow.count} watching</Text>
+        {isLive && follow.count > 0 && (m.is_mine || !onToggleFollow) && (
+          <Text style={styles.meta}>{follow.count} {follow.count === 1 ? 'follower' : 'followers'}</Text>
         )}
         {m.is_mine && <Text style={styles.mineTag}>Your match</Text>}
       </View>

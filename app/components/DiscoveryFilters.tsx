@@ -153,7 +153,7 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
           <View style={styles.switchRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.switchLabel}>Browse everything</Text>
-              <Text style={styles.switchHint}>Ignore your home course and handicap range</Text>
+              <Text style={styles.switchHint}>Show every course, not just your home course</Text>
             </View>
             <Switch
               value={local.all}

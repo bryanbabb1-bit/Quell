@@ -101,10 +101,15 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
         AND m.creator_id NOT IN (SELECT blocker_id FROM blocks WHERE blocked_id = ?)`;
   const binds: unknown[] = [auth.userId, today, auth.userId, auth.userId];
 
-  if (me?.handicap != null && !showAll) {
-    sql += ' AND ? BETWEEN m.hcp_range_min AND m.hcp_range_max';
-    binds.push(me.handicap);
-  }
+  // The handicap window is the CREATOR's preference, not an eligibility gate —
+  // accept() doesn't enforce it (a lower-handicap player can accept and give
+  // strokes; that's normal match play). So it's a SOFT sort, not a hard filter:
+  // matches whose window includes you lead, the rest still show. (It used to
+  // hard-filter, which silently emptied an explicit course search for anyone
+  // whose index fell outside the posted ranges — the confusing "no results, but
+  // toggling Favorites reveals a match" bug.)
+  const softHcp = me?.handicap != null && !showAll;
+
   if (qpType && (MATCH_TYPES as readonly string[]).includes(qpType)) {
     sql += ' AND m.match_type = ?';
     binds.push(qpType);
@@ -122,8 +127,6 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
   }
   // Course: an explicit search is a hard filter. The home course is only a
   // SOFT preference — home-course matches sort first, everything else follows.
-  // (It used to be a hard filter, which emptied the deck for anyone whose home
-  // course had few open matches while dozens existed elsewhere.)
   let homePref: string | null = null;
   if (qpCourse) {
     sql += ' AND m.course_name LIKE ?';
@@ -133,12 +136,22 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
       .bind(me.home_course_id).first<{ name: string }>();
     homePref = home?.name ?? null;
   }
-  if (homePref) {
-    sql += ' ORDER BY CASE WHEN m.course_name = ? THEN 0 ELSE 1 END, m.play_date ASC, m.created_at DESC LIMIT 100';
-    binds.push(homePref);
-  } else {
-    sql += ' ORDER BY m.play_date ASC, m.created_at DESC LIMIT 100';
+
+  // ORDER BY: handicap-compatible first, then home course, then soonest. The
+  // ORDER BY binds come AFTER every WHERE bind, in the order the terms appear.
+  const orderTerms: string[] = [];
+  const orderBinds: unknown[] = [];
+  if (softHcp) {
+    orderTerms.push('CASE WHEN ? BETWEEN m.hcp_range_min AND m.hcp_range_max THEN 0 ELSE 1 END');
+    orderBinds.push(me!.handicap);
   }
+  if (homePref) {
+    orderTerms.push('CASE WHEN m.course_name = ? THEN 0 ELSE 1 END');
+    orderBinds.push(homePref);
+  }
+  orderTerms.push('m.play_date ASC', 'm.created_at DESC');
+  sql += ' ORDER BY ' + orderTerms.join(', ') + ' LIMIT 100';
+  binds.push(...orderBinds);
 
   const { results } = await env.DB.prepare(sql).bind(...binds).all();
   return json({ matches: results });
