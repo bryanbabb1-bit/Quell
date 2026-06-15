@@ -23,6 +23,22 @@ const CHEERS: { kind: CheerKind; emoji: string }[] = [
 
 const toParStr = (n: number | null): string => (n == null ? '' : n === 0 ? 'E' : n > 0 ? `+${n}` : `${n}`);
 
+// The notable score on a hole, NET-aware — the match is decided on net, so a
+// handicap stroke can turn a gross par into a "net birdie", which is what
+// actually won the hole. Returns the word + whether it was net + whether it's
+// under par (for the gold celebration).
+function holeScoreWord(gh: GamecastHole, side: 'creator' | 'opponent'): { word: string; under: boolean } | null {
+  const gross = side === 'creator' ? gh.creator_gross : gh.opponent_gross;
+  const net = side === 'creator' ? gh.creator_net : gh.opponent_net;
+  const strokes = side === 'creator' ? gh.creator_strokes : gh.opponent_strokes;
+  if (gross == null || net == null || gh.par == null) return null;
+  const toPar = net - gh.par; // net decides the hole
+  const base = toPar <= -2 ? 'eagle' : toPar === -1 ? 'birdie' : toPar === 0 ? 'par'
+    : toPar === 1 ? 'bogey' : toPar === 2 ? 'double' : '';
+  if (!base) return { word: '', under: false };
+  return { word: strokes > 0 ? `net ${base}` : base, under: toPar < 0 };
+}
+
 export default function LiveMatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const api = useApi();
@@ -333,21 +349,23 @@ function PlayByPlayRow({ e, holes, cName, oName, divider, colors, styles }: {
   const gh = holes.find((h) => h.hole === e.hole);
   const status = gh?.status_label ?? '';
   const sideName = e.side === 'creator' ? cName : e.side === 'opponent' ? oName : '';
-  const scoreWord = e.score_name === 'eagle' ? 'eagle' : e.score_name === 'birdie' ? 'birdie'
-    : e.score_name === 'par' ? 'par' : e.score_name === 'bogey' ? 'bogey' : e.score_name === 'double' ? 'double' : '';
-  const isBird = e.score_name === 'birdie' || e.score_name === 'eagle';
+  // Net-aware score word: the winner's for a win; the creator's for a halve
+  // (both made the same net result, so either represents it).
+  const sl = gh ? holeScoreWord(gh, e.side ?? 'creator') : null;
+  const scoreWord = sl?.word ?? '';
+  const isUnder = sl?.under ?? false;
 
   let icon: any = 'golf-outline'; let tint = colors.muted; let text = '';
   if (e.kind === 'lead_change') { icon = 'flash'; tint = colors.gold; text = `Lead change — ${sideName} goes ${status.replace(' Up', ' up')}`; }
   else if (e.kind === 'closeout') { icon = 'trophy'; tint = colors.gold; text = `${sideName} closes it out`; }
   else if (e.kind === 'halve') { icon = 'remove-outline'; tint = colors.muted; text = `Halved${scoreWord ? ` with ${scoreWord}s` : ''}`; }
-  else { icon = isBird ? 'sparkles' : 'caret-up'; tint = isBird ? colors.gold : (e.side === 'creator' ? colors.sideA : colors.sideB); text = `${sideName} wins${scoreWord ? ` with ${scoreWord}` : ''} — ${status.toLowerCase()}`; }
+  else { icon = isUnder ? 'sparkles' : 'caret-up'; tint = isUnder ? colors.gold : (e.side === 'creator' ? colors.sideA : colors.sideB); text = `${sideName} wins${scoreWord ? ` with ${scoreWord}` : ''} — ${status.toLowerCase()}`; }
 
   return (
     <View style={[styles.pbpRow, divider && styles.rowDivider]}>
       <View style={styles.pbpHole}><Text style={styles.pbpHoleText}>{e.hole}</Text></View>
       <Ionicons name={icon} size={15} color={tint} />
-      <Text style={[styles.pbpText, isBird && { color: colors.gold }]} numberOfLines={2}>{text}</Text>
+      <Text style={[styles.pbpText, isUnder && { color: colors.gold }]} numberOfLines={2}>{text}</Text>
     </View>
   );
 }
@@ -358,11 +376,15 @@ function ScoreGrid({ r, cName, oName, colors, styles }: {
   const played = r.holes.filter((h) => h.winner != null);
   const cell = (gh: GamecastHole, who: 'creator' | 'opponent') => {
     const g = who === 'creator' ? gh.creator_gross : gh.opponent_gross;
+    const net = who === 'creator' ? gh.creator_net : gh.opponent_net;
+    const strokes = who === 'creator' ? gh.creator_strokes : gh.opponent_strokes;
     const tp = who === 'creator' ? gh.creator_to_par : gh.opponent_to_par;
     const won = gh.winner === who;
+    const showNet = strokes > 0 && net != null && g != null; // a stroke fell here
     return (
       <View key={gh.hole} style={[styles.gCell, won && styles.gCellWon]}>
         <Text style={[styles.gScore, tp != null && tp < 0 && { color: colors.gold }, won && styles.gScoreWon]}>{g ?? '–'}</Text>
+        {showNet && <Text style={styles.gNet}>({net})</Text>}
       </View>
     );
   };
@@ -501,8 +523,9 @@ function makeStyles(c: Palette) {
     gCellWon: { backgroundColor: c.surfaceRaised },
     gHead: { ...typography.caption, fontSize: 11, color: c.muted, fontFamily: fonts.bodySemi },
     gPar: { ...typography.caption, fontSize: 11, color: c.muted },
-    gScore: { ...typography.body, fontSize: 13, color: c.text, fontVariant: ['tabular-nums'] },
+    gScore: { ...typography.body, fontSize: 13, lineHeight: 15, color: c.text, fontVariant: ['tabular-nums'] },
     gScoreWon: { fontFamily: fonts.bodyBold },
+    gNet: { ...typography.caption, fontSize: 9, lineHeight: 10, color: c.muted, fontVariant: ['tabular-nums'] },
     gMatch: { ...typography.caption, fontSize: 11, color: c.muted, fontVariant: ['tabular-nums'] },
     // Recap
     recapBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: c.accent, borderRadius: radius.md, paddingVertical: spacing.md, marginTop: spacing.sm },

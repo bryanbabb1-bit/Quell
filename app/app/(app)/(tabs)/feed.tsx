@@ -172,7 +172,10 @@ export default function FeedScreen() {
     }
   }, [api]);
 
-  const live = rows.filter((m) => m.status === 'in_progress');     // actually being played
+  // "Now playing" = watchable LIVE matches only: in_progress + same-group (live
+  // scoring). An apart in_progress match has sealed cards — nothing to follow —
+  // so it isn't shown as live; it reappears under Final results when it settles.
+  const live = rows.filter((m) => m.status === 'in_progress' && !!m.playing_together);
   const scheduled = rows.filter((m) => m.status === 'accepted');   // teed up, not started
   const done = rows.filter((m) => m.status === 'completed');
   const onToday = date === isoToday();

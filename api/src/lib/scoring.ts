@@ -274,6 +274,13 @@ export interface GamecastHole {
   opponent_gross: number | null;
   creator_to_par: number | null;   // gross − par (null until played)
   opponent_to_par: number | null;
+  // Net (gross − handicap strokes on this hole) + the strokes each receives, so
+  // the UI can show "gross (net)" and tell a NET birdie from a gross one — the
+  // hole is won on net, which is what decides the match.
+  creator_net: number | null;
+  opponent_net: number | null;
+  creator_strokes: number;
+  opponent_strokes: number;
   winner: 'creator' | 'opponent' | 'tie' | null;
   creator_delta: number | null;    // running, after this hole
   status_label: string | null;     // "2 Up" / "All Square" (creator perspective)
@@ -345,6 +352,9 @@ export function buildGamecast(
         creator_gross: cg > 0 ? cg : null, opponent_gross: og > 0 ? og : null,
         creator_to_par: cg > 0 && par != null ? cg - par : null,
         opponent_to_par: og > 0 && par != null ? og - par : null,
+        creator_net: cg > 0 ? cg - creatorStrokes[i] : null,
+        opponent_net: og > 0 ? og - opponentStrokes[i] : null,
+        creator_strokes: creatorStrokes[i], opponent_strokes: opponentStrokes[i],
         winner: null, creator_delta: null, status_label: null,
       });
       continue;
@@ -364,6 +374,8 @@ export function buildGamecast(
       creator_gross: cg, opponent_gross: og,
       creator_to_par: par != null ? cg - par : null,
       opponent_to_par: par != null ? og - par : null,
+      creator_net: cNet, opponent_net: oNet,
+      creator_strokes: creatorStrokes[i], opponent_strokes: opponentStrokes[i],
       winner, creator_delta: delta, status_label: deltaLabel(delta),
     });
 

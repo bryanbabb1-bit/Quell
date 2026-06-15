@@ -219,6 +219,10 @@ export interface GamecastHole {
   opponent_gross: number | null;
   creator_to_par: number | null;
   opponent_to_par: number | null;
+  creator_net: number | null;
+  opponent_net: number | null;
+  creator_strokes: number;
+  opponent_strokes: number;
   winner: 'creator' | 'opponent' | 'tie' | null;
   creator_delta: number | null;
   status_label: string | null;

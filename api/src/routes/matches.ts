@@ -758,10 +758,13 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
           AND play_date BETWEEN date(?, '-6 days') AND ?`
     ).bind(course, today, today).all<{ creator_id: string; opponent_id: string | null }>(),
     env.DB.prepare(
-      // "Live now" = a match actually being PLAYED (in_progress). 'accepted' is
-      // teed up but not started — that's "Teed up today", not live.
+      // "Live now" = a WATCHABLE live match: public + in_progress + same-group
+      // (live scoring). A private match can't be watched; an apart match has
+      // sealed cards (nothing to follow) — neither is "live" to a spectator, so
+      // counting them just misleads ("2 live now" with nothing on the feed).
       `SELECT COUNT(*) AS n FROM matches
-        WHERE course_name = ? AND status = 'in_progress' AND play_date = ?`
+        WHERE course_name = ? AND status = 'in_progress'
+          AND visibility = 'public' AND playing_together = 1 AND play_date = ?`
     ).bind(course, today).first<{ n: number }>(),
   ]);
   const weekPlayers = new Set<string>();
