@@ -349,7 +349,7 @@ export default function MatchDetailScreen() {
 
       {/* Same-group live scoring — tap in holes as you play; both of you + any
           followers watch the running tally. Only before it's settled. */}
-      {isParticipant && match.playing_together && (match.status === 'accepted' || match.status === 'in_progress') && (
+      {isParticipant && !!match.playing_together && (match.status === 'accepted' || match.status === 'in_progress') && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Live scoring</Text>
           <Text style={styles.note}>You're playing together — post each hole as you go and follow the match live.</Text>

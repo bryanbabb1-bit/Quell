@@ -10,6 +10,7 @@ import { handleMatches } from './routes/matches';
 import { handleScorecards } from './routes/scorecards';
 import { handleMessages } from './routes/messages';
 import { handleLive } from './routes/live';
+import { handleLogs } from './routes/logs';
 import { handleCourses } from './routes/courses';
 import { handleClubs } from './routes/clubs';
 import { handleFavorites } from './routes/favorites';
@@ -127,6 +128,8 @@ async function handleRequest(
     response = await handleUploadPhoto(auth, env, request);
   } else if (root === 'gifs' && method === 'GET') {
     response = await handleGifs(auth, env, request);
+  } else if (root === 'logs' && method === 'POST') {
+    response = await handleLogs(auth, env, request);
   } else {
     response = error('Not found', 404);
   }

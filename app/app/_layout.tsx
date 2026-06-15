@@ -21,6 +21,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { tokenCache } from '@/lib/tokenCache';
 import { setTokenRefresher, apiJson } from '@/lib/api';
+import { installLogging, setLogTokenGetter } from '@/lib/logger';
 import { useUserStore } from '@/store/useUserStore';
 import { useThemeStore, useColors } from '@/store/useThemeStore';
 import { configureNotifications, registerForPush } from '@/lib/notifications';
@@ -29,6 +30,9 @@ import { colors } from '@/constants/theme';
 // Hold the native splash until fonts + theme are ready so the first frame is
 // already the dark Tournament look (no light flash, no fallback-font reflow).
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Capture errors → /logs from the very first frame (idempotent).
+installLogging();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
@@ -50,7 +54,9 @@ function AuthGate() {
   const pushRegistered = useRef(false);
   useEffect(() => {
     setTokenRefresher(() => getTokenRef.current({ skipCache: true }));
-    return () => setTokenRefresher(null);
+    // Same token source feeds the error logger's /logs flush.
+    setLogTokenGetter(() => getTokenRef.current());
+    return () => { setTokenRefresher(null); setLogTokenGetter(null); };
   }, []);
 
   useEffect(() => {
