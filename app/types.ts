@@ -108,6 +108,8 @@ export interface CourseFeedMatch {
   opponent_name: string;
   creator_photo_url: string | null;
   opponent_photo_url: string | null;
+  creator_handicap_index?: number | null;  // index snapshot, shown face-up on the card
+  opponent_handicap_index?: number | null;
   playing_together?: number; // 0/1 — same group (live-scorable) vs apart
   follower_count?: number;   // 👁 spectators on a live match
   is_following?: boolean;    // does the caller follow this match

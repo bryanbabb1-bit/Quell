@@ -643,6 +643,7 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
   const { results } = await env.DB.prepare(
     `SELECT m.id, m.course_name, m.play_date, m.play_time, m.match_type, m.status,
             m.result, m.match_progression, m.creator_id, m.opponent_id, m.playing_together,
+            m.creator_handicap, m.opponent_handicap,
             (SELECT COUNT(*) FROM match_followers mf WHERE mf.match_id = m.id) AS follower_count,
             cu.first_name AS creator_first_name, cu.last_name AS creator_last_name,
             cu.profile_photo_url AS creator_photo_url,
@@ -686,6 +687,8 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
       opponent_name: name(m.opponent_first_name, m.opponent_last_name) ?? 'Opponent',
       creator_photo_url: m.creator_photo_url ?? null,
       opponent_photo_url: m.opponent_photo_url ?? null,
+      creator_handicap_index: m.creator_handicap ?? null,
+      opponent_handicap_index: m.opponent_handicap ?? null,
       playing_together: m.playing_together ?? 0,
       follower_count: m.follower_count ?? 0,
       cheer_count: m.cheer_count ?? 0,

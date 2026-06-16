@@ -634,6 +634,7 @@ function FeedRow({ m, colors, styles, onToggleFollow }: {
         <View style={styles.momPlayer}>
           <Avatar name={m.creator_name} size={46} photoUrl={m.creator_photo_url} />
           <Text style={styles.momName} numberOfLines={1}>{m.creator_name.split(' ')[0]}</Text>
+          {m.creator_handicap_index != null && <Text style={styles.momHcp}>{formatHandicap(m.creator_handicap_index)}</Text>}
         </View>
         <View style={styles.momMid}>
           {isLive ? (
@@ -645,6 +646,7 @@ function FeedRow({ m, colors, styles, onToggleFollow }: {
         <View style={styles.momPlayer}>
           <Avatar name={m.opponent_name} size={46} photoUrl={m.opponent_photo_url} />
           <Text style={styles.momName} numberOfLines={1}>{m.opponent_name.split(' ')[0]}</Text>
+          {m.opponent_handicap_index != null && <Text style={styles.momHcp}>{formatHandicap(m.opponent_handicap_index)}</Text>}
         </View>
       </View>
 
@@ -698,6 +700,7 @@ function makeStyles(colors: Palette) {
     momPlayers: { flexDirection: 'row', alignItems: 'center' },
     momPlayer: { flex: 1, alignItems: 'center', gap: 6 },
     momName: { ...typography.bodySemiBold, fontSize: 14, color: colors.text },
+    momHcp: { ...typography.caption, fontSize: 11, color: colors.muted, fontVariant: ['tabular-nums'] },
     momMid: { width: 56, alignItems: 'center' },
     momVs: { ...typography.caption, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
     momHeadline: { fontFamily: fonts.display, fontSize: 18, color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
