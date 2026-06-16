@@ -7,6 +7,7 @@ import { useFocusEffect, router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
+import { useNearbyCourse } from '@/lib/useNearbyCourse';
 import { useColors } from '@/store/useThemeStore';
 import { useCourses } from '@/store/useCourseStore';
 import { useUserStore } from '@/store/useUserStore';
@@ -97,14 +98,32 @@ export default function FeedScreen() {
   // without it, hitting ✕ instantly repopulated the course they just cleared.
   const { courses, load: loadCourses } = useCourses();
   const defaultedRef = useRef(false);
+  const manualRef = useRef(false); // user explicitly picked a course → GPS yields
+  const nearby = useNearbyCourse();
+  const [atCourseName, setAtCourseName] = useState<string | null>(null);
   useEffect(() => { loadCourses(); }, [loadCourses]);
+
+  // Default the board ONCE, with the agreed precedence: the course you're
+  // standing at (GPS) > your home course > nothing. GPS resolves a beat after
+  // mount, so if you're at a course (even a different one than home) and haven't
+  // manually picked, it takes over and we flag the "You're at" banner.
   useEffect(() => {
-    if (defaultedRef.current) return;
+    if (manualRef.current) return;
+    if (nearby.atCourse && nearby.atCourse.name !== course) {
+      defaultedRef.current = true;
+      setAtCourseName(nearby.atCourse.name);
+      setCourse(nearby.atCourse.name);
+      return;
+    }
+    if (defaultedRef.current || course) return;
+    // No at-course — fall back to home, but wait for GPS to settle first so the
+    // home board isn't briefly shown then overridden (unless location's absent).
+    if (nearby.status === 'idle') return;
     const hid = user?.home_course_id;
-    if (!hid || course || !courses) return;
+    if (!hid || !courses) return;
     const n = courses.find((x) => x.id === hid)?.name ?? null;
     if (n) { defaultedRef.current = true; setCourse(n); }
-  }, [user, courses, course]);
+  }, [user, courses, course, nearby]);
 
   const load = useCallback(async () => {
     if (!course) { setLoading(false); return; }
@@ -194,6 +213,8 @@ export default function FeedScreen() {
   const visibleOpen = showAllOpen ? open : open.slice(0, 4);
 
   const onPickCourse = (c: CourseSummary | null) => {
+    manualRef.current = true; // a manual choice wins over GPS for this session
+    setAtCourseName(null);
     setCourse(c?.name ?? null);
     setSwitching(false);
   };
@@ -260,6 +281,20 @@ export default function FeedScreen() {
           </Text>
         )}
       </View>
+      {atCourseName && course === atCourseName && !switching && (
+        <PressableScale
+          style={styles.atBanner}
+          accessibilityRole="button"
+          accessibilityLabel={`You're at ${boardTitle(atCourseName)}. Switch course.`}
+          onPress={() => setSwitching(true)}
+        >
+          <Ionicons name="location" size={13} color={colors.accent} />
+          <Text style={styles.atBannerText} numberOfLines={1}>
+            You're at <Text style={styles.atBannerName}>{boardTitle(atCourseName)}</Text>
+          </Text>
+          <Text style={styles.atBannerSwitch}>Switch</Text>
+        </PressableScale>
+      )}
       {(switching || !course) && (
         <View style={styles.switcher}>
           <CourseSelect valueName={course} onSelect={onPickCourse} placeholder="Search a course…" />
@@ -698,6 +733,15 @@ function makeStyles(colors: Palette) {
     pulseLine: { ...typography.caption, fontSize: 13, color: colors.muted, marginTop: spacing.sm },
     pulseLineNum: { fontFamily: fonts.bodySemi, color: colors.text, fontVariant: ['tabular-nums'] },
     switcher: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+    atBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      marginHorizontal: spacing.lg, marginTop: spacing.sm,
+      backgroundColor: colors.accentGlow, borderRadius: radius.pill,
+      paddingHorizontal: spacing.md, paddingVertical: 6,
+    },
+    atBannerText: { ...typography.caption, fontSize: 12.5, color: colors.muted, flex: 1 },
+    atBannerName: { color: colors.text, fontFamily: fonts.bodySemi },
+    atBannerSwitch: { ...typography.caption, fontSize: 12.5, color: colors.accent, fontFamily: fonts.bodySemi },
     dateBar: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       paddingVertical: spacing.xs,

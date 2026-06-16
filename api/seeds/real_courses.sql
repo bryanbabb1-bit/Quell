@@ -5,7 +5,7 @@ DELETE FROM holes WHERE tee_id IN (SELECT id FROM tees WHERE course_id IN ('cour
 DELETE FROM tees WHERE course_id IN ('course_prairie','course_ironhorse','course_falcon');
 DELETE FROM courses WHERE id IN ('course_prairie','course_ironhorse','course_falcon');
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_10516','Prairie Highlands Golf Course','Olathe','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_10516','Prairie Highlands Golf Course','Olathe','KS',38.861732,-94.88574,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_10516_black','course_api_10516','Black','M',74.4,139,72,37.7,140,36,36.7,137,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10516_black_01','tee_api_10516_black',1,4,11);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10516_black_02','tee_api_10516_black',2,4,13);
@@ -159,7 +159,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10516_yellow_17','tee_api_10516_yellow',17,4,18);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10516_yellow_18','tee_api_10516_yellow',18,4,2);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_17985','Ironhorse Golf Club','Leawood','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_17985','Ironhorse Golf Club','Leawood','KS',38.84995,-94.63416,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_17985_black','course_api_17985','Black','M',73.5,144,72,36.9,136,36,36.6,152,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_17985_black_01','tee_api_17985_black',1,4,9);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_17985_black_02','tee_api_17985_black',2,3,7);
@@ -313,7 +313,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_17985_red_17','tee_api_17985_red',17,3,10);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_17985_red_18','tee_api_17985_red',18,4,4);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18074','Falcon Ridge Golf Club','Lenexa','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18074','Falcon Ridge Golf Club','Lenexa','KS',38.95162,-94.82075,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18074_blackm','course_api_18074','Black (M)','M',74.4,148,72,37,142,36,37.4,154,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18074_blackm_01','tee_api_18074_blackm',1,4,17);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18074_blackm_02','tee_api_18074_blackm',2,4,5);
@@ -486,7 +486,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18074_redm_17','tee_api_18074_redm',17,4,12);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18074_redm_18','tee_api_18074_redm',18,4,6);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18355','Sycamore Ridge Golf Club','Spring Hill','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18355','Sycamore Ridge Golf Club','Spring Hill','KS',38.75867,-94.83976,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18355_black','course_api_18355','Black','M',76,143,72,38.9,151,36,37.1,135,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18355_black_01','tee_api_18355_black',1,4,4);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18355_black_02','tee_api_18355_black',2,5,6);
@@ -602,7 +602,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18355_yellow_17','tee_api_18355_yellow',17,3,13);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18355_yellow_18','tee_api_18355_yellow',18,5,3);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18084','Shadow Glen Golf Club','Olathe','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18084','Shadow Glen Golf Club','Olathe','KS',38.9384,-94.888176,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18084_black','course_api_18084','Black','M',74.6,136,72,37.1,138,36,37.5,133,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18084_black_01','tee_api_18084_black',1,4,6);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18084_black_02','tee_api_18084_black',2,5,10);
@@ -756,7 +756,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18084_red_17','tee_api_18084_red',17,4,9);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18084_red_18','tee_api_18084_red',18,5,11);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18229','Deer Creek Golf Club','Overland Park','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18229','Deer Creek Golf Club','Overland Park','KS',38.88873,-94.66623,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18229_black','course_api_18229','Black','M',73.5,139,72,36.9,136,36,36.6,141,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18229_black_01','tee_api_18229_black',1,4,9);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18229_black_02','tee_api_18229_black',2,4,13);
@@ -834,7 +834,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18229_red_17','tee_api_18229_red',17,4,6);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18229_red_18','tee_api_18229_red',18,5,12);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18026','Tomahawk Hills Golf Course','Shawnee','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18026','Tomahawk Hills Golf Course','Shawnee','KS',38.999733,-94.79083,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18026_blue','course_api_18026','Blue','M',69.7,118,70,34.4,116,35,35.3,119,35);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18026_blue_01','tee_api_18026_blue',1,5,3);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18026_blue_02','tee_api_18026_blue',2,3,11);
@@ -893,7 +893,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18026_red_17','tee_api_18026_red',17,4,6);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18026_red_18','tee_api_18026_red',18,3,12);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18041','Canyon Farms Golf Club','Lenexa','KS','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18041','Canyon Farms Golf Club','Lenexa','KS',38.97024,-94.791115,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18041_goldprofessional','course_api_18041','Gold (Professional)','M',74.4,142,70,36.9,145,35,37.5,139,35);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18041_goldprofessional_01','tee_api_18041_goldprofessional',1,4,9);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18041_goldprofessional_02','tee_api_18041_goldprofessional',2,5,7);
@@ -1066,7 +1066,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18041_redforward_17','tee_api_18041_redforward',17,4,6);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18041_redforward_18','tee_api_18041_redforward',18,5,10);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_10447','The National Golf Club Of Kansas City','Parkville','MO','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_10447','The National Golf Club Of Kansas City','Parkville','MO',39.21878,-94.71205,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_10447_blackwatson','course_api_10447','Black (Watson)','M',74.5,144,72,37,150,36,37.5,138,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10447_blackwatson_01','tee_api_10447_blackwatson',1,4,15);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10447_blackwatson_02','tee_api_10447_blackwatson',2,5,17);
@@ -1201,7 +1201,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10447_whiteforward_17','tee_api_10447_whiteforward',17,4,4);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_10447_whiteforward_18','tee_api_10447_whiteforward',18,5,10);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18127','Tiffany Greens Golf Club','Kansas City','MO','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18127','Tiffany Greens Golf Club','Kansas City','MO',39.274273,-94.64596,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18127_tiff','course_api_18127','Tiff','M',74.2,144,72,37.2,144,36,37,143,36);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18127_tiff_01','tee_api_18127_tiff',1,5,13);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18127_tiff_02','tee_api_18127_tiff',2,4,5);
@@ -1374,7 +1374,7 @@ INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18127_red_17','tee_api_18127_red',17,4,8);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18127_red_18','tee_api_18127_red',18,4,4);
 
-INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('course_api_18080','Shoal Creek Golf Course','Kansas City','MO','2026-06-09T00:00:00.000Z');
+INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('course_api_18080','Shoal Creek Golf Course','Kansas City','MO',39.255318,-94.486015,'2026-06-09T00:00:00.000Z');
 INSERT OR REPLACE INTO tees (id, course_id, name, gender, course_rating, slope_rating, par, front_course_rating, front_slope_rating, front_par, back_course_rating, back_slope_rating, back_par) VALUES ('tee_api_18080_gold','course_api_18080','Gold','M',73.7,138,71,37.5,138,36,36.2,138,35);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18080_gold_01','tee_api_18080_gold',1,4,3);
 INSERT OR REPLACE INTO holes (id, tee_id, hole_number, par, stroke_index) VALUES ('h_api_18080_gold_02','tee_api_18080_gold',2,4,15);

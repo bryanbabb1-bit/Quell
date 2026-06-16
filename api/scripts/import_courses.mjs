@@ -64,7 +64,7 @@ for (const q of QUERIES) {
     const c = bestMatch(res.courses, q);
     if (!c) { console.error('  no result:', q); }
     else if (seen.has(c.id)) { console.error('  dup:', c.course_name); }
-    else { picked.push(c); seen.add(c.id); console.error('  ok:', c.course_name, `${c.location?.city}, ${c.location?.state} (id ${c.id})`); }
+    else { picked.push(c); seen.add(c.id); console.error('  ok:', c.course_name, `${c.location?.city}, ${c.location?.state} @ ${c.location?.latitude ?? c.location?.lat},${c.location?.longitude ?? c.location?.lng} (id ${c.id})`); }
   } catch (e) {
     console.error('  err:', q, e.message);
   }
@@ -83,7 +83,9 @@ let teeCount = 0, holeCount = 0;
 for (const c of picked) {
   const cid = `course_api_${c.id}`;
   const loc = c.location || {};
-  sql += `INSERT OR REPLACE INTO courses (id, name, city, state, created_at) VALUES ('${cid}','${esc(c.course_name)}','${esc(loc.city)}','${esc(loc.state)}','2026-06-09T00:00:00.000Z');\n`;
+  const lat = loc.latitude ?? loc.lat;
+  const lng = loc.longitude ?? loc.lng ?? loc.lon;
+  sql += `INSERT OR REPLACE INTO courses (id, name, city, state, latitude, longitude, created_at) VALUES ('${cid}','${esc(c.course_name)}','${esc(loc.city)}','${esc(loc.state)}',${num(lat)},${num(lng)},'2026-06-09T00:00:00.000Z');\n`;
 
   // Include every men's tee with a full 18-hole card — combos (e.g. "Blue/White")
   // included, since real courses offer them.

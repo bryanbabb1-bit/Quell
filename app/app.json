@@ -30,6 +30,12 @@
       "expo-font",
       "expo-notifications",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Foretera uses your location to show the course you're at and find nearby games."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Foretera uses your photos to set a profile picture."

@@ -6,6 +6,7 @@ import { useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { useApi } from '@/lib/useApi';
+import { useNearbyCourse } from '@/lib/useNearbyCourse';
 import { useUserStore } from '@/store/useUserStore';
 import { useColors } from '@/store/useThemeStore';
 import { useFavorites } from '@/store/useFavoritesStore';
@@ -16,7 +17,7 @@ import { DiscoveryFilters, DEFAULT_FILTERS, isFiltered, localTodayISO, type Disc
 import { ErrorState, SkeletonCard } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import type { DiscoveryMatch } from '@/types';
-import { spacing, radius, elevation, makeType, type Palette } from '@/constants/theme';
+import { spacing, radius, elevation, fonts, makeType, type Palette } from '@/constants/theme';
 
 const COACH_KEY = 'mp_coach_seen';
 
@@ -46,6 +47,11 @@ export default function DiscoveryScreen() {
 
   useEffect(() => { loadFavs(); }, [loadFavs]);
 
+  // GPS: when you're standing at a course, pre-scope the deck to it ONCE.
+  const nearby = useNearbyCourse();
+  const [atCourseName, setAtCourseName] = useState<string | null>(null);
+  const gpsRef = useRef(false);
+
   const load = useCallback(async (f?: DiscoveryFilterState) => {
     try {
       setError(null);
@@ -68,6 +74,20 @@ export default function DiscoveryScreen() {
   }, [api]);
 
   useFocusEffect(useCallback(() => { load(); loadFavs(); }, [load, loadFavs]));
+
+  // Pre-scope the deck to the course you're standing at — but never override a
+  // filter you've already set this session.
+  useEffect(() => {
+    if (gpsRef.current || nearby.status === 'idle') return;
+    gpsRef.current = true;
+    if (nearby.atCourse && !isFiltered(filtersRef.current)) {
+      const next = { ...DEFAULT_FILTERS, course: nearby.atCourse.name };
+      setAtCourseName(nearby.atCourse.name);
+      setFilters(next);
+      setLoading(true);
+      load(next);
+    }
+  }, [nearby, load]);
 
   // "Favorites only" filters against the favorited creator ids; re-run it when
   // those change (favorites loading, or a star toggle) so the deck reflects them.
@@ -160,6 +180,19 @@ export default function DiscoveryScreen() {
         }}
       />
 
+      {atCourseName && filters.course === atCourseName && (
+        <TouchableOpacity
+          style={styles.atPill}
+          onPress={() => { haptics.light(); setShowFilters(true); }}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={`Showing matches at ${atCourseName}. Change.`}
+        >
+          <Ionicons name="location" size={12} color={colors.accent} />
+          <Text style={styles.atPillText} numberOfLines={1}>At {atCourseName}</Text>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity style={styles.filterBtn} onPress={() => { haptics.light(); setShowFilters(true); }} activeOpacity={0.85}>
         <Ionicons name="options-outline" size={22} color={colors.text} />
         {isFiltered(filters) && <View style={styles.filterDot} />}
@@ -231,6 +264,14 @@ function makeStyles(colors: Palette) {
     ...elevation.floating,
   },
   filterDot: { position: 'absolute', top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent, borderWidth: 1.5, borderColor: colors.surface },
+  atPill: {
+    position: 'absolute', top: spacing.sm, alignSelf: 'center', zIndex: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '72%',
+    backgroundColor: colors.surface, borderRadius: radius.pill,
+    borderWidth: 1, borderColor: colors.divider,
+    paddingHorizontal: spacing.md, paddingVertical: 6, ...elevation.card,
+  },
+  atPillText: { ...t.caption, color: colors.text, fontFamily: fonts.bodySemi },
   coach: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   coachCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, alignItems: 'center', alignSelf: 'stretch', ...elevation.sheet },
   coachTitle: { ...t.heading, textAlign: 'center' },

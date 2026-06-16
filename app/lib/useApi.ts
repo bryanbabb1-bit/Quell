@@ -6,7 +6,7 @@ import type {
   MyRecord, LeaderboardEntry, CourseSummary, TeeSummary, Favorite, PlayerProfile, Gif,
   CourseFeedMatch, Visibility, OpenInvite, CoursePulse, ClubSummary, ClubDetail,
   ClubChampions, ClubDashboard, ClubMemberDetail, ClubIntros, LiveState, CheerKind,
-  CheerResult, Reactors,
+  CheerResult, Reactors, NearbyCourse,
 } from '@/types';
 
 export interface CreateMatchInput {
@@ -74,6 +74,8 @@ export function useApi() {
       // Course catalog
       getCourses: () => call<{ courses: CourseSummary[] }>('/courses'),
       getCourse: (id: string) => call<{ course: CourseSummary; tees: TeeSummary[] }>(`/courses/${id}`),
+      coursesNear: (lat: number, lng: number, limit = 6) =>
+        call<{ courses: NearbyCourse[] }>(`/courses/near?lat=${lat}&lng=${lng}&limit=${limit}`),
 
       // Clubs (the network layer)
       getClub: (id: string) => call<ClubDetail>(`/clubs/${id}`),

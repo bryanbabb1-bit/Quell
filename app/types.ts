@@ -500,6 +500,15 @@ export interface CourseSummary {
   state: string | null;
 }
 
+// A course returned by the GPS nearest-course endpoint (with its distance).
+export interface NearbyCourse {
+  id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  distance_km: number;
+}
+
 export interface TeeSummary {
   id: string;
   name: string;

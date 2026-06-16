@@ -48,6 +48,9 @@ const PRIVACY_HTML = `<!doctype html>
     <li><strong>Match &amp; score data</strong> — matches you post, accept, and play, and the
       hole-by-hole scores and results you enter.</li>
     <li><strong>Messages</strong> — optional in-match messages and GIFs you send to an opponent.</li>
+    <li><strong>Approximate location</strong> — only while you are actively using the app, and
+      only if you allow it, to show the golf course you're at and find nearby games. We do
+      <strong>not</strong> track your location in the background.</li>
     <li><strong>Device push token</strong> — only if you enable notifications, so we can send
       challenge and score-reminder alerts.</li>
     <li><strong>Diagnostics</strong> — basic error logs to keep the app stable.</li>
