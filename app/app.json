@@ -20,7 +20,7 @@
       "package": "com.bryanbabb.quell",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FAF8F4"
+        "backgroundColor": "#F2542D"
       }
     },
     "plugins": [
@@ -40,7 +40,7 @@
         {
           "image": "./assets/splash.png",
           "imageWidth": 300,
-          "backgroundColor": "#FAF8F4",
+          "backgroundColor": "#F2542D",
           "resizeMode": "contain"
         }
       ],

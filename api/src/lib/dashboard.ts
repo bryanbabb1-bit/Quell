@@ -18,6 +18,7 @@ export interface ClubDashboard {
   this_week: { matches: number; players: number };
   last_week: { matches: number; players: number };
   trend: { week: string; matches: number }[];        // 8 weeks, oldest → newest
+  month_matches: number;
   active_this_month: number;
   new_this_month: number;
   returning_this_month: number;
@@ -48,7 +49,7 @@ export async function buildDashboard(env: Env, clubId: string, courseName: strin
     const arr = playDates.get(id) ?? [];
     arr.push(d); playDates.set(id, arr);
   };
-  let weekMatches = 0, lastWeekMatches = 0;
+  let weekMatches = 0, lastWeekMatches = 0, monthMatches = 0;
   const weekPlayers = new Set<string>(), lastWeekPlayers = new Set<string>();
   const trendBuckets: number[] = new Array(8).fill(0);
 
@@ -59,6 +60,7 @@ export async function buildDashboard(env: Env, clubId: string, courseName: strin
     if (ageDays >= 0 && ageDays < 7) { weekMatches++; weekPlayers.add(m.creator_id); weekPlayers.add(m.opponent_id); }
     else if (ageDays >= 7 && ageDays < 14) { lastWeekMatches++; lastWeekPlayers.add(m.creator_id); lastWeekPlayers.add(m.opponent_id); }
     if (ageDays >= 0 && ageDays < 56) trendBuckets[7 - Math.floor(ageDays / 7)]++;
+    if (m.play_date.slice(0, 7) === month) monthMatches++;
   }
 
   // This month: active / new / returning + most active.
@@ -114,6 +116,7 @@ export async function buildDashboard(env: Env, clubId: string, courseName: strin
     this_week: { matches: weekMatches, players: weekPlayers.size },
     last_week: { matches: lastWeekMatches, players: lastWeekPlayers.size },
     trend: trendBuckets.map((matches, i) => ({ week: `${8 - i}w`, matches })),
+    month_matches: monthMatches,
     active_this_month: activeThisMonth.size,
     new_this_month: newThisMonth,
     returning_this_month: activeThisMonth.size - newThisMonth,

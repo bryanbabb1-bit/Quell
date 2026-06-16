@@ -205,6 +205,7 @@ export interface ClubDashboard {
   this_week: { matches: number; players: number };
   last_week: { matches: number; players: number };
   trend: { week: string; matches: number }[];
+  month_matches: number;
   active_this_month: number;
   new_this_month: number;
   returning_this_month: number;

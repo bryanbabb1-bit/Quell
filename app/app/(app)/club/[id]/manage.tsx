@@ -7,7 +7,7 @@ import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
-import { shareClubInvite, shareIntro } from '@/lib/invite';
+import { shareClubInvite, shareIntro, shareClubMonth } from '@/lib/invite';
 import type { ClubDashboard, ClubDetail, ClubIntros } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
@@ -177,6 +177,26 @@ export default function ClubManageScreen() {
           >
             <Ionicons name="share-outline" size={16} color={colors.onAccent} />
             <Text style={styles.recruitBtnText}>Share club invite</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Share the month — turns the dashboard into marketing the pro can post. */}
+        <View style={styles.panel}>
+          <View style={styles.panelHeadRow}>
+            <Ionicons name="trophy-outline" size={16} color={colors.gold} />
+            <Text style={styles.panelTitle}>Your month</Text>
+          </View>
+          <Text style={styles.demandLine}>
+            <Text style={styles.demandNum}>{data.month_matches}</Text> matches · <Text style={styles.demandNum}>{data.active_this_month}</Text> golfers
+            {data.new_this_month > 0 ? ` · ${data.new_this_month} new` : ''} this month
+          </Text>
+          <TouchableOpacity
+            style={styles.recruitBtn} activeOpacity={0.85}
+            accessibilityRole="button" accessibilityLabel="Share your club's month"
+            onPress={() => { haptics.select(); shareClubMonth(club?.name ?? '', { matches: data.month_matches, golfers: data.active_this_month, newCount: data.new_this_month }); }}
+          >
+            <Ionicons name="share-outline" size={16} color={colors.onAccent} />
+            <Text style={styles.recruitBtnText}>Share the month</Text>
           </TouchableOpacity>
         </View>
 

@@ -25,6 +25,22 @@ export async function shareClubInvite(clubName: string): Promise<void> {
   } catch { /* dismissed */ }
 }
 
+// Club staff → a one-tap shareable recap of the club's month (marketing the
+// board to socials / the membership).
+export async function shareClubMonth(
+  clubName: string,
+  stats: { matches: number; golfers: number; newCount: number }
+): Promise<void> {
+  const club = clubName?.trim() || 'our club';
+  const parts = [`${stats.matches} matches`, `${stats.golfers} golfers`];
+  if (stats.newCount > 0) parts.push(`${stats.newCount} new`);
+  try {
+    await Share.share({
+      message: `This month at ${club}: ${parts.join(' · ')}. Find your next game on Foretera. ${FORETERA_URL}`,
+    });
+  } catch { /* dismissed */ }
+}
+
 // Club staff → forward a suggested intro between two members. The pro sends it
 // to whichever of the two they're in touch with; it names both so it's clear.
 export async function shareIntro(aName: string, bName: string, clubName: string): Promise<void> {
