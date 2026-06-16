@@ -256,9 +256,9 @@ function toParText(diff: number): string {
   return diff > 0 ? `+${diff}` : `${diff}`;
 }
 function toParColor(diff: number, colors: Palette) {
-  if (diff < 0) return { color: colors.fairway };   // under par
+  if (diff < 0) return { color: colors.win };        // under par
   if (diff === 0) return { color: colors.muted };    // even
-  return { color: colors.flagRed };                  // over par
+  return { color: colors.loss };                     // over par
 }
 
 function makeStyles(colors: Palette) {

@@ -42,7 +42,7 @@ export function Button({
 
   const labelColor =
     variant === 'primary' ? c.onAccent :
-    variant === 'danger' ? c.text :
+    variant === 'danger' ? c.loss :
     variant === 'ghost' ? c.accent :
     c.text;
 

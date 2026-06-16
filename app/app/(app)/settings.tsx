@@ -148,8 +148,8 @@ export default function SettingsScreen() {
               value={notifOn}
               onValueChange={(v) => { haptics.select(); toggleNotifications(v); }}
               disabled={notifBusy}
-              trackColor={{ true: c.accent, false: c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised }}
-              ios_backgroundColor={c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised}
+              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              ios_backgroundColor={c.surfaceRaised}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -214,7 +214,7 @@ function makeStyles(c: Palette) {
     sectionHint: { ...typography.caption, color: c.muted, marginBottom: spacing.xs },
     card: { backgroundColor: c.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
     row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
-    rowDivider: { borderTopWidth: 1, borderTopColor: c.border },
+    rowDivider: { borderTopWidth: 1, borderTopColor: c.divider },
     rowLabel: { ...typography.bodySemiBold, color: c.text, flex: 1 },
     rowSub: { ...typography.caption, color: c.muted, marginTop: 1 },
     rowAction: { ...typography.bodySemiBold, color: c.accent },

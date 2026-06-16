@@ -382,9 +382,9 @@ function OutcomeChip({ outcome }: { outcome: Outcome }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const map = {
-    win: { t: 'W', bg: colors.accent, fg: colors.onAccent },
-    loss: { t: 'L', bg: colors.loss, fg: colors.bg },
-    tie: { t: 'H', bg: colors.halve, fg: colors.bg },
+    win: { t: 'W', bg: colors.win, fg: colors.onAccent },
+    loss: { t: 'L', bg: colors.loss, fg: colors.onAccent },
+    tie: { t: 'H', bg: colors.halve, fg: colors.onAccent },
   }[outcome];
   return <View style={[styles.chip, { backgroundColor: map.bg }]}><Text style={[styles.chipText, { color: map.fg }]}>{map.t}</Text></View>;
 }
@@ -449,7 +449,7 @@ function makeStyles(colors: Palette) {
   courseWl: { ...typography.bodySemiBold, color: colors.text, fontVariant: ['tabular-nums'] },
   formChip: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', opacity: 0.75 },
   formChipLatest: { opacity: 1, transform: [{ scale: 1.15 }] },
-  formChipText: { ...typography.caption, fontSize: 11, color: colors.bg, fontWeight: '800' },
+  formChipText: { ...typography.caption, fontSize: 11, color: colors.onAccent, fontWeight: '800' },
   sectionTitle: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm },
   lbHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.sm },
   scopeToggle: { flexDirection: 'row', backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, padding: 2 },
@@ -477,8 +477,8 @@ function makeStyles(colors: Palette) {
   lbRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, gap: spacing.sm },
   lbHead: { backgroundColor: colors.paper },
   lbHeadText: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5 },
-  lbMine: { backgroundColor: colors.fairwaySoft },
-  lbMineText: { color: colors.fairway, fontWeight: '700' },
+  lbMine: { backgroundColor: colors.surfaceRaised },
+  lbMineText: { color: colors.accent, fontWeight: '700' },
   lbRank: { width: 22, ...typography.bodySemiBold, color: colors.muted },
   lbName: { flex: 1, ...typography.body },
   lbWl: { width: 72, textAlign: 'center', ...typography.body },

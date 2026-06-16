@@ -387,9 +387,9 @@ function makeStyles(colors: Palette) {
   segBtnActive: { backgroundColor: colors.fairway, borderColor: colors.fairway },
   segRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   segText: { ...typography.bodySemiBold, color: colors.ink },
-  segTextActive: { color: colors.surface },
+  segTextActive: { color: colors.onAccent },
   note: { ...typography.caption, color: colors.muted },
   submit: { backgroundColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
-  submitText: { ...typography.bodySemiBold, color: colors.surface },
+  submitText: { ...typography.bodySemiBold, color: colors.onAccent },
   });
 }

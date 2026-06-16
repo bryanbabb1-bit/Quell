@@ -512,7 +512,7 @@ function crestInitials(name: string): string {
 function crestTextColor(bg: string | null, colors: Palette): string {
   if (!bg) return colors.text; // theme fallback chip → theme text
   const m = bg.match(/^#?([0-9a-fA-F]{6})/);
-  if (!m) return '#F5F1E6';
+  if (!m) return colors.text;
   const n = parseInt(m[1], 16);
   const lum = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
   return lum > 145 ? '#16120A' : '#F5F1E6';
@@ -808,8 +808,8 @@ function makeStyles(colors: Palette) {
     statusChip: { backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
     statusChipText: { ...typography.caption, color: colors.muted },
     liveChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.live, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 },
-    liveChipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.scheme === 'dark' ? colors.bg : '#FFFFFF' },
-    liveChipText: { ...typography.caption, fontSize: 11, color: colors.scheme === 'dark' ? colors.bg : '#FFFFFF', fontFamily: fonts.bodyBold, letterSpacing: 0.5 },
+    liveChipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFFFF' },
+    liveChipText: { ...typography.caption, fontSize: 11, color: '#FFFFFF', fontFamily: fonts.bodyBold, letterSpacing: 0.5 },
     watchBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
     watchText: { ...typography.caption, fontSize: 11, color: colors.muted, fontFamily: fonts.bodySemi },
     meta: { ...typography.caption, color: colors.muted, textAlign: 'right' },

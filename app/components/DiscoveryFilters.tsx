@@ -144,8 +144,8 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
             <Switch
               value={local.starred}
               onValueChange={(v) => { haptics.select(); setLocal((s) => ({ ...s, starred: v })); }}
-              trackColor={{ true: c.accent, false: c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised }}
-              ios_backgroundColor={c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised}
+              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              ios_backgroundColor={c.surfaceRaised}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -158,8 +158,8 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
             <Switch
               value={local.all}
               onValueChange={(v) => { haptics.select(); setLocal((s) => ({ ...s, all: v })); }}
-              trackColor={{ true: c.accent, false: c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised }}
-              ios_backgroundColor={c.scheme === 'light' ? '#B9C3BC' : c.surfaceRaised}
+              trackColor={{ true: c.accent, false: c.surfaceRaised }}
+              ios_backgroundColor={c.surfaceRaised}
               thumbColor="#FFFFFF"
             />
           </View>

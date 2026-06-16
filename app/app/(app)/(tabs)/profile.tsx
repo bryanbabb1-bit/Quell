@@ -179,7 +179,7 @@ function makeStyles(colors: Palette) {
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     fontSize: 16, color: colors.ink,
   },
-  ageNote: { ...typography.caption, color: colors.fairway },
+  ageNote: { ...typography.caption, color: colors.muted },
   note: { ...typography.caption, color: colors.muted },
   saveBtn: { backgroundColor: colors.fairway, borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
   saveText: { ...typography.bodySemiBold, color: colors.surface },
