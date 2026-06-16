@@ -7,6 +7,7 @@ import { computeChampions, readCrowned } from '../lib/champions';
 import { buildDashboard } from '../lib/dashboard';
 import { buildMemberDetail } from '../lib/memberDetail';
 import { buildIntros } from '../lib/intros';
+import { sendPush } from '../lib/push';
 
 // Clubs — the network layer (strategy doc A2/A3/A4).
 //   GET   /clubs/:id             summary + demand count (claim screen)
@@ -77,7 +78,7 @@ export async function handleClubs(
   }
 
   // ── Staff-only surfaces ──
-  if (action === 'dashboard' || action === 'member' || action === 'intros' || action === 'crest' || (!action && method === 'PATCH')) {
+  if (action === 'dashboard' || action === 'member' || action === 'intros' || action === 'nudge' || action === 'crest' || (!action && method === 'PATCH')) {
     const staff = await env.DB.prepare('SELECT 1 FROM club_staff WHERE club_id = ? AND user_id = ?')
       .bind(clubId, auth.userId).first();
     if (!staff) return error('Not authorized for this club', 403);
@@ -99,6 +100,16 @@ export async function handleClubs(
     if (action === 'intros' && method === 'GET') {
       if (!course) return error('Club has no course linked', 409);
       return json(await buildIntros(env, course.name));
+    }
+
+    // Staff → nudge a lapsing member with a push to come back.
+    if (action === 'nudge' && method === 'POST') {
+      const memberId = segments[3];
+      if (!memberId) return error('Member id required', 400);
+      const member = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(memberId).first();
+      if (!member) return error('Member not found', 404);
+      await sendPush(env, memberId, `${club.name} misses you`, `Line up your next game at ${club.name} on Foretera.`, {});
+      return json({ ok: true });
     }
 
     if (action === 'crest' && method === 'POST') {

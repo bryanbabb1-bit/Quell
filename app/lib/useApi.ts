@@ -98,6 +98,7 @@ export function useApi() {
         call<ClubChampions>(`/clubs/${id}/champions${month ? `?month=${month}` : ''}`),
       getClubDashboard: (id: string) => call<ClubDashboard>(`/clubs/${id}/dashboard`),
       getClubMember: (id: string, userId: string) => call<ClubMemberDetail>(`/clubs/${id}/member/${userId}`),
+      nudgeMember: (id: string, userId: string) => call<{ ok: boolean }>(`/clubs/${id}/nudge/${userId}`, { method: 'POST' }),
       getClubIntros: (id: string) => call<ClubIntros>(`/clubs/${id}/intros`),
       updateClub: (id: string, patch: { primary_color?: string | null; pinned_message?: string | null }) =>
         call<ClubDetail>(`/clubs/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),

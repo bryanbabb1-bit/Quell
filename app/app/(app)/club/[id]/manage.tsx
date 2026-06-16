@@ -7,7 +7,7 @@ import { useApi } from '@/lib/useApi';
 import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
-import { shareClubInvite, shareIntro, shareClubMonth } from '@/lib/invite';
+import { shareClubInvite, shareIntro } from '@/lib/invite';
 import type { ClubDashboard, ClubDetail, ClubIntros } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
@@ -24,6 +24,13 @@ export default function ClubManageScreen() {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const openMember = (userId: string) => { haptics.select(); router.push(`/(app)/club/${id}/member/${userId}`); };
+  const [nudged, setNudged] = useState<Set<string>>(new Set());
+  const nudge = async (userId: string) => {
+    if (!id || nudged.has(userId)) return;
+    haptics.medium();
+    setNudged((s) => new Set(s).add(userId));
+    try { await api.nudgeMember(id, userId); } catch { /* best effort */ }
+  };
 
   const [data, setData] = useState<ClubDashboard | null>(null);
   const [club, setClub] = useState<ClubDetail | null>(null);
@@ -180,26 +187,6 @@ export default function ClubManageScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Share the month — turns the dashboard into marketing the pro can post. */}
-        <View style={styles.panel}>
-          <View style={styles.panelHeadRow}>
-            <Ionicons name="trophy-outline" size={16} color={colors.gold} />
-            <Text style={styles.panelTitle}>Your month</Text>
-          </View>
-          <Text style={styles.demandLine}>
-            <Text style={styles.demandNum}>{data.month_matches}</Text> matches · <Text style={styles.demandNum}>{data.active_this_month}</Text> golfers
-            {data.new_this_month > 0 ? ` · ${data.new_this_month} new` : ''} this month
-          </Text>
-          <TouchableOpacity
-            style={styles.recruitBtn} activeOpacity={0.85}
-            accessibilityRole="button" accessibilityLabel="Share your club's month"
-            onPress={() => { haptics.select(); shareClubMonth(club?.name ?? '', { matches: data.month_matches, golfers: data.active_this_month, newCount: data.new_this_month }); }}
-          >
-            <Ionicons name="share-outline" size={16} color={colors.onAccent} />
-            <Text style={styles.recruitBtnText}>Share the month</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* 8-week trend */}
         <View style={styles.panel}>
           <Text style={styles.panelTitle}>Matches per week · 8 weeks</Text>
@@ -241,10 +228,18 @@ export default function ClubManageScreen() {
                 <Avatar name={p.name} size={28} photoUrl={p.photo_url} />
                 <Text style={styles.personName} numberOfLines={1}>{p.name}</Text>
                 <Text style={styles.personMeta}>last {p.last_played}</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.muted} />
+                <TouchableOpacity
+                  style={[styles.nudgeBtn, nudged.has(p.user_id) && styles.nudgeBtnDone]}
+                  hitSlop={6} disabled={nudged.has(p.user_id)}
+                  accessibilityRole="button" accessibilityLabel={`Nudge ${p.name}`}
+                  onPress={() => nudge(p.user_id)}
+                >
+                  <Ionicons name={nudged.has(p.user_id) ? 'checkmark' : 'notifications-outline'} size={12} color={nudged.has(p.user_id) ? colors.win : colors.accent} />
+                  <Text style={[styles.nudgeText, nudged.has(p.user_id) && { color: colors.win }]}>{nudged.has(p.user_id) ? 'Nudged' : 'Nudge'}</Text>
+                </TouchableOpacity>
               </TouchableOpacity>
             ))}
-            <Text style={styles.hint}>Tap a member to see their engagement — then win them back.</Text>
+            <Text style={styles.hint}>Tap a name to see their engagement, or nudge them back.</Text>
           </View>
         )}
 
@@ -397,6 +392,9 @@ function makeStyles(c: Palette) {
     rank: { width: 16, textAlign: 'center', ...typography.caption, color: c.muted },
     personName: { flex: 1, ...typography.body },
     personMeta: { ...typography.caption, color: c.muted },
+    nudgeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: c.accentGlow, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+    nudgeBtnDone: { backgroundColor: c.winGlow },
+    nudgeText: { ...typography.caption, fontSize: 11, color: c.accent, fontFamily: fonts.bodySemi },
     hint: { ...typography.caption, color: c.muted, fontStyle: 'italic' },
     demandLine: { ...typography.body, color: c.text },
     demandNum: { fontFamily: fonts.bodyBold, color: c.gold },

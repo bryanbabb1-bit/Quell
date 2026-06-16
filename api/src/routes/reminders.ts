@@ -1,6 +1,33 @@
 import type { Env } from '../types';
 import { now } from '../lib/id';
 import { sendPush } from '../lib/push';
+import { settle, computeLiveState, holeRange } from './scorecards';
+
+// A LIVE (playing-together) round whose cards both exist but was never CONFIRMED
+// won't settle on its own — without this it lingers in_progress forever ("stale
+// Live"). After the forfeit window: finalize it if the round is actually
+// complete (scores all in, just unconfirmed), else expire it as abandoned.
+async function resolveStaleLive(env: Env, matchId: string, course: string): Promise<void> {
+  const full = await env.DB.prepare('SELECT * FROM matches WHERE id = ?').bind(matchId).first<Record<string, any>>();
+  if (!full || full.status !== 'in_progress') return;
+  const range = holeRange(full.match_type);
+  const gc = await computeLiveState(env, full).catch(() => null);
+  if (gc && gc.holes_played === range.count) {
+    await settle(env, full); // complete round, just never confirmed → finalize
+    const settled = await env.DB.prepare('SELECT status FROM matches WHERE id = ?').bind(matchId).first<{ status: string }>();
+    if (settled?.status === 'completed') {
+      await sendPush(env, full.creator_id, 'Result ready', `Your ${course} match was finalized — see the result.`, { matchId });
+      if (full.opponent_id) await sendPush(env, full.opponent_id, 'Result ready', `Your ${course} match was finalized — see the result.`, { matchId });
+    }
+  } else {
+    const res = await env.DB.prepare(`UPDATE matches SET status='expired', updated_at=? WHERE id=? AND status='in_progress'`)
+      .bind(now(), matchId).run();
+    if ((res.meta.changes ?? 0) > 0) {
+      await sendPush(env, full.creator_id, 'Match expired', `Your ${course} match was left unfinished.`, { matchId });
+      if (full.opponent_id) await sendPush(env, full.opponent_id, 'Match expired', `Your ${course} match was left unfinished.`, { matchId });
+    }
+  }
+}
 
 // Scheduled (hourly cron) score-reminder + forfeit sweep. Policy:
 //   • play day, after 7pm LOCAL, not submitted  → "post your score" reminder
@@ -50,14 +77,21 @@ export async function runReminders(env: Env): Promise<void> {
   for (const m of results ?? []) {
     const creatorIn = !!m.creator_scorecard_id;
     const opponentIn = !!m.opponent_scorecard_id;
-    if (creatorIn && opponentIn) continue; // will settle on its own
-
     const ref = nowInTz(m.creator_tz || DEFAULT_TZ);
     const daysSince = daysBetween(m.play_date, ref.date);
+    const course = m.course_name as string;
+
+    // Both cards exist but still in_progress → an APART match would already have
+    // settled on the 2nd submit, so this is a LIVE round that was never
+    // confirmed. After +2 days, finalize-or-expire it (see resolveStaleLive).
+    if (creatorIn && opponentIn) {
+      if (daysSince >= 2) await resolveStaleLive(env, m.id, course);
+      continue;
+    }
+
     const unsubmitted: string[] = [];
     if (!creatorIn) unsubmitted.push(m.creator_id);
     if (!opponentIn) unsubmitted.push(m.opponent_id);
-    const course = m.course_name as string;
 
     // ── Forfeit (+2 days) ──
     // Guarded UPDATEs (status IN accepted/in_progress) + push only when the
