@@ -54,7 +54,12 @@ export function useNearbyCourse(enabled = true): NearbyResult {
           if (!cancelled) setResult((r) => ({ ...r, status: 'denied' }));
           return;
         }
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        // Race a timeout so a slow/no GPS fix never blocks the board waiting on us
+        // (the screens gate the home-course default on this leaving 'idle').
+        const pos: any = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000)),
+        ]);
         const { latitude, longitude } = pos.coords;
         const { courses } = await api.coursesNear(latitude, longitude);
         if (cancelled) return;
