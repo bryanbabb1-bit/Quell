@@ -14,7 +14,7 @@ import { CourseSelect } from '@/components/CourseSelect';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { AcceptCelebration } from '@/components/AcceptCelebration';
 import { Avatar, EmptyState } from '@/components/ui';
-import { Reveal, CountUp, PressableScale } from '@/components/motion';
+import { CountUp, PressableScale } from '@/components/motion';
 import { haptics } from '@/lib/haptics';
 import { formatHandicap } from '@/lib/format';
 import { MATCH_TYPE_LABELS } from '@/types';
@@ -257,18 +257,15 @@ export default function FeedScreen() {
         {/* Pinned note from the club's staff — set in Club Control, shown to
             everyone on the board. */}
         {club?.pinned_message ? (
-          <Reveal index={0}>
-            <View style={styles.pinnedCard}>
-              <Ionicons name="pin" size={15} color={colors.gold} />
-              <Text style={styles.pinnedText}>{club.pinned_message}</Text>
-            </View>
-          </Reveal>
+          <View style={styles.pinnedCard}>
+            <Ionicons name="pin" size={15} color={colors.gold} />
+            <Text style={styles.pinnedText}>{club.pinned_message}</Text>
+          </View>
         ) : null}
 
         {/* ── A2: the join-the-network prompt — home board, prospect clubs
             only. Gentle, dismissible, never gates anything. ── */}
         {club?.status === 'prospect' && isHomeBoard && !prospectHidden && (
-          <Reveal index={0}>
           <View style={styles.prospectCard}>
             <View style={styles.prospectHead}>
               <Ionicons name="shield-outline" size={16} color={colors.gold} />
@@ -301,38 +298,35 @@ export default function FeedScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          </Reveal>
         )}
 
         {/* ── Club pulse — the course's weekly heartbeat. Network clubs wear
             the gold trim: the paid tier should LOOK like the paid tier. ── */}
         {course && pulse && (
-          <Reveal index={1}>
-            <View style={[styles.pulseCard, club?.status === 'network' && styles.pulseCardNetwork]}>
-              <View style={styles.pulseCell}>
-                <CountUp style={styles.pulseNum} value={pulse.week_matches} />
-                <Text style={styles.pulseLabel}>matches this week</Text>
-              </View>
-              <View style={styles.pulseDivider} />
-              <View style={styles.pulseCell}>
-                <CountUp style={styles.pulseNum} value={pulse.week_players} />
-                <Text style={styles.pulseLabel}>players active</Text>
-              </View>
-              <View style={styles.pulseDivider} />
-              <View style={styles.pulseCell}>
-                <View style={styles.pulseLiveRow}>
-                  {pulse.live_now > 0 && <View style={styles.liveDot} />}
-                  <CountUp style={[styles.pulseNum, pulse.live_now > 0 && { color: colors.live }]} value={pulse.live_now} />
-                </View>
-                <Text style={styles.pulseLabel}>live now</Text>
-              </View>
+          <View style={[styles.pulseCard, club?.status === 'network' && styles.pulseCardNetwork]}>
+            <View style={styles.pulseCell}>
+              <CountUp style={styles.pulseNum} value={pulse.week_matches} />
+              <Text style={styles.pulseLabel}>matches this week</Text>
             </View>
-          </Reveal>
+            <View style={styles.pulseDivider} />
+            <View style={styles.pulseCell}>
+              <CountUp style={styles.pulseNum} value={pulse.week_players} />
+              <Text style={styles.pulseLabel}>players active</Text>
+            </View>
+            <View style={styles.pulseDivider} />
+            <View style={styles.pulseCell}>
+              <View style={styles.pulseLiveRow}>
+                {pulse.live_now > 0 && <View style={styles.liveDot} />}
+                <CountUp style={[styles.pulseNum, pulse.live_now > 0 && { color: colors.live }]} value={pulse.live_now} />
+              </View>
+              <Text style={styles.pulseLabel}>live now</Text>
+            </View>
+          </View>
         )}
 
         {/* ── Monthly champions — the network club's marquee (gold). ── */}
         {club?.status === 'network' && champions && (
-          <Reveal index={2} style={{ gap: spacing.md }}>
+          <>
             <View style={styles.sectionHead}>
               <Ionicons name="trophy" size={14} color={colors.gold} style={{ marginTop: spacing.sm }} />
               <Text style={styles.sectionTitle}>{monthTitle(champions.month, champions.crowned)}</Text>
@@ -349,12 +343,12 @@ export default function FeedScreen() {
               <CrownCard label="Most Played" entry={champions.played[0]} colors={colors} styles={styles} />
               <CrownCard label="Best Win %" entry={champions.win_pct[0]} colors={colors} styles={styles} />
             </View>
-          </Reveal>
+          </>
         )}
 
         {/* ── Looking for a game — the open network at this course ── */}
         {course && (
-          <Reveal index={3} style={{ gap: spacing.md }}>
+          <>
             <View style={styles.sectionHead}>
               <Ionicons name="people-outline" size={14} color={colors.accent} style={{ marginTop: spacing.sm }} />
               <Text style={styles.sectionTitle}>Looking for a game</Text>
@@ -393,12 +387,11 @@ export default function FeedScreen() {
               <Ionicons name="add-circle-outline" size={16} color={colors.onAccent} />
               <Text style={styles.postBtnText}>Post a match</Text>
             </PressableScale>
-          </Reveal>
+          </>
         )}
 
         {/* ── Around the club — the browsed day's public activity ── */}
         {course && (
-          <Reveal index={4}>
           <View style={styles.dateBar}>
             <TouchableOpacity
               hitSlop={10}
@@ -426,10 +419,8 @@ export default function FeedScreen() {
               <Ionicons name="chevron-forward" size={22} color={atMax ? colors.border : colors.text} />
             </TouchableOpacity>
           </View>
-          </Reveal>
         )}
 
-        <Reveal key={`day-${date}`} type="fade" index={5} style={{ gap: spacing.md }}>
         {!loading && course && rows.length === 0 && !error && (
           <EmptyState
             icon="newspaper-outline"
@@ -467,7 +458,6 @@ export default function FeedScreen() {
             </View>
           </>
         )}
-        </Reveal>
       </ScrollView>
 
       <ConfirmIndexSheet
