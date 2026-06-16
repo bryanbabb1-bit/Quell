@@ -241,6 +241,13 @@ export default function FeedScreen() {
           </View>
           <Ionicons name={switching ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
         </PressableScale>
+        {course && pulse && (
+          <Text style={styles.pulseLine} numberOfLines={1}>
+            <CountUp style={styles.pulseLineNum} value={pulse.week_matches} /> matches
+            {'   ·   '}<CountUp style={styles.pulseLineNum} value={pulse.week_players} /> players
+            {'   ·   '}<CountUp style={[styles.pulseLineNum, pulse.live_now > 0 && { color: colors.live }]} value={pulse.live_now} /> live
+          </Text>
+        )}
       </View>
       {(switching || !course) && (
         <View style={styles.switcher}>
@@ -302,28 +309,6 @@ export default function FeedScreen() {
 
         {/* ── Club pulse — the course's weekly heartbeat. Network clubs wear
             the gold trim: the paid tier should LOOK like the paid tier. ── */}
-        {course && pulse && (
-          <View style={[styles.pulseCard, club?.status === 'network' && styles.pulseCardNetwork]}>
-            <View style={styles.pulseCell}>
-              <CountUp style={styles.pulseNum} value={pulse.week_matches} />
-              <Text style={styles.pulseLabel}>matches this week</Text>
-            </View>
-            <View style={styles.pulseDivider} />
-            <View style={styles.pulseCell}>
-              <CountUp style={styles.pulseNum} value={pulse.week_players} />
-              <Text style={styles.pulseLabel}>players active</Text>
-            </View>
-            <View style={styles.pulseDivider} />
-            <View style={styles.pulseCell}>
-              <View style={styles.pulseLiveRow}>
-                {pulse.live_now > 0 && <View style={styles.liveDot} />}
-                <CountUp style={[styles.pulseNum, pulse.live_now > 0 && { color: colors.live }]} value={pulse.live_now} />
-              </View>
-              <Text style={styles.pulseLabel}>live now</Text>
-            </View>
-          </View>
-        )}
-
         {/* ── Monthly champions — the network club's marquee (gold). ── */}
         {club?.status === 'network' && champions && (
           <>
@@ -435,7 +420,7 @@ export default function FeedScreen() {
               <View style={[styles.liveDot, { marginTop: spacing.sm }]} />
               <Text style={styles.sectionTitle}>Now playing</Text>
             </View>
-            <View style={styles.card}>
+            <View style={[styles.card, styles.cardLive]}>
               {live.map((m, i) => <FeedRow key={m.id} m={m} divider={i > 0} colors={colors} styles={styles} onToggleFollow={toggleFollow} />)}
             </View>
           </>
@@ -672,36 +657,26 @@ function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
 function makeStyles(colors: Palette) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.paper },
-    courseHeader: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-    courseTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-    courseTitle: { ...typography.heading, fontSize: 20, color: colors.text, flex: 1 },
+    courseHeader: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xs },
+    courseTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    courseTitle: { ...typography.title, fontSize: 26, color: colors.text },
+    pulseLine: { ...typography.caption, fontSize: 13, color: colors.muted, marginTop: spacing.sm },
+    pulseLineNum: { fontFamily: fonts.bodySemi, color: colors.text, fontVariant: ['tabular-nums'] },
     switcher: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
     dateBar: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      marginTop: spacing.md, paddingTop: spacing.sm,
-      borderTopWidth: 1, borderTopColor: colors.border,
+      paddingVertical: spacing.xs,
     },
     dateMid: { alignItems: 'center', gap: 2 },
     dateText: { ...typography.bodySemiBold, color: colors.text },
     todayLink: { ...typography.caption, color: colors.accent },
-    container: { padding: spacing.lg, gap: spacing.md },
+    container: { padding: spacing.lg, gap: spacing.lg },
     error: { ...typography.caption, color: colors.flagRed, textAlign: 'center' },
     sectionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-    sectionTitle: { ...typography.caption, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: spacing.sm },
+    sectionTitle: { fontFamily: fonts.bodySemi, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted, marginTop: spacing.sm },
     liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
-    card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-    // Club pulse strip
-    pulseCard: {
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: colors.surface, borderRadius: radius.lg,
-      borderWidth: 1, borderColor: colors.border,
-      paddingVertical: spacing.md,
-    },
-    pulseCell: { flex: 1, alignItems: 'center', gap: 2 },
-    pulseDivider: { width: 1, height: 28, backgroundColor: colors.border },
-    pulseNum: { ...typography.heading, fontSize: 22, color: colors.text, fontVariant: ['tabular-nums'] },
-    pulseLiveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    pulseLabel: { ...typography.caption, fontSize: 11, color: colors.muted },
+    card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
+    cardLive: { borderLeftWidth: 2, borderLeftColor: colors.live },
     countBadge: {
       marginTop: spacing.sm, backgroundColor: colors.accentGlow, borderRadius: radius.pill,
       paddingHorizontal: 8, paddingVertical: 1, minWidth: 20, alignItems: 'center',
@@ -742,7 +717,7 @@ function makeStyles(colors: Palette) {
     champRow: { flexDirection: 'row', gap: spacing.sm },
     crownCard: {
       flex: 1, alignItems: 'center', gap: 4,
-      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+      backgroundColor: colors.surface,
       borderRadius: radius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.xs,
     },
     crownLabel: { ...typography.caption, fontSize: 10.5, color: colors.gold, textTransform: 'uppercase', letterSpacing: 0.6, textAlign: 'center' },
@@ -754,14 +729,15 @@ function makeStyles(colors: Palette) {
     pinnedCard: {
       flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
       backgroundColor: colors.goldGlow, borderRadius: radius.lg,
-      borderWidth: 1, borderColor: colors.gold, padding: spacing.md,
+      paddingVertical: spacing.md, paddingHorizontal: spacing.md,
+      borderLeftWidth: 2, borderLeftColor: colors.gold,
     },
     pinnedText: { ...typography.body, fontSize: 14, color: colors.text, flex: 1 },
     // Prospect (join-the-network) card — standard border. The GOLD trim is the
     // network's earned mark; a prospect card wearing it would dilute the paid tier.
     prospectCard: {
       backgroundColor: colors.surface, borderRadius: radius.lg,
-      borderWidth: 1, borderColor: colors.border, padding: spacing.md, gap: spacing.sm,
+      padding: spacing.md, gap: spacing.sm,
     },
     prospectHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     prospectTitle: { ...typography.bodySemiBold, fontSize: 15, flex: 1 },
@@ -778,8 +754,7 @@ function makeStyles(colors: Palette) {
     moreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: spacing.sm },
     moreText: { ...typography.caption, color: colors.accent, fontFamily: fonts.bodySemi },
     openEmpty: {
-      backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1,
-      borderColor: colors.border, borderStyle: 'dashed', padding: spacing.md,
+      backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md,
     },
     openEmptyText: { ...typography.caption, color: colors.muted, textAlign: 'center' },
     postBtn: {
@@ -790,7 +765,7 @@ function makeStyles(colors: Palette) {
     postBtnText: { ...typography.bodySemiBold, fontSize: 14, color: colors.onAccent },
     // Day activity rows
     row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
-    rowDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+    rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider },
     players: { flex: 1, gap: 4 },
     playerLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     playerName: { ...typography.bodySemiBold, flex: 1 },

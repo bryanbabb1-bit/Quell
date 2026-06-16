@@ -20,7 +20,8 @@ export interface Palette {
   surfaceRaised: string; // raised cards / inputs / pressed rows
   text: string;          // primary text
   muted: string;         // secondary text
-  border: string;        // hairlines / dividers
+  border: string;        // subtle edge hairlines
+  divider: string;       // in-group row separators (must read on `surface`)
   accent: string;        // brand / primary action
   accentDark: string;    // accent pressed
   accentGlow: string;    // translucent accent wash (halos)
@@ -82,8 +83,8 @@ export const PALETTES: { id: string; name: string; colors: Palette }[] = [
     id: 'fairway', name: 'Dark',
     colors: pal({
       scheme: 'dark',
-      bg: '#0C0C0E', surface: '#151518', surfaceRaised: '#1F1F24',
-      text: '#F5F1E6', muted: '#A8A296', border: '#2B2B30',
+      bg: '#0B0B0D', surface: '#151518', surfaceRaised: '#202026',
+      text: '#F5F1E6', muted: '#A8A296', border: '#242429', divider: '#33333A',
       accent: '#D4B36A', accentDark: '#B6934B', accentGlow: 'rgba(212,179,106,0.13)', onAccent: '#16120A',
       win: '#46B17C', winGlow: 'rgba(70,177,124,0.14)',
       loss: '#D26A5C', lossGlow: 'rgba(210,106,92,0.13)', halve: '#BCB3A0', halveGlow: 'rgba(188,179,160,0.10)',
@@ -100,7 +101,7 @@ export const PALETTES: { id: string; name: string; colors: Palette }[] = [
     colors: pal({
       scheme: 'light',
       bg: '#F6F2E9', surface: '#FFFFFF', surfaceRaised: '#ECE6D8',
-      text: '#191613', muted: '#6E6759', border: '#DCD5C3',
+      text: '#191613', muted: '#6E6759', border: '#DCD5C3', divider: '#D8D0BE',
       accent: '#96772B', accentDark: '#7A6021', accentGlow: 'rgba(150,119,43,0.12)', onAccent: '#FFFFFF',
       win: '#1F7A4D', winGlow: 'rgba(31,122,77,0.12)',
       // halve must stay visible on the ivory canvas — a pale chip there fails
