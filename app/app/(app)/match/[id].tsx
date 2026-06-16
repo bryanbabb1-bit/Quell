@@ -11,6 +11,8 @@ import { useUserStore } from '@/store/useUserStore';
 import { useFavorites } from '@/store/useFavoritesStore';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { Avatar } from '@/components/ui';
+import { ForfeitClock } from '@/components/ForfeitClock';
+import { isPendingForfeit } from '@/lib/forfeit';
 import { haptics } from '@/lib/haptics';
 import type { Match, HolesSetup, TeeSummary, Visibility } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
@@ -194,6 +196,9 @@ export default function MatchDetailScreen() {
     match.status === 'accepted' || match.status === 'in_progress' || match.status === 'completed';
   // A completed match missing a card was won by forfeit (no hole-by-hole reveal).
   const isForfeit = match.status === 'completed' && (!match.creator_scorecard_id || !match.opponent_scorecard_id);
+  // In the pre-forfeit window (apart match, play date passed, cards not both in)?
+  // Drives the live countdown so a waiting player isn't left in limbo.
+  const pendingForfeit = isPendingForfeit(match as any);
   const iWon = (match.result === 'creator_wins' && isCreator) || (match.result === 'opponent_wins' && isOpponent);
 
   // Per-player tees. The creator's is tee_color; the opponent's is
@@ -386,6 +391,11 @@ export default function MatchDetailScreen() {
           ) : !mySubmitted ? (
             <>
               <Text style={styles.note}>Enter your hole-by-hole gross scores. They stay hidden until your opponent submits too.</Text>
+              {pendingForfeit && (
+                <View style={{ marginTop: spacing.xs }}>
+                  <ForfeitClock playDate={match.play_date} label="You forfeit in" tone="act" />
+                </View>
+              )}
               {/* Pre-Settle tension: they're in their card right now. */}
               {!oppSubmitted && otherScoringAt && (
                 <View style={styles.statusRow}>
@@ -416,6 +426,11 @@ export default function MatchDetailScreen() {
                   {oppSubmitted ? 'Submitted' : `Card's in. Waiting on ${firstName(otherName)}.`}
                 </Text>
               </View>
+              {pendingForfeit && !oppSubmitted && (
+                <View style={{ marginTop: spacing.xs }}>
+                  <ForfeitClock playDate={match.play_date} label={`${firstName(otherName)} forfeits in`} tone="wait" />
+                </View>
+              )}
               {/* Pre-Settle tension: they've opened score entry but haven't posted. */}
               {!oppSubmitted && otherScoringAt && (
                 <View style={styles.statusRow}>

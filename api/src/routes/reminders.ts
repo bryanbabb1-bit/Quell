@@ -29,14 +29,16 @@ async function resolveStaleLive(env: Env, matchId: string, course: string): Prom
   }
 }
 
-// Scheduled (hourly cron) score-reminder + forfeit sweep. Policy:
-//   • play day, after 7pm LOCAL, not submitted  → "post your score" reminder
-//   • +1 day, not submitted                     → "you'll forfeit" warning
-//   • +2 days, not submitted                    → FORFEIT:
+// Scheduled (hourly cron) score-reminder + forfeit sweep. Policy (1-day window):
+//   • play day, after 7pm LOCAL, not submitted        → "post your score" reminder
+//   • next day, before 7pm, not submitted             → "submit by 7pm or forfeit" warning
+//   • next day, 7pm LOCAL onward, not submitted       → FORFEIT:
 //        - other player submitted → they win by forfeit (completed, no reveal)
 //        - neither submitted      → match 'expired'
-// Keeps the discovery/match feed from filling with matches that never finish.
+// The forfeit deadline (7pm the day AFTER the play date) is mirrored client-side
+// in app/lib/forfeit.ts for the live countdown — keep the two in sync.
 const DEFAULT_TZ = 'America/Chicago';
+const FORFEIT_HOUR = 19; // 7pm local, the day after the play date
 
 function nowInTz(tz: string): { date: string; hour: number } {
   const d = new Date();
@@ -80,12 +82,14 @@ export async function runReminders(env: Env): Promise<void> {
     const ref = nowInTz(m.creator_tz || DEFAULT_TZ);
     const daysSince = daysBetween(m.play_date, ref.date);
     const course = m.course_name as string;
+    // Forfeit fires at 7pm local the day after the play date (1-day window).
+    const forfeitDue = daysSince > 1 || (daysSince === 1 && ref.hour >= FORFEIT_HOUR);
 
     // Both cards exist but still in_progress → an APART match would already have
     // settled on the 2nd submit, so this is a LIVE round that was never
-    // confirmed. After +2 days, finalize-or-expire it (see resolveStaleLive).
+    // confirmed. Past the forfeit deadline, finalize-or-expire it (resolveStaleLive).
     if (creatorIn && opponentIn) {
-      if (daysSince >= 2) await resolveStaleLive(env, m.id, course);
+      if (forfeitDue) await resolveStaleLive(env, m.id, course);
       continue;
     }
 
@@ -93,11 +97,11 @@ export async function runReminders(env: Env): Promise<void> {
     if (!creatorIn) unsubmitted.push(m.creator_id);
     if (!opponentIn) unsubmitted.push(m.opponent_id);
 
-    // ── Forfeit (+2 days) ──
+    // ── Forfeit (7pm the day after play) ──
     // Guarded UPDATEs (status IN accepted/in_progress) + push only when the
     // write actually landed — overlapping cron invocations otherwise both read
     // the stale row and double-push the forfeit.
-    if (daysSince >= 2) {
+    if (forfeitDue) {
       if (creatorIn !== opponentIn) {
         const winnerId = creatorIn ? m.creator_id : m.opponent_id;
         const loserId = creatorIn ? m.opponent_id : m.creator_id;
@@ -122,28 +126,28 @@ export async function runReminders(env: Env): Promise<void> {
       continue;
     }
 
-    // ── Warning (+1 day) ── (stamp BEFORE pushing: a duplicate stamp is
-    // harmless, a missed stamp re-sends the warning every hour)
-    if (daysSince === 1 && !m.forfeit_warning_at) {
+    // ── Warning (day after play, before the 7pm deadline) ── (stamp BEFORE
+    // pushing: a duplicate stamp is harmless, a missed stamp re-sends hourly)
+    if (daysSince === 1 && ref.hour < FORFEIT_HOUR && !m.forfeit_warning_at) {
       const res = await env.DB.prepare(
         `UPDATE matches SET forfeit_warning_at=? WHERE id=? AND forfeit_warning_at IS NULL`
       ).bind(now(), m.id).run();
       if ((res.meta.changes ?? 0) > 0) {
         for (const uid of unsubmitted) {
-          await sendPush(env, uid, 'Submit or forfeit', `Enter your ${course} score by tomorrow or you'll forfeit the match.`, { matchId: m.id });
+          await sendPush(env, uid, 'Submit by 7pm or forfeit', `Enter your ${course} score by 7pm today or you'll forfeit the match.`, { matchId: m.id });
         }
       }
       continue;
     }
 
     // ── Reminder (play day, after 7pm local) ──
-    if (daysSince === 0 && ref.hour >= 19 && !m.score_reminder_at) {
+    if (daysSince === 0 && ref.hour >= FORFEIT_HOUR && !m.score_reminder_at) {
       const res = await env.DB.prepare(
         `UPDATE matches SET score_reminder_at=? WHERE id=? AND score_reminder_at IS NULL`
       ).bind(now(), m.id).run();
       if ((res.meta.changes ?? 0) > 0) {
         for (const uid of unsubmitted) {
-          await sendPush(env, uid, 'Post your score', `Don't forget to enter your ${course} score from today's match.`, { matchId: m.id });
+          await sendPush(env, uid, 'Post your score', `Enter your ${course} score by 7pm tomorrow, or you'll forfeit.`, { matchId: m.id });
         }
       }
     }

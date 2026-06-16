@@ -12,6 +12,8 @@ import { useColors } from '@/store/useThemeStore';
 import { useArchiveStore } from '@/store/useArchiveStore';
 import { useResultsStore } from '@/store/useResultsStore';
 import { SkeletonCard, EmptyState, ErrorState } from '@/components/ui';
+import { ForfeitClock } from '@/components/ForfeitClock';
+import { isPendingForfeit } from '@/lib/forfeit';
 import { haptics } from '@/lib/haptics';
 import type { Match } from '@/types';
 import { MATCH_TYPE_LABELS } from '@/types';
@@ -89,6 +91,20 @@ function renderTrailing(
       <Text style={[styles.badgeText, { color: tint[m.status] ?? colors.muted }]}>{STATUS_LABELS[m.status]}</Text>
     </View>
   );
+}
+
+// For a pending-forfeit match, the card countdown's label + tone from the
+// viewer's perspective (you posted → they're on the clock, and vice versa).
+function forfeitClockProps(
+  m: Match, userId: string | null | undefined,
+): { label: string; tone: 'wait' | 'act' } | null {
+  if (!isPendingForfeit(m)) return null;
+  const amCreator = m.creator_id === userId;
+  const mySub = amCreator ? !!m.creator_scorecard_id : !!m.opponent_scorecard_id;
+  const theirSub = amCreator ? !!m.opponent_scorecard_id : !!m.creator_scorecard_id;
+  if (mySub && !theirSub) return { label: 'They forfeit in', tone: 'wait' };
+  if (!mySub && theirSub) return { label: 'You forfeit in', tone: 'act' };
+  return { label: 'Expires in', tone: 'act' };
 }
 
 export default function MyMatchesScreen() {
@@ -205,7 +221,9 @@ export default function MyMatchesScreen() {
                 ? <EmptyState icon="filter-outline" title={`No ${cat.label.toLowerCase()} matches`} message="Try a different filter above." />
                 : <EmptyState icon="list-outline" title="No matches yet" message="Post a match or accept one from Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const fc = forfeitClockProps(item, userId);
+          return (
           <TouchableOpacity
             style={styles.row}
             onPress={() => router.push(`/(app)/match/${item.id}`)}
@@ -222,10 +240,12 @@ export default function MyMatchesScreen() {
                   ? `${item.course_name} · ${formatPlayWhen(item.play_date)}`
                   : `Open · ${formatPlayWhen(item.play_date)} · ${MATCH_TYPE_LABELS[item.match_type]}`}
               </Text>
+              {fc && <ForfeitClock playDate={item.play_date} label={fc.label} tone={fc.tone} />}
             </View>
             {renderTrailing(item, userId, seen, colors, styles)}
           </TouchableOpacity>
-        )}
+          );
+        }}
       />
     </SafeAreaView>
   );
