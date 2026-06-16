@@ -9,6 +9,10 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#FAF8F4",
     "newArchEnabled": true,
+    "runtimeVersion": { "policy": "fingerprint" },
+    "updates": {
+      "url": "https://u.expo.dev/89031ab0-a5d3-4a44-acab-134069bd0f1e"
+    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bryanbabb.quell",
