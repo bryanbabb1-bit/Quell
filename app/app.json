@@ -6,8 +6,8 @@
     "icon": "./assets/icon.png",
     "orientation": "default",
     "scheme": "quell",
-    "userInterfaceStyle": "dark",
-    "backgroundColor": "#0C0C0E",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FAF8F4",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
@@ -20,7 +20,7 @@
       "package": "com.bryanbabb.quell",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0C0C0E"
+        "backgroundColor": "#FAF8F4"
       }
     },
     "plugins": [
@@ -40,7 +40,7 @@
         {
           "image": "./assets/splash.png",
           "imageWidth": 300,
-          "backgroundColor": "#0C0C0E",
+          "backgroundColor": "#FAF8F4",
           "resizeMode": "contain"
         }
       ],

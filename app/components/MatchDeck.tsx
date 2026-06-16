@@ -210,8 +210,8 @@ function CardBody({ m }: { m: DiscoveryMatch }) {
         <Image source={{ uri: m.creator_photo_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       ) : (
         <LinearGradient
-          colors={[colors.accent, colors.accentDark, colors.bg]}
-          locations={[0, 0.55, 1]}
+          colors={[colors.accent, colors.accentDark, colors.accentDark]}
+          locations={[0, 0.6, 1]}
           start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
           style={StyleSheet.absoluteFill}
         >
@@ -271,16 +271,16 @@ function makeStyles(colors: Palette) {
   fallbackAvatar: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 120, opacity: 0.92 },
 
   topRow: { position: 'absolute', top: spacing.md, left: spacing.md, right: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  // Member-card marks: black glass with a champagne hairline + gold text.
-  hcpPill: { backgroundColor: 'rgba(10,10,12,0.72)', borderWidth: 1, borderColor: 'rgba(232,200,126,0.5)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
-  hcpText: { ...typography.caption, color: colors.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12.5 },
+  // Marks over the photo: dark glass + clean light text (legible on any image).
+  hcpPill: { backgroundColor: 'rgba(10,10,12,0.72)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  hcpText: { ...typography.caption, color: 'rgba(255,255,255,0.95)', fontWeight: '800', letterSpacing: 1, fontSize: 12.5 },
   whenPill: { backgroundColor: 'rgba(10,10,12,0.55)', borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
   whenText: { ...typography.caption, color: 'rgba(245,241,230,0.92)', fontWeight: '700', fontSize: 12, letterSpacing: 0.4 },
 
   overlay: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg, gap: 6 },
   nameOverlay: { ...typography.title, color: '#FFFFFF', fontSize: 34, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } },
   courseOverlay: { ...typography.body, color: 'rgba(245,241,230,0.92)', fontWeight: '600' },
-  rule: { width: 44, height: 1.5, backgroundColor: colors.gold, opacity: 0.9, marginVertical: 3 },
+  rule: { width: 44, height: 2, backgroundColor: colors.accent, opacity: 0.95, marginVertical: 3 },
   detailLine: { ...typography.caption, color: 'rgba(245,241,230,0.78)', fontSize: 13, letterSpacing: 0.3 },
 
   // Solid FILLED badges (not outlines) so ACCEPT/PASS read instantly over a

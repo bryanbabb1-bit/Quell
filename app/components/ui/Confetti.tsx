@@ -5,7 +5,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withDelay, withTiming, Easi
 // Lightweight confetti burst built on Reanimated (no native dependency, so it
 // streams over the dev server). Mount it to fire once — e.g. on a match win.
 const { width, height } = Dimensions.get('window');
-const PIECE_COLORS = ['#36E27D', '#7C83FF', '#FF9A5A', '#2DD4D4', '#FFD166', '#FF5A5F', '#F7F9FC'];
+const PIECE_COLORS = ['#36E27D', '#7C83FF', '#FF9A5A', '#2DD4D4', '#FFD166', '#FF5A5F', '#2D6CDF'];
 
 function Piece({ index }: { index: number }) {
   // Deterministic-enough spread using Math.random (fine in app code).
