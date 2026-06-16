@@ -10,6 +10,7 @@ import { useApi } from '@/lib/useApi';
 import { useResultsStore } from '@/store/useResultsStore';
 import { useColors } from '@/store/useThemeStore';
 import { Confetti } from '@/components/ui';
+import { useCountUp } from '@/components/motion';
 import { WinSmash } from '@/components/WinSmash';
 import { haptics } from '@/lib/haptics';
 import type { RevealResponse, HoleResult } from '@/types';
@@ -453,23 +454,6 @@ export default function RevealScreen() {
   );
 }
 
-// Count-up the gross as the hole appears.
-function useCountUp(target: number, key: number): number {
-  const [n, setN] = useState(target);
-  useEffect(() => {
-    let raf: number;
-    const from = 0, dur = 420, start = Date.now();
-    const tick = () => {
-      const t = Math.min(1, (Date.now() - start) / dur);
-      setN(Math.round(from + (target - from) * t));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    tick();
-    return () => cancelAnimationFrame(raf);
-  }, [key, target]);
-  return n;
-}
-
 function HoleSide({ name, gross, net, strokes, won, you, wonColor, wonGlow, stepKey }: {
   name: string; gross: number; net: number; strokes: number; won: boolean; you?: boolean;
   // Broadcast override (spectators): the player's color instead of win-green.
@@ -477,7 +461,7 @@ function HoleSide({ name, gross, net, strokes, won, you, wonColor, wonGlow, step
 }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const shown = useCountUp(gross, stepKey);
+  const shown = useCountUp(gross, { from: 0, resetKey: stepKey });
   const wonWrap = won && (wonColor ? { borderColor: wonColor, backgroundColor: wonGlow } : styles.sideWonWrap);
   const wonText = won && (wonColor ? { color: wonColor } : styles.sideWonText);
   // In broadcast mode (wonColor present) stroke dots go neutral — accent dots

@@ -14,6 +14,7 @@ import { CourseSelect } from '@/components/CourseSelect';
 import { ConfirmIndexSheet } from '@/components/ConfirmIndexSheet';
 import { AcceptCelebration } from '@/components/AcceptCelebration';
 import { Avatar, EmptyState } from '@/components/ui';
+import { Reveal, CountUp, PressableScale } from '@/components/motion';
 import { haptics } from '@/lib/haptics';
 import { formatHandicap } from '@/lib/format';
 import { MATCH_TYPE_LABELS } from '@/types';
@@ -217,12 +218,12 @@ export default function FeedScreen() {
       {/* Club masthead — the branded board header. Crest (or monogram), club
           name, and the gold network lockup; the whole row is the switcher. */}
       <View style={styles.courseHeader}>
-        <TouchableOpacity
-          style={styles.courseTitleRow} activeOpacity={0.7}
+        <PressableScale
+          style={styles.courseTitleRow}
           accessibilityRole="button"
           accessibilityLabel={course ? `${course} — change course` : 'Pick a course'}
           accessibilityState={{ expanded: switching }}
-          onPress={() => { haptics.select(); setSwitching((s) => !s); }}
+          onPress={() => setSwitching((s) => !s)}
         >
           {course && club ? (
             <ClubCrest club={club} colors={colors} styles={styles} />
@@ -239,7 +240,7 @@ export default function FeedScreen() {
             )}
           </View>
           <Ionicons name={switching ? 'chevron-up' : 'chevron-down'} size={16} color={colors.muted} />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
       {(switching || !course) && (
         <View style={styles.switcher}>
@@ -256,15 +257,18 @@ export default function FeedScreen() {
         {/* Pinned note from the club's staff — set in Club Control, shown to
             everyone on the board. */}
         {club?.pinned_message ? (
-          <View style={styles.pinnedCard}>
-            <Ionicons name="pin" size={15} color={colors.gold} />
-            <Text style={styles.pinnedText}>{club.pinned_message}</Text>
-          </View>
+          <Reveal index={0}>
+            <View style={styles.pinnedCard}>
+              <Ionicons name="pin" size={15} color={colors.gold} />
+              <Text style={styles.pinnedText}>{club.pinned_message}</Text>
+            </View>
+          </Reveal>
         ) : null}
 
         {/* ── A2: the join-the-network prompt — home board, prospect clubs
             only. Gentle, dismissible, never gates anything. ── */}
         {club?.status === 'prospect' && isHomeBoard && !prospectHidden && (
+          <Reveal index={0}>
           <View style={styles.prospectCard}>
             <View style={styles.prospectHead}>
               <Ionicons name="shield-outline" size={16} color={colors.gold} />
@@ -297,35 +301,38 @@ export default function FeedScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          </Reveal>
         )}
 
         {/* ── Club pulse — the course's weekly heartbeat. Network clubs wear
             the gold trim: the paid tier should LOOK like the paid tier. ── */}
         {course && pulse && (
-          <View style={[styles.pulseCard, club?.status === 'network' && styles.pulseCardNetwork]}>
-            <View style={styles.pulseCell}>
-              <Text style={styles.pulseNum}>{pulse.week_matches}</Text>
-              <Text style={styles.pulseLabel}>matches this week</Text>
-            </View>
-            <View style={styles.pulseDivider} />
-            <View style={styles.pulseCell}>
-              <Text style={styles.pulseNum}>{pulse.week_players}</Text>
-              <Text style={styles.pulseLabel}>players active</Text>
-            </View>
-            <View style={styles.pulseDivider} />
-            <View style={styles.pulseCell}>
-              <View style={styles.pulseLiveRow}>
-                {pulse.live_now > 0 && <View style={styles.liveDot} />}
-                <Text style={[styles.pulseNum, pulse.live_now > 0 && { color: colors.live }]}>{pulse.live_now}</Text>
+          <Reveal index={1}>
+            <View style={[styles.pulseCard, club?.status === 'network' && styles.pulseCardNetwork]}>
+              <View style={styles.pulseCell}>
+                <CountUp style={styles.pulseNum} value={pulse.week_matches} />
+                <Text style={styles.pulseLabel}>matches this week</Text>
               </View>
-              <Text style={styles.pulseLabel}>live now</Text>
+              <View style={styles.pulseDivider} />
+              <View style={styles.pulseCell}>
+                <CountUp style={styles.pulseNum} value={pulse.week_players} />
+                <Text style={styles.pulseLabel}>players active</Text>
+              </View>
+              <View style={styles.pulseDivider} />
+              <View style={styles.pulseCell}>
+                <View style={styles.pulseLiveRow}>
+                  {pulse.live_now > 0 && <View style={styles.liveDot} />}
+                  <CountUp style={[styles.pulseNum, pulse.live_now > 0 && { color: colors.live }]} value={pulse.live_now} />
+                </View>
+                <Text style={styles.pulseLabel}>live now</Text>
+              </View>
             </View>
-          </View>
+          </Reveal>
         )}
 
         {/* ── Monthly champions — the network club's marquee (gold). ── */}
         {club?.status === 'network' && champions && (
-          <>
+          <Reveal index={2} style={{ gap: spacing.md }}>
             <View style={styles.sectionHead}>
               <Ionicons name="trophy" size={14} color={colors.gold} style={{ marginTop: spacing.sm }} />
               <Text style={styles.sectionTitle}>{monthTitle(champions.month, champions.crowned)}</Text>
@@ -342,12 +349,12 @@ export default function FeedScreen() {
               <CrownCard label="Most Played" entry={champions.played[0]} colors={colors} styles={styles} />
               <CrownCard label="Best Win %" entry={champions.win_pct[0]} colors={colors} styles={styles} />
             </View>
-          </>
+          </Reveal>
         )}
 
         {/* ── Looking for a game — the open network at this course ── */}
         {course && (
-          <>
+          <Reveal index={3} style={{ gap: spacing.md }}>
             <View style={styles.sectionHead}>
               <Ionicons name="people-outline" size={14} color={colors.accent} style={{ marginTop: spacing.sm }} />
               <Text style={styles.sectionTitle}>Looking for a game</Text>
@@ -360,7 +367,7 @@ export default function FeedScreen() {
                 {visibleOpen.map((iv, i) => (
                   <InviteRow
                     key={iv.id} iv={iv} divider={i > 0} colors={colors} styles={styles}
-                    onAccept={() => { haptics.select(); setPendingAccept(iv); }}
+                    onAccept={() => setPendingAccept(iv)}
                   />
                 ))}
                 {open.length > 4 && (
@@ -378,19 +385,20 @@ export default function FeedScreen() {
                 <Text style={styles.openEmptyText}>No one's posted an open match yet. Put one up and the club will see it here.</Text>
               </View>
             )}
-            <TouchableOpacity
+            <PressableScale
               style={styles.postBtn}
-              activeOpacity={0.8}
-              onPress={() => { haptics.select(); router.push('/(app)/create'); }}
+              haptic="medium"
+              onPress={() => router.push('/(app)/create')}
             >
               <Ionicons name="add-circle-outline" size={16} color={colors.onAccent} />
               <Text style={styles.postBtnText}>Post a match</Text>
-            </TouchableOpacity>
-          </>
+            </PressableScale>
+          </Reveal>
         )}
 
         {/* ── Around the club — the browsed day's public activity ── */}
         {course && (
+          <Reveal index={4}>
           <View style={styles.dateBar}>
             <TouchableOpacity
               hitSlop={10}
@@ -418,8 +426,10 @@ export default function FeedScreen() {
               <Ionicons name="chevron-forward" size={22} color={atMax ? colors.border : colors.text} />
             </TouchableOpacity>
           </View>
+          </Reveal>
         )}
 
+        <Reveal key={`day-${date}`} type="fade" index={5} style={{ gap: spacing.md }}>
         {!loading && course && rows.length === 0 && !error && (
           <EmptyState
             icon="newspaper-outline"
@@ -457,6 +467,7 @@ export default function FeedScreen() {
             </View>
           </>
         )}
+        </Reveal>
       </ScrollView>
 
       <ConfirmIndexSheet
@@ -549,10 +560,9 @@ function InviteRow({ iv, divider, colors, styles, onAccept }: {
   const time = timeLabel(iv.play_time);
   const when = [dateLabel(iv.play_date), time].filter(Boolean).join(' · ');
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[styles.inviteRow, divider && styles.rowDivider]}
-      activeOpacity={0.7}
-      onPress={() => { haptics.select(); router.push(`/(app)/match/${iv.id}`); }}
+      onPress={() => router.push(`/(app)/match/${iv.id}`)}
     >
       <Avatar name={iv.creator_name} size={40} photoUrl={iv.creator_photo_url} />
       <View style={styles.inviteMid}>
@@ -579,12 +589,12 @@ function InviteRow({ iv, divider, colors, styles, onAccept }: {
         </View>
       </View>
       {!iv.is_mine && (
-        <TouchableOpacity style={styles.acceptBtn} activeOpacity={0.8} onPress={onAccept} hitSlop={6}>
+        <PressableScale style={styles.acceptBtn} haptic="medium" onPress={onAccept} hitSlop={6}>
           <Ionicons name="flash" size={13} color={colors.onAccent} />
           <Text style={styles.acceptBtnText}>Accept</Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -615,9 +625,9 @@ function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
     }
   }
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[styles.row, divider && styles.rowDivider]}
-      activeOpacity={0.7}
+      accessibilityRole="button"
       // Completed → the reveal. A live SAME-GROUP match → the live follow screen
       // (running tally). Other live matches → read-only match detail (no scores).
       onPress={() => router.push(
@@ -665,7 +675,7 @@ function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
         )}
         {m.is_mine && <Text style={styles.mineTag}>Your match</Text>}
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -699,7 +709,7 @@ function makeStyles(colors: Palette) {
     },
     pulseCell: { flex: 1, alignItems: 'center', gap: 2 },
     pulseDivider: { width: 1, height: 28, backgroundColor: colors.border },
-    pulseNum: { ...typography.heading, fontSize: 22, color: colors.text },
+    pulseNum: { ...typography.heading, fontSize: 22, color: colors.text, fontVariant: ['tabular-nums'] },
     pulseLiveRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     pulseLabel: { ...typography.caption, fontSize: 11, color: colors.muted },
     countBadge: {
