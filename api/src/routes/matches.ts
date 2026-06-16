@@ -114,6 +114,10 @@ async function discover(auth: AuthContext, env: Env, request: Request): Promise<
     sql += ' AND m.match_type = ?';
     binds.push(qpType);
   }
+  // Play style: same group (playing_together) vs separate rounds. Literal, no bind.
+  const qpStyle = url.searchParams.get('play_style');
+  if (qpStyle === 'together') sql += ' AND m.playing_together = 1';
+  else if (qpStyle === 'apart') sql += ' AND m.playing_together = 0';
   if (untilDate) {
     sql += ' AND m.play_date <= ?';
     binds.push(untilDate);

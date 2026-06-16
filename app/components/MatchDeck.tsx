@@ -242,6 +242,16 @@ function CardBody({ m }: { m: DiscoveryMatch }) {
       {/* Bottom overlay: editorial hierarchy — name, course, a gold hairline,
           then one quiet detail line. No bubble chips. */}
       <View style={styles.overlay}>
+        <View style={styles.tagRow}>
+          <View style={styles.tag}>
+            <Ionicons name={m.playing_together ? 'people' : 'shuffle'} size={11} color="#FFFFFF" />
+            <Text style={styles.tagText}>{m.playing_together ? 'Same group' : 'Separate rounds'}</Text>
+          </View>
+          <View style={styles.tag}>
+            <Ionicons name={m.visibility === 'public' ? 'earth' : 'lock-closed'} size={11} color="#FFFFFF" />
+            <Text style={styles.tagText}>{m.visibility === 'public' ? 'Public' : 'Private'}</Text>
+          </View>
+        </View>
         <Text style={styles.nameOverlay} numberOfLines={1}>{name}</Text>
         <Text style={styles.courseOverlay} numberOfLines={1}>{m.course_name}</Text>
         <View style={styles.rule} />
@@ -278,6 +288,9 @@ function makeStyles(colors: Palette) {
   whenText: { ...typography.caption, color: 'rgba(245,241,230,0.92)', fontWeight: '700', fontSize: 12, letterSpacing: 0.4 },
 
   overlay: { position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg, gap: 6 },
+  tagRow: { flexDirection: 'row', gap: 6, marginBottom: 2 },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(10,10,12,0.6)', borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 4 },
+  tagText: { ...typography.caption, color: '#FFFFFF', fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
   nameOverlay: { ...typography.title, color: '#FFFFFF', fontSize: 34, textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 2 } },
   courseOverlay: { ...typography.body, color: 'rgba(245,241,230,0.92)', fontWeight: '600' },
   rule: { width: 44, height: 2, backgroundColor: colors.accent, opacity: 0.95, marginVertical: 3 },

@@ -6,10 +6,10 @@ import { CourseSelect } from '@/components/CourseSelect';
 import { haptics } from '@/lib/haptics';
 import { makeType, spacing, radius, type Palette } from '@/constants/theme';
 
-export type DiscoveryFilterState = { match_type: string; course: string; all: boolean; starred: boolean; dates: string[] };
-export const DEFAULT_FILTERS: DiscoveryFilterState = { match_type: 'any', course: '', all: false, starred: false, dates: [] };
+export type DiscoveryFilterState = { match_type: string; play_style: string; course: string; all: boolean; starred: boolean; dates: string[] };
+export const DEFAULT_FILTERS: DiscoveryFilterState = { match_type: 'any', play_style: 'any', course: '', all: false, starred: false, dates: [] };
 export const isFiltered = (f: DiscoveryFilterState) =>
-  f.match_type !== 'any' || f.course.trim() !== '' || f.all || f.starred || f.dates.length > 0;
+  f.match_type !== 'any' || f.play_style !== 'any' || f.course.trim() !== '' || f.all || f.starred || f.dates.length > 0;
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 const isoDate = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
@@ -51,6 +51,12 @@ const TYPE_OPTIONS = [
   { k: 'front_nine', label: 'Front 9' },
   { k: 'back_nine', label: 'Back 9' },
   { k: 'eighteen', label: '18' },
+];
+
+const STYLE_OPTIONS = [
+  { k: 'any', label: 'Any' },
+  { k: 'together', label: 'Same group' },
+  { k: 'apart', label: 'Separate' },
 ];
 
 // Bottom-sheet filter for the discovery feed. Overlay pattern (not RN Modal);
@@ -105,6 +111,22 @@ export function DiscoveryFilters({ visible, value, onApply, onClose }: {
                 <Pressable
                   key={o.k}
                   onPress={() => { haptics.select(); setLocal((s) => ({ ...s, match_type: o.k })); }}
+                  style={[styles.segBtn, active && styles.segActive]}
+                >
+                  <Text style={[styles.segText, active && styles.segTextActive]}>{o.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={styles.label}>Play style</Text>
+          <View style={styles.seg}>
+            {STYLE_OPTIONS.map((o) => {
+              const active = local.play_style === o.k;
+              return (
+                <Pressable
+                  key={o.k}
+                  onPress={() => { haptics.select(); setLocal((s) => ({ ...s, play_style: o.k })); }}
                   style={[styles.segBtn, active && styles.segActive]}
                 >
                   <Text style={[styles.segText, active && styles.segTextActive]}>{o.label}</Text>

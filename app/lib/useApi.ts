@@ -135,9 +135,10 @@ export function useApi() {
         call<{ entries: LeaderboardEntry[] }>(`/leaderboard${course ? `?course=${encodeURIComponent(course)}` : ''}`),
 
       // Matches
-      discover: (filters?: { match_type?: string; course?: string; all?: boolean; from?: string; days?: string[] }) => {
+      discover: (filters?: { match_type?: string; course?: string; all?: boolean; from?: string; days?: string[]; play_style?: string }) => {
         const q = new URLSearchParams();
         if (filters?.match_type && filters.match_type !== 'any') q.set('match_type', filters.match_type);
+        if (filters?.play_style && filters.play_style !== 'any') q.set('play_style', filters.play_style);
         if (filters?.course?.trim()) q.set('course', filters.course.trim());
         if (filters?.all) q.set('all', '1');
         if (filters?.from) q.set('from', filters.from);
