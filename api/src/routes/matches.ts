@@ -763,7 +763,7 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
   // join-the-network prompt and A3 branded board next. Null when the course
   // isn't in the catalog (free-text course names).
   const clubPromise = env.DB.prepare(
-    `SELECT cl.id, cl.name, cl.status, cl.crest_url, cl.primary_color, cl.pinned_message,
+    `SELECT cl.id, cl.name, cl.status, cl.crest_url, cl.primary_color, cl.pinned_message, cl.link_url,
             (SELECT COUNT(*) FROM club_interest ci WHERE ci.club_id = cl.id) AS interest_count
        FROM courses co JOIN clubs cl ON cl.id = co.club_id
       WHERE co.name = ? LIMIT 1`

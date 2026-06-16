@@ -33,7 +33,7 @@ export async function handleClubs(
   // contact_email/contact_name (the GM's details) off the member-facing wire.
   // Never widen to SELECT *.
   const club = await env.DB.prepare(
-    'SELECT id, name, status, crest_url, primary_color, pinned_message FROM clubs WHERE id = ?'
+    'SELECT id, name, status, crest_url, primary_color, pinned_message, link_url FROM clubs WHERE id = ?'
   ).bind(clubId).first<Record<string, any>>();
   if (!club) return error('Club not found', 404);
 
@@ -148,6 +148,15 @@ export async function handleClubs(
         fields.push('pinned_message = ?'); vals.push(msg ?? null);
         fields.push('pinned_at = ?'); vals.push(msg ? now() : null);
       }
+      if ('link_url' in patch) {
+        const u = patch.link_url;
+        if (u !== null && (typeof u !== 'string' || u.length > 300)) {
+          return error('link_url must be a string (<=300) or null', 400);
+        }
+        let val = u ? String(u).trim() : null;
+        if (val && !/^https?:\/\//i.test(val)) val = `https://${val}`; // tolerate "club.com"
+        fields.push('link_url = ?'); vals.push(val);
+      }
       if (fields.length === 0) return error('No fields to update', 400);
       fields.push('updated_at = ?'); vals.push(now());
       vals.push(clubId);
@@ -155,7 +164,7 @@ export async function handleClubs(
       // Return the SAME shape as GET /clubs/:id (incl. interest_count) so the
       // ClubDetail contract holds and a client can setClub() the response.
       const updated = await env.DB.prepare(
-        'SELECT id, name, status, crest_url, primary_color, pinned_message FROM clubs WHERE id = ?'
+        'SELECT id, name, status, crest_url, primary_color, pinned_message, link_url FROM clubs WHERE id = ?'
       ).bind(clubId).first<Record<string, unknown>>();
       const cnt = await env.DB.prepare('SELECT COUNT(*) AS n FROM club_interest WHERE club_id = ?')
         .bind(clubId).first<{ n: number }>();

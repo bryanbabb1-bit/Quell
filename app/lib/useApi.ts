@@ -100,7 +100,7 @@ export function useApi() {
       getClubMember: (id: string, userId: string) => call<ClubMemberDetail>(`/clubs/${id}/member/${userId}`),
       nudgeMember: (id: string, userId: string) => call<{ ok: boolean }>(`/clubs/${id}/nudge/${userId}`, { method: 'POST' }),
       getClubIntros: (id: string) => call<ClubIntros>(`/clubs/${id}/intros`),
-      updateClub: (id: string, patch: { primary_color?: string | null; pinned_message?: string | null }) =>
+      updateClub: (id: string, patch: { primary_color?: string | null; pinned_message?: string | null; link_url?: string | null }) =>
         call<ClubDetail>(`/clubs/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
       // Crest upload — staff only; mirrors uploadPhoto but targets the club.
       uploadClubCrest: async (id: string, localUri: string): Promise<{ crest_url: string }> => {

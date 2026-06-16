@@ -41,6 +41,8 @@ export default function ClubManageScreen() {
   const [uploading, setUploading] = useState(false);
   const [pinned, setPinned] = useState('');
   const [savingPin, setSavingPin] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const [savingLink, setSavingLink] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -53,6 +55,7 @@ export default function ClubManageScreen() {
       setClub(c);
       setIntros(ix);
       setPinned(c.pinned_message ?? '');
+      setLinkUrl(c.link_url ?? '');
     } catch (e: any) {
       setError(e?.message ?? 'Could not load the dashboard.');
     } finally {
@@ -107,6 +110,20 @@ export default function ClubManageScreen() {
       Alert.alert('Could not save', e?.message ?? 'Try again.');
     } finally {
       setSavingPin(false);
+    }
+  };
+
+  const saveLink = async () => {
+    if (!id) return;
+    setSavingLink(true);
+    try {
+      const updated = await api.updateClub(id, { link_url: linkUrl.trim() || null });
+      setClub(updated);
+      haptics.success();
+    } catch (e: any) {
+      Alert.alert('Could not save', e?.message ?? 'Try again.');
+    } finally {
+      setSavingLink(false);
     }
   };
 
@@ -352,6 +369,24 @@ export default function ClubManageScreen() {
             <Text style={styles.saveText}>{savingPin ? 'Saving…' : 'Save note'}</Text>
           </TouchableOpacity>
         </View>
+
+        <View style={styles.panel}>
+          <Text style={styles.panelTitle}>Club link</Text>
+          <Text style={styles.hint}>A website, tee-time booking, or league signup — tappable from your board.</Text>
+          <TextInput
+            style={styles.linkInput}
+            value={linkUrl}
+            onChangeText={setLinkUrl}
+            placeholder="e.g. prairiehighlands.com/leagues"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
+          <TouchableOpacity style={styles.saveBtn} activeOpacity={0.85} disabled={savingLink} accessibilityRole="button" accessibilityLabel="Save club link" onPress={saveLink}>
+            <Text style={styles.saveText}>{savingLink ? 'Saving…' : 'Save link'}</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -414,6 +449,7 @@ function makeStyles(c: Palette) {
     swatch: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: 'transparent' },
     swatchOn: { borderColor: c.gold },
     pinInput: { ...typography.body, color: c.text, backgroundColor: c.surfaceRaised, borderRadius: radius.md, padding: spacing.md, minHeight: 64, textAlignVertical: 'top' },
+    linkInput: { ...typography.body, color: c.text, backgroundColor: c.surfaceRaised, borderRadius: radius.md, padding: spacing.md },
     saveBtn: { alignSelf: 'flex-start', backgroundColor: c.accent, borderRadius: radius.pill, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
     saveText: { fontFamily: fonts.bodySemi, fontSize: 13, color: c.onAccent },
   });

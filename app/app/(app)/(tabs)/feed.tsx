@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert, Image, Share,
+  View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert, Image, Share, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, router } from 'expo-router';
@@ -25,6 +25,11 @@ import { spacing, radius, typography, fonts, type Palette } from '@/constants/th
 // "Prairie Highlands Golf Course" reads as the punchier "Prairie Highlands".
 function boardTitle(name: string): string {
   return name.replace(/\s+(Golf & Country Club|Country Club|Golf Course|Golf Club|Golf Links|G&CC|G\.?C\.?C\.?|GC|CC)$/i, '').trim() || name;
+}
+
+// A clean label for a club's external link (drop the protocol/www/trailing slash).
+function linkLabel(url: string): string {
+  return url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
 }
 
 // Local YYYY-MM-DD (the player's clock, not UTC) so "today" lines up with the
@@ -274,6 +279,18 @@ export default function FeedScreen() {
             <Ionicons name="pin" size={15} color={colors.gold} />
             <Text style={styles.pinnedText}>{club.pinned_message}</Text>
           </View>
+        ) : null}
+
+        {club?.link_url ? (
+          <TouchableOpacity
+            style={styles.linkChip} activeOpacity={0.8} accessibilityRole="link"
+            accessibilityLabel={`Open ${linkLabel(club.link_url)}`}
+            onPress={() => { haptics.select(); Linking.openURL(club.link_url!).catch(() => {}); }}
+          >
+            <Ionicons name="link" size={15} color={colors.accent} />
+            <Text style={styles.linkChipText} numberOfLines={1}>{linkLabel(club.link_url)}</Text>
+            <Ionicons name="open-outline" size={14} color={colors.muted} />
+          </TouchableOpacity>
         ) : null}
 
         {/* ── A2: the join-the-network prompt — home board, prospect clubs
@@ -766,6 +783,12 @@ function makeStyles(colors: Palette) {
       borderLeftWidth: 2, borderLeftColor: colors.gold,
     },
     pinnedText: { ...typography.body, fontSize: 14, color: colors.text, flex: 1 },
+    linkChip: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      backgroundColor: colors.surface, borderRadius: radius.lg,
+      paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md,
+    },
+    linkChipText: { ...typography.bodySemiBold, fontSize: 14, color: colors.accent, flex: 1 },
     // Prospect (join-the-network) card — standard border. The GOLD trim is the
     // network's earned mark; a prospect card wearing it would dilute the paid tier.
     prospectCard: {

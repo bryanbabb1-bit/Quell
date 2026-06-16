@@ -154,6 +154,8 @@ export interface ClubSummary {
   primary_color: string | null;
   // A note the club's staff pin to the board (e.g. "Men's league Saturday").
   pinned_message?: string | null;
+  // An external link staff publish (website, tee-time booking, league signup).
+  link_url?: string | null;
   // Member demand signals for this club (prospects) — social proof shown on
   // the prospect card before the viewer has tapped anything.
   interest_count?: number;
