@@ -149,6 +149,16 @@ export function getPalette(id: string | null | undefined): Palette {
 // Back-compat static export (default palette). Screens not yet migrated still work.
 export const colors = getPalette(DEFAULT_PALETTE_ID);
 
+// CINEMATIC — the reveal + live gamecast are always-dark broadcast surfaces,
+// regardless of the app palette (the dark-on-light contrast is the point). A
+// rich dark canvas carrying the Ignite orange brand accent + the red/blue
+// gamecast identity. Screens use this directly instead of useColors().
+export const cinematicColors: Palette = {
+  ...getPalette('fairway'),
+  accent: '#F2542D', accentDark: '#D8431E', accentGlow: 'rgba(242,84,45,0.16)', onAccent: '#FFFFFF',
+  fairway: '#F2542D', fairwayDark: '#D8431E', fairwaySoft: 'rgba(242,84,45,0.16)',
+};
+
 export const spacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
 export const radius = { sm: 8, md: 12, lg: 20, xl: 28, pill: 999 } as const;
 

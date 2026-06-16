@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, useWindowDimensions, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import Animated, { FadeIn, FadeInUp, useSharedValue, useAnimatedStyle, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
@@ -8,14 +9,13 @@ import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
 import { useResultsStore } from '@/store/useResultsStore';
-import { useColors } from '@/store/useThemeStore';
 import { Confetti } from '@/components/ui';
 import { useCountUp } from '@/components/motion';
 import { WinSmash } from '@/components/WinSmash';
 import { haptics } from '@/lib/haptics';
 import type { RevealResponse, HoleResult } from '@/types';
 import { deltaLabel } from '@/lib/format';
-import { spacing, radius, makeType, fonts, type Palette } from '@/constants/theme';
+import { spacing, radius, makeType, fonts, cinematicColors, type Palette } from '@/constants/theme';
 
 const STEP_MS = 2500; // hybrid auto-advance pace
 
@@ -25,7 +25,7 @@ export default function RevealScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { userId } = useAuth();
   const api = useApi();
-  const colors = useColors();
+  const colors = cinematicColors;
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const markSeen = useResultsStore((s) => s.markSeen);
 
@@ -248,6 +248,7 @@ export default function RevealScreen() {
 
   return (
     <View style={styles.flex}>
+      <StatusBar style="light" />
       <LinearGradient colors={grad} style={StyleSheet.absoluteFill} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} />
       {done && outcome === 'win' && !isSpectator && <Confetti />}
 
@@ -459,7 +460,7 @@ function HoleSide({ name, gross, net, strokes, won, you, wonColor, wonGlow, step
   // Broadcast override (spectators): the player's color instead of win-green.
   wonColor?: string; wonGlow?: string; stepKey: number;
 }) {
-  const colors = useColors();
+  const colors = cinematicColors;
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const shown = useCountUp(gross, { from: 0, resetKey: stepKey });
   const wonWrap = won && (wonColor ? { borderColor: wonColor, backgroundColor: wonGlow } : styles.sideWonWrap);

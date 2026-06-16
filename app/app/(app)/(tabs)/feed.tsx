@@ -21,6 +21,12 @@ import { MATCH_TYPE_LABELS } from '@/types';
 import type { CourseFeedMatch, CourseSummary, OpenInvite, CoursePulse, ClubSummary, ClubChampions, ChampionEntry } from '@/types';
 import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
 
+// Shorten a course name for the masthead hero — drop the boilerplate suffix so
+// "Prairie Highlands Golf Course" reads as the punchier "Prairie Highlands".
+function boardTitle(name: string): string {
+  return name.replace(/\s+(Golf & Country Club|Country Club|Golf Course|Golf Club|Golf Links|G&CC|G\.?C\.?C\.?|GC|CC)$/i, '').trim() || name;
+}
+
 // Local YYYY-MM-DD (the player's clock, not UTC) so "today" lines up with the
 // feed's play_date filter.
 function isoOn(d: Date): string {
@@ -231,7 +237,7 @@ export default function FeedScreen() {
             <Ionicons name="golf-outline" size={18} color={colors.live} />
           )}
           <View style={styles.mastheadMid}>
-            <Text style={styles.courseTitle} numberOfLines={1}>{course ?? 'Pick a course'}</Text>
+            <Text style={styles.courseTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{course ? boardTitle(course) : 'Pick a course'}</Text>
             {club?.status === 'network' && (
               <View style={styles.networkRow}>
                 <Ionicons name="shield-checkmark" size={11} color={colors.gold} />

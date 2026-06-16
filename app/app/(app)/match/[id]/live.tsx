@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useApi } from '@/lib/useApi';
-import { useColors } from '@/store/useThemeStore';
 import { Avatar } from '@/components/ui';
 import { haptics } from '@/lib/haptics';
 import { formatCourseHandicap } from '@/lib/format';
 import type { LiveState, Gamecast, GamecastEvent, GamecastHole, CheerKind, Reactors } from '@/types';
-import { spacing, radius, typography, fonts, type Palette } from '@/constants/theme';
+import { spacing, radius, typography, fonts, cinematicColors, type Palette } from '@/constants/theme';
 
 // The live GAMECAST for a same-group match — built to be watched. Participants
 // keep the card (either player can enter both sides) and confirm at the end;
@@ -43,7 +43,7 @@ function holeScoreWord(gh: GamecastHole, side: 'creator' | 'opponent'): { word: 
 export default function LiveMatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const api = useApi();
-  const colors = useColors();
+  const colors = cinematicColors;
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [state, setState] = useState<LiveState | null>(null);
@@ -154,6 +154,7 @@ export default function LiveMatchScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <StatusBar style="light" />
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.headRow}>
