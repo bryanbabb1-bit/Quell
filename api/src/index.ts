@@ -18,6 +18,7 @@ import { handlePlayer } from './routes/players';
 import { runReminders } from './routes/reminders';
 import { crownPriorMonth } from './lib/champions';
 import { handleUploadPhoto, servePhoto } from './routes/photos';
+import { privacyPage } from './routes/legal';
 import { handleGifs } from './routes/gifs';
 
 // CORS only matters for browsers (Expo Web, dev tooling). Native iOS/Android
@@ -65,6 +66,9 @@ async function handleRequest(
   }
   if (root === 'photos' && method === 'GET') {
     return { response: await servePhoto(env, segments), userId: null };
+  }
+  if (root === 'privacy' && method === 'GET') {
+    return { response: privacyPage(), userId: null };
   }
 
   // ── Authenticated ──

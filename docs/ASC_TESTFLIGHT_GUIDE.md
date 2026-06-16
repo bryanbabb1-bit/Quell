@@ -1,10 +1,14 @@
 # Foretera — App Store Connect → TestFlight, step by step
 
-A do-it-yourself walkthrough to get Foretera in front of beta testers. Written
-for where you are **right now**: the production build (#4, store distribution) is
-processing on EAS; your iOS Distribution Certificate + provisioning profile are
-set up (you did the Apple login tonight). This guide is just the ASC + TestFlight
-clicking — the part only you can do.
+A do-it-yourself walkthrough to get Foretera in front of beta testers. The ASC +
+TestFlight click-path below is the same regardless of build number — just submit
+your **latest production build** (the one carrying the new **Ignite** orange
+rebrand: light theme + orange logo). Your iOS Distribution Certificate +
+provisioning profile are already set up. EAS **auto-increments the build number**
+(`production.autoIncrement: true`, `appVersionSource: remote`), so each
+`eas build` produces a fresh, non-colliding build number — **no manual version
+bump needed**. This guide is just the ASC + TestFlight clicking — the part only
+you can do.
 
 | Fact | Value |
 |---|---|
@@ -13,7 +17,7 @@ clicking — the part only you can do.
 | Apple Team | `R8R2L8WM46` (Bryan Babb — Individual) |
 | EAS project | `@true-forecast/quell` |
 | Backend | `match-play-api.bryan-babb1.workers.dev` (live) |
-| This build | production / **store** distribution, version `0.1.0`, build #4 |
+| This build | production / **store** distribution, version `0.1.0`, build # auto-incremented per EAS build |
 
 **The two fastest paths:**
 - **Internal testing** (up to 100 testers, **no Apple review**, live in minutes) — do this first to get yourself + a handful of friends testing tonight/tomorrow.
@@ -88,7 +92,7 @@ In your app → left sidebar:
 
 ---
 
-## STEP 3 — Get build #4 into App Store Connect
+## STEP 3 — Get your latest build into App Store Connect
 
 The EAS build produces the binary but does **not** auto-upload. Two ways to push
 it to ASC — pick one:
@@ -144,7 +148,7 @@ Up to **100 internal testers**, **no Apple review**, available within minutes.
    "Team").
    - Internal testers must first exist under **Users and Access** with any role
      (add them by Apple ID email there; they accept the ASC invite).
-   - Back in the group, **add** those people and **assign build #4**.
+   - Back in the group, **add** those people and **assign your latest build**.
 4. They get a TestFlight email → install the **TestFlight** app from the App
    Store → accept → install Foretera. Done — they're testing.
 
@@ -160,7 +164,7 @@ Review). Do this once you want a crowd.
 
 1. **TestFlight** → **External Testing** → **＋** to create a group (e.g.
    "Beta").
-2. **Add the build** (#4) to the group. This triggers the **"What to Test"** +
+2. **Add the build** (the latest build) to the group. This triggers the **"What to Test"** +
    **Beta App Review Information** form. Fill it carefully — see the gotchas
    below; this is where betas get rejected.
 3. Add testers by **email**, or enable the **Public Link** (a shareable URL —
@@ -209,15 +213,15 @@ These are the things that get *this* app bounced:
 
 | Task | Who |
 |---|---|
-| Run the production build | **Done** (build #4 baking) — future ones I run **if** you set up the ASC API key (Step 3A) |
+| Run the production build | **You** (real terminal, interactive Apple login); EAS auto-increments the build #. Future ones I can run **if** you set up the ASC API key (Step 3A) |
 | `eas submit` to upload to ASC | Me (with the ASC API key) — or you, Step 3B |
 | Create the app record, app privacy, age rating | **You** (Step 1–2) |
 | TestFlight test info, groups, testers, submit for review | **You** (Step 5–7) |
 | Draft the privacy policy text / review notes / demo-user setup steps | Me — just ask |
 | Swap to a production Clerk instance before scaling testers | You create it → I wire the key |
 
-**Bottom line tonight:** the binary is building. The only thing blocking
-*internal* testing is the app record (Step 1) + getting the build uploaded
+**Bottom line:** once your latest build is uploaded, the only thing blocking
+*internal* testing is the app record (Step 1) + getting the build into ASC
 (Step 3). Do those and you + a few testers are live with zero Apple wait.
 External/volume needs the Beta App Review (Step 6) with the demo account + the
 not-gambling note.
