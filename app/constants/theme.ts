@@ -79,7 +79,31 @@ function pal(p: PalInput): Palette {
 // space. Think Centurion card, not GPS rangefinder.
 export const PALETTES: { id: string; name: string; colors: Palette }[] = [
   {
-    // Members — DARK (default). Rich black + ivory + champagne.
+    // ── "IGNITE" — energetic orange on a clean, bright base. ──────────────────
+    // The sporty/community direction: Strava-style energy. A warm-white canvas
+    // keeps it fresh and alive (the reveal stays cinematically dark for contrast);
+    // one confident coral-orange is the signature — wins, kudos, CTAs. Win=green,
+    // Loss=red for results; gold survives only as the achievement/championship
+    // mark (medals). Community/live surfaces get a vivid blue so they read as
+    // their own space.
+    id: 'ignite', name: 'Ignite',
+    colors: pal({
+      scheme: 'light',
+      bg: '#FAF8F4', surface: '#FFFFFF', surfaceRaised: '#F1EDE5',
+      text: '#1A1916', muted: '#76726A', border: '#EAE5DC', divider: '#E1DBD0',
+      accent: '#F2542D', accentDark: '#D8431E', accentGlow: 'rgba(242,84,45,0.10)', onAccent: '#FFFFFF',
+      win: '#1A9D5A', winGlow: 'rgba(26,157,90,0.12)',
+      loss: '#D93A34', lossGlow: 'rgba(217,58,52,0.10)',
+      halve: '#8A857A', halveGlow: 'rgba(138,133,122,0.18)',
+      gold: '#D69A1E', goldGlow: 'rgba(214,154,30,0.14)',
+      live: '#2D6CDF', liveGlow: 'rgba(45,108,223,0.10)',
+      liveAlt: '#7A5AD0', liveAltGlow: 'rgba(122,90,208,0.12)',
+      sideA: '#D93A34', sideAGlow: 'rgba(217,58,52,0.12)',
+      sideB: '#2D6CDF', sideBGlow: 'rgba(45,108,223,0.12)',
+    }),
+  },
+  {
+    // Members — DARK. Rich black + ivory + champagne.
     id: 'fairway', name: 'Dark',
     colors: pal({
       scheme: 'dark',
@@ -116,7 +140,7 @@ export const PALETTES: { id: string; name: string; colors: Palette }[] = [
   },
 ];
 
-export const DEFAULT_PALETTE_ID = 'fairway';
+export const DEFAULT_PALETTE_ID = 'ignite';
 
 export function getPalette(id: string | null | undefined): Palette {
   return (PALETTES.find((p) => p.id === id)?.colors) ?? PALETTES[0].colors;
