@@ -84,7 +84,7 @@ export default function ClubMemberScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.name} numberOfLines={1}>{data.name}</Text>
             <Text style={styles.sub}>
-              {data.handicap != null ? `${formatHandicap(data.handicap)} index` : 'No index'} · member since {monthYear(data.member_since)}
+              {data.handicap != null ? `${formatHandicap(data.handicap)} index` : 'No index'} · first played here {monthYear(data.member_since)}
             </Text>
           </View>
           <View style={[styles.statusChip, { borderColor: sm.color }]}>
@@ -162,7 +162,7 @@ export default function ClubMemberScreen() {
 
 function statusMeta(s: MemberStatus, c: Palette): { label: string; color: string; icon: any } {
   switch (s) {
-    case 'new': return { label: 'NEW', color: c.gold, icon: 'sparkles-outline' };
+    case 'new': return { label: 'NEW HERE', color: c.gold, icon: 'sparkles-outline' };
     case 'active': return { label: 'ACTIVE', color: c.win, icon: 'checkmark-circle-outline' };
     case 'cooling': return { label: 'COOLING', color: c.muted, icon: 'time-outline' };
     case 'lapsed': return { label: 'LAPSED', color: c.loss, icon: 'alert-circle-outline' };

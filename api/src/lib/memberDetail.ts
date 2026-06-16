@@ -133,7 +133,9 @@ function headlineFor(
   momentum: 'rising' | 'steady' | 'cooling', partners: number
 ): string {
   if (status === 'new') {
-    return total >= 3 ? 'New member, off to a strong start.' : 'New member — welcome them in.';
+    // "new" = first match on Foretera here was recent — NOT a claim about club
+    // tenure (they may be a 10-year member who just started logging here).
+    return total >= 3 ? 'New to the board — off to a strong start.' : 'New to the board — first match here was recent.';
   }
   if (status === 'lapsed') {
     return `Lapsed — quiet ${daysSince ?? '90+'} days. Worth a personal nudge.`;

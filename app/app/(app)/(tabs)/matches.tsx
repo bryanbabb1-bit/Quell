@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView,
   RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,15 @@ import { formatPlayWhen, STATUS_LABELS } from '@/lib/format';
 
 // Matches that can be archived out of the list (the record keeps them).
 const TERMINAL = ['completed', 'cancelled', 'declined', 'expired'];
+
+// Filter chips for the active list — by where the match is in its life.
+const CATS: { k: string; label: string; test: (m: Match) => boolean }[] = [
+  { k: 'all', label: 'All', test: () => true },
+  { k: 'pending', label: 'Challenges', test: (m) => m.status === 'pending' },
+  { k: 'upcoming', label: 'Upcoming', test: (m) => m.status === 'open' || m.status === 'accepted' },
+  { k: 'live', label: 'Live', test: (m) => m.status === 'in_progress' },
+  { k: 'final', label: 'Final', test: (m) => m.status === 'completed' },
+];
 
 const statusTint = (c: Palette): Record<string, string> => ({
   open: c.muted,
@@ -92,6 +101,7 @@ export default function MyMatchesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [filter, setFilter] = useState('all');
 
   const archived = useArchiveStore((s) => s.archived);
   const toggleArchive = useArchiveStore((s) => s.toggle);
@@ -120,9 +130,11 @@ export default function MyMatchesScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const archivedSet = useMemo(() => new Set(archived), [archived]);
+  const cat = useMemo(() => CATS.find((c) => c.k === filter) ?? CATS[0], [filter]);
   const visible = useMemo(
-    () => matches.filter((m) => (showArchived ? archivedSet.has(m.id) : !archivedSet.has(m.id))),
-    [matches, archivedSet, showArchived],
+    // Archive split first; the status filter applies only to the ACTIVE list.
+    () => matches.filter((m) => (showArchived ? archivedSet.has(m.id) : !archivedSet.has(m.id) && cat.test(m))),
+    [matches, archivedSet, showArchived, cat],
   );
   const archivedCount = useMemo(
     () => matches.filter((m) => archivedSet.has(m.id)).length,
@@ -163,19 +175,35 @@ export default function MyMatchesScreen() {
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.accent} />}
         ListHeaderComponent={
-          archivedCount > 0 ? (
-            <TouchableOpacity style={styles.archiveToggle} onPress={() => { haptics.select(); setShowArchived((v) => !v); }}>
-              <Ionicons name={showArchived ? 'arrow-back' : 'archive-outline'} size={15} color={colors.muted} />
-              <Text style={styles.archiveToggleText}>{showArchived ? 'Back to active matches' : `View archived (${archivedCount})`}</Text>
-            </TouchableOpacity>
-          ) : null
+          <>
+            {!showArchived && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+                {CATS.map((cIt) => {
+                  const active = filter === cIt.k;
+                  return (
+                    <TouchableOpacity key={cIt.k} onPress={() => { haptics.select(); setFilter(cIt.k); }} style={[styles.chip, active && styles.chipActive]} accessibilityRole="button" accessibilityState={{ selected: active }}>
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{cIt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+            {archivedCount > 0 && (
+              <TouchableOpacity style={styles.archiveToggle} onPress={() => { haptics.select(); setShowArchived((v) => !v); }}>
+                <Ionicons name={showArchived ? 'arrow-back' : 'archive-outline'} size={15} color={colors.muted} />
+                <Text style={styles.archiveToggleText}>{showArchived ? 'Back to active matches' : `View archived (${archivedCount})`}</Text>
+              </TouchableOpacity>
+            )}
+          </>
         }
         ListEmptyComponent={
           error
             ? <ErrorState message={error} onRetry={() => { setLoading(true); load(); }} />
             : showArchived
               ? <EmptyState icon="archive-outline" title="Nothing archived" message="Long-press a finished match to archive it." />
-              : <EmptyState icon="list-outline" title="No matches yet" message="Post a match or accept one from Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
+              : filter !== 'all'
+                ? <EmptyState icon="filter-outline" title={`No ${cat.label.toLowerCase()} matches`} message="Try a different filter above." />
+                : <EmptyState icon="list-outline" title="No matches yet" message="Post a match or accept one from Discovery." actionLabel="Post a match" onAction={() => router.push('/(app)/create')} />
         }
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -221,6 +249,11 @@ function makeStyles(colors: Palette) {
     resultText: { ...typography.caption, fontSize: 12, fontFamily: fonts.bodyBold, fontVariant: ['tabular-nums'] },
     archiveToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, marginBottom: spacing.xs },
     archiveToggleText: { ...typography.caption, color: colors.muted },
+    filterRow: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.md },
+    chip: { paddingHorizontal: spacing.md, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    chipActive: { backgroundColor: colors.accentGlow, borderColor: colors.accent },
+    chipText: { ...typography.caption, color: colors.muted, fontFamily: fonts.bodySemi },
+    chipTextActive: { color: colors.accent },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingTop: spacing.xl * 2 },
     emptyTitle: { ...typography.heading, color: colors.muted },
     emptyHint: { ...typography.caption, textAlign: 'center', maxWidth: 260 },

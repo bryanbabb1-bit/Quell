@@ -118,12 +118,16 @@ export default function ClubManageScreen() {
   }
 
   const wkDelta = data.this_week.matches - data.last_week.matches;
+  const plDelta = data.this_week.players - data.last_week.players;
   const maxTrend = Math.max(1, ...data.trend.map((t) => t.matches));
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
       <ScrollView
         contentContainerStyle={styles.container}
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.gold} />}
       >
         <Text style={styles.kicker}>Pulse dashboard</Text>
@@ -143,8 +147,13 @@ export default function ClubManageScreen() {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNum}>{data.this_week.players}</Text>
-            <Text style={styles.statLabel}>golfers this week</Text>
-            <Text style={styles.deltaMuted}>{data.live_now} on the course · {data.open_invites} looking</Text>
+            <Text style={styles.statLabel}>golfers played</Text>
+            <Text
+              style={[styles.delta, plDelta >= 0 ? styles.deltaUp : styles.deltaDown]}
+              accessibilityLabel={`${plDelta >= 0 ? 'Up' : 'Down'} ${Math.abs(plDelta)} golfers versus last week`}
+            >
+              {plDelta >= 0 ? '▲' : '▼'} {Math.abs(plDelta)} vs last week
+            </Text>
           </View>
         </View>
 
@@ -191,7 +200,7 @@ export default function ClubManageScreen() {
           <Text style={styles.panelTitle}>This month</Text>
           <View style={styles.flowRow}>
             <View style={styles.flowCell}><Text style={styles.flowNum}>{data.active_this_month}</Text><Text style={styles.statLabel}>active</Text></View>
-            <View style={styles.flowCell}><Text style={[styles.flowNum, { color: colors.win }]}>{data.new_this_month}</Text><Text style={styles.statLabel}>new</Text></View>
+            <View style={styles.flowCell}><Text style={[styles.flowNum, { color: colors.win }]}>{data.new_this_month}</Text><Text style={styles.statLabel}>new here</Text></View>
             <View style={styles.flowCell}><Text style={styles.flowNum}>{data.returning_this_month}</Text><Text style={styles.statLabel}>returning</Text></View>
           </View>
         </View>
@@ -269,14 +278,17 @@ export default function ClubManageScreen() {
           </View>
         )}
 
-        {/* Demand */}
-        <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Member demand</Text>
-          <Text style={styles.demandLine}>
-            <Text style={styles.demandNum}>{data.demand.total}</Text> members have asked for this club
-            {data.demand.last_30d > 0 ? `  ·  ${data.demand.last_30d} in the last 30 days` : ''}
-          </Text>
-        </View>
+        {/* Demand — only meaningful for a PROSPECT club courting a claim, not a
+            live network club that already has its board. */}
+        {club && club.status !== 'network' && (
+          <View style={styles.panel}>
+            <Text style={styles.panelTitle}>Member demand</Text>
+            <Text style={styles.demandLine}>
+              <Text style={styles.demandNum}>{data.demand.total}</Text> members have asked for this club
+              {data.demand.last_30d > 0 ? `  ·  ${data.demand.last_30d} in the last 30 days` : ''}
+            </Text>
+          </View>
+        )}
 
         {/* ── Club identity ── */}
         <Text style={styles.sectionRule}>Club identity</Text>
