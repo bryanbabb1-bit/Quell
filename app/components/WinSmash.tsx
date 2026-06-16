@@ -4,9 +4,8 @@ import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, interpolate, runOnJS, Extrapolation, Easing,
 } from 'react-native-reanimated';
 import { Avatar } from '@/components/ui';
-import { useColors } from '@/store/useThemeStore';
 import { haptics } from '@/lib/haptics';
-import { makeType, spacing, radius, type Palette } from '@/constants/theme';
+import { makeType, spacing, radius, cinematicColors, type Palette } from '@/constants/theme';
 
 const { width } = Dimensions.get('window');
 const DURATION = 4400;
@@ -25,7 +24,7 @@ export function WinSmash({ winnerName, winnerPhoto, loserName, loserPhoto, delta
   youWon: boolean;
   onDone: () => void;
 }) {
-  const c = useColors();
+  const c = cinematicColors;
   const styles = makeStyles(c);
   const t = useSharedValue(0);
 

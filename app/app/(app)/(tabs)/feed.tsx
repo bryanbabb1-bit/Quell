@@ -426,8 +426,8 @@ export default function FeedScreen() {
               <View style={[styles.liveDot, { marginTop: spacing.sm }]} />
               <Text style={styles.sectionTitle}>Now playing</Text>
             </View>
-            <View style={[styles.card, styles.cardLive]}>
-              {live.map((m, i) => <FeedRow key={m.id} m={m} divider={i > 0} colors={colors} styles={styles} onToggleFollow={toggleFollow} />)}
+            <View style={styles.cardStack}>
+              {live.map((m) => <FeedRow key={m.id} m={m} colors={colors} styles={styles} onToggleFollow={toggleFollow} />)}
             </View>
           </>
         )}
@@ -435,8 +435,8 @@ export default function FeedScreen() {
         {scheduled.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Teed up today</Text>
-            <View style={styles.card}>
-              {scheduled.map((m, i) => <FeedRow key={m.id} m={m} divider={i > 0} colors={colors} styles={styles} onToggleFollow={toggleFollow} />)}
+            <View style={styles.cardStack}>
+              {scheduled.map((m) => <FeedRow key={m.id} m={m} colors={colors} styles={styles} onToggleFollow={toggleFollow} />)}
             </View>
           </>
         )}
@@ -444,8 +444,8 @@ export default function FeedScreen() {
         {done.length > 0 && (
           <>
             <Text style={styles.sectionTitle}>Final results</Text>
-            <View style={styles.card}>
-              {done.map((m, i) => <FeedRow key={m.id} m={m} divider={i > 0} colors={colors} styles={styles} />)}
+            <View style={styles.cardStack}>
+              {done.map((m) => <FeedRow key={m.id} m={m} colors={colors} styles={styles} />)}
             </View>
           </>
         )}
@@ -579,13 +579,18 @@ function InviteRow({ iv, divider, colors, styles, onAccept }: {
   );
 }
 
-function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
-  m: CourseFeedMatch; divider: boolean; colors: Palette; styles: ReturnType<typeof makeStyles>;
+// A people-first "moment card" — the two players' faces, the result/state as the
+// hero line, and a 🔥 kudos action. Tap → the reveal (done), live gamecast, or
+// match detail. This is the community-feed building block.
+function FeedRow({ m, colors, styles, onToggleFollow }: {
+  m: CourseFeedMatch; colors: Palette; styles: ReturnType<typeof makeStyles>;
   onToggleFollow?: (id: string, follow: boolean) => Promise<{ following: boolean; count: number } | null>;
 }) {
+  const api = useApi();
   const time = timeLabel(m.play_time);
   const isLive = m.status === 'in_progress';
-  // Optimistic 👁 follow state, synced when the feed reloads.
+  const isDone = m.status === 'completed';
+  // Optimistic follow state for live matches.
   const [follow, setFollow] = useState({ following: !!m.is_following, count: m.follower_count ?? 0 });
   useEffect(() => { setFollow({ following: !!m.is_following, count: m.follower_count ?? 0 }); }, [m.is_following, m.follower_count]);
   const onWatch = async () => {
@@ -596,63 +601,68 @@ function FeedRow({ m, divider, colors, styles, onToggleFollow }: {
     const r = await onToggleFollow(m.id, next);
     if (r) setFollow({ following: r.following, count: r.count });
   };
-  // Result line for a finished match (neutral, third-person).
-  let resultText: string | null = null;
-  if (m.status === 'completed') {
-    if (m.result === 'tie') resultText = m.final_delta ? `Halved (${m.final_delta})` : 'Halved';
+  // Optimistic kudos (🔥), reconciled to the server's fire tally.
+  const [cheer, setCheer] = useState({ on: !!m.viewer_cheered, count: m.cheer_count ?? 0 });
+  useEffect(() => { setCheer({ on: !!m.viewer_cheered, count: m.cheer_count ?? 0 }); }, [m.viewer_cheered, m.cheer_count]);
+  const onCheer = () => {
+    haptics.medium();
+    const next = !cheer.on;
+    setCheer((s) => ({ on: next, count: Math.max(0, s.count + (next ? 1 : -1)) }));
+    api.sendCheer(m.id, 'fire')
+      .then((r) => setCheer({ on: r.your_reactions.includes('fire'), count: r.reactions.fire ?? 0 }))
+      .catch(() => {});
+  };
+
+  // The hero line: result (done), live state, or tee time.
+  let headline = 'Scheduled';
+  if (isDone) {
+    if (m.result === 'tie') headline = m.final_delta ? `Halved · ${m.final_delta}` : 'Halved';
     else {
-      const winner = m.result === 'creator_wins' ? m.creator_name : m.opponent_name;
-      resultText = m.final_delta ? `${winner} won ${m.final_delta}` : `${winner} won`;
+      const winner = (m.result === 'creator_wins' ? m.creator_name : m.opponent_name).split(' ')[0];
+      headline = m.final_delta ? `${winner} won ${m.final_delta}` : `${winner} won`;
     }
-  }
+  } else if (isLive) headline = 'Live now';
+  else if (time) headline = `Tees off ${time}`;
+
+  const dest = isDone ? `/(app)/match/${m.id}/reveal`
+    : (isLive && m.playing_together) ? `/(app)/match/${m.id}/live`
+    : `/(app)/match/${m.id}`;
+
   return (
-    <PressableScale
-      style={[styles.row, divider && styles.rowDivider]}
-      accessibilityRole="button"
-      // Completed → the reveal. A live SAME-GROUP match → the live follow screen
-      // (running tally). Other live matches → read-only match detail (no scores).
-      onPress={() => router.push(
-        m.status === 'completed' ? `/(app)/match/${m.id}/reveal`
-          : (isLive && m.playing_together) ? `/(app)/match/${m.id}/live`
-          : `/(app)/match/${m.id}`,
-      )}
-    >
-      <View style={styles.players}>
-        <View style={styles.playerLine}>
-          <Avatar name={m.creator_name} size={26} photoUrl={m.creator_photo_url} />
-          <Text style={styles.playerName} numberOfLines={1}>{m.creator_name}</Text>
+    <PressableScale style={styles.momentCard} accessibilityRole="button" accessibilityLabel={`${m.creator_name} versus ${m.opponent_name}`} onPress={() => router.push(dest)}>
+      <View style={styles.momPlayers}>
+        <View style={styles.momPlayer}>
+          <Avatar name={m.creator_name} size={46} photoUrl={m.creator_photo_url} />
+          <Text style={styles.momName} numberOfLines={1}>{m.creator_name.split(' ')[0]}</Text>
         </View>
-        <Text style={styles.vs}>vs</Text>
-        <View style={styles.playerLine}>
-          <Avatar name={m.opponent_name} size={26} photoUrl={m.opponent_photo_url} />
-          <Text style={styles.playerName} numberOfLines={1}>{m.opponent_name}</Text>
+        <View style={styles.momMid}>
+          {isLive ? (
+            <View style={styles.liveChip}><View style={styles.liveChipDot} /><Text style={styles.liveChipText}>LIVE</Text></View>
+          ) : (
+            <Text style={styles.momVs}>vs</Text>
+          )}
+        </View>
+        <View style={styles.momPlayer}>
+          <Avatar name={m.opponent_name} size={46} photoUrl={m.opponent_photo_url} />
+          <Text style={styles.momName} numberOfLines={1}>{m.opponent_name.split(' ')[0]}</Text>
         </View>
       </View>
 
-      <View style={styles.rowRight}>
-        {m.status === 'completed' ? (
-          <Text style={styles.resultText} numberOfLines={2}>{resultText}</Text>
-        ) : isLive ? (
-          <View style={styles.liveChip}>
-            <View style={styles.liveChipDot} />
-            <Text style={styles.liveChipText}>LIVE</Text>
-          </View>
-        ) : (
-          <View style={styles.statusChip}>
-            <Text style={styles.statusChipText}>Scheduled</Text>
-          </View>
+      <Text style={styles.momHeadline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{headline}</Text>
+      <Text style={styles.momMeta} numberOfLines={1}>{[time, MATCH_TYPE_LABELS[m.match_type]].filter(Boolean).join(' · ')}</Text>
+
+      <View style={styles.momActions}>
+        {(isDone || isLive) && (
+          <PressableScale haptic={null} hitSlop={8} onPress={onCheer} style={[styles.kudosBtn, cheer.on && styles.kudosBtnOn]} accessibilityRole="button" accessibilityLabel={cheer.on ? 'Remove cheer' : 'Cheer this match'}>
+            <Text style={styles.kudosEmoji}>🔥</Text>
+            <Text style={[styles.kudosText, cheer.on && { color: colors.accent }]}>{cheer.count > 0 ? `${cheer.count} ` : ''}{cheer.on ? 'Cheered' : 'Cheer'}</Text>
+          </PressableScale>
         )}
-        <Text style={styles.meta}>{[time, MATCH_TYPE_LABELS[m.match_type]].filter(Boolean).join(' · ')}</Text>
-        {/* Watch — a "people" metaphor, never an eyeball. Participants don't
-            follow their own match; they just see the watcher count when there is one. */}
         {isLive && !m.is_mine && onToggleFollow && (
-          <TouchableOpacity style={styles.watchBtn} onPress={onWatch} hitSlop={6} accessibilityRole="button" accessibilityLabel={follow.following ? 'Stop following' : 'Follow this match'}>
-            <Ionicons name={follow.following ? 'people' : 'people-outline'} size={13} color={follow.following ? colors.live : colors.muted} />
+          <PressableScale haptic={null} hitSlop={8} onPress={onWatch} style={styles.watchBtn} accessibilityRole="button" accessibilityLabel={follow.following ? 'Stop following' : 'Follow this match'}>
+            <Ionicons name={follow.following ? 'people' : 'people-outline'} size={14} color={follow.following ? colors.live : colors.muted} />
             <Text style={[styles.watchText, follow.following && { color: colors.live }]}>{follow.count > 0 ? `${follow.count} ` : ''}{follow.following ? 'Following' : 'Follow'}</Text>
-          </TouchableOpacity>
-        )}
-        {isLive && follow.count > 0 && (m.is_mine || !onToggleFollow) && (
-          <Text style={styles.meta}>{follow.count} {follow.count === 1 ? 'follower' : 'followers'}</Text>
+          </PressableScale>
         )}
         {m.is_mine && <Text style={styles.mineTag}>Your match</Text>}
       </View>
@@ -682,7 +692,21 @@ function makeStyles(colors: Palette) {
     sectionTitle: { fontFamily: fonts.bodySemi, fontSize: 12, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.muted, marginTop: spacing.sm },
     liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
     card: { backgroundColor: colors.surface, borderRadius: radius.lg, overflow: 'hidden' },
-    cardLive: { borderLeftWidth: 2, borderLeftColor: colors.live },
+    // Moment cards (people-first community feed)
+    cardStack: { gap: spacing.md },
+    momentCard: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+    momPlayers: { flexDirection: 'row', alignItems: 'center' },
+    momPlayer: { flex: 1, alignItems: 'center', gap: 6 },
+    momName: { ...typography.bodySemiBold, fontSize: 14, color: colors.text },
+    momMid: { width: 56, alignItems: 'center' },
+    momVs: { ...typography.caption, color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+    momHeadline: { fontFamily: fonts.display, fontSize: 18, color: colors.text, textAlign: 'center', letterSpacing: -0.3 },
+    momMeta: { ...typography.caption, color: colors.muted, textAlign: 'center' },
+    momActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, marginTop: spacing.xs },
+    kudosBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surfaceRaised, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 6 },
+    kudosBtnOn: { backgroundColor: colors.accentGlow },
+    kudosEmoji: { fontSize: 14 },
+    kudosText: { ...typography.caption, color: colors.muted, fontFamily: fonts.bodySemi, fontVariant: ['tabular-nums'] },
     countBadge: {
       marginTop: spacing.sm, backgroundColor: colors.accentGlow, borderRadius: radius.pill,
       paddingHorizontal: 8, paddingVertical: 1, minWidth: 20, alignItems: 'center',

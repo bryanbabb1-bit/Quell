@@ -111,6 +111,8 @@ export interface CourseFeedMatch {
   playing_together?: number; // 0/1 — same group (live-scorable) vs apart
   follower_count?: number;   // 👁 spectators on a live match
   is_following?: boolean;    // does the caller follow this match
+  cheer_count?: number;      // 🔥 kudos on this match
+  viewer_cheered?: boolean;  // has the caller cheered it
   is_mine: boolean;
 }
 

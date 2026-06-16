@@ -647,7 +647,8 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
             cu.first_name AS creator_first_name, cu.last_name AS creator_last_name,
             cu.profile_photo_url AS creator_photo_url,
             ou.first_name AS opponent_first_name, ou.last_name AS opponent_last_name,
-            ou.profile_photo_url AS opponent_photo_url
+            ou.profile_photo_url AS opponent_photo_url,
+            (SELECT COUNT(*) FROM match_reactions r WHERE r.match_id = m.id AND r.kind = 'fire') AS cheer_count
        FROM matches m
        JOIN users cu ON cu.id = m.creator_id
        LEFT JOIN users ou ON ou.id = m.opponent_id
@@ -687,6 +688,8 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
       opponent_photo_url: m.opponent_photo_url ?? null,
       playing_together: m.playing_together ?? 0,
       follower_count: m.follower_count ?? 0,
+      cheer_count: m.cheer_count ?? 0,
+      viewer_cheered: false, // filled below for the caller
       is_following: false, // filled below for the caller
       // Whether the viewer is one of the two players (so the client can label it).
       is_mine: m.creator_id === auth.userId || m.opponent_id === auth.userId,
@@ -703,6 +706,17 @@ async function courseFeed(auth: AuthContext, env: Env, request: Request): Promis
     ).bind(auth.userId, ...liveIds).all<{ match_id: string }>();
     const set = new Set((follows ?? []).map((f) => f.match_id));
     for (const r of rows) if (set.has(r.id)) r.is_following = true;
+  }
+
+  // Mark which rows the caller has already cheered (kudos = a 🔥 reaction).
+  const allIds = rows.map((r) => r.id);
+  if (allIds.length) {
+    const ph2 = allIds.map(() => '?').join(',');
+    const { results: ch } = await env.DB.prepare(
+      `SELECT DISTINCT match_id FROM match_reactions WHERE user_id = ? AND kind = 'fire' AND match_id IN (${ph2})`
+    ).bind(auth.userId, ...allIds).all<{ match_id: string }>();
+    const cset = new Set((ch ?? []).map((c) => c.match_id));
+    for (const r of rows) if (cset.has(r.id)) r.viewer_cheered = true;
   }
 
   // Open invites — players at this course looking for a game, today onward.
