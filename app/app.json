@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#FAF8F4",
     "newArchEnabled": true,
-    "runtimeVersion": { "policy": "fingerprint" },
+    "runtimeVersion": "6eea8b33708fb59d8f3ca0a24af22e3442d02255",
     "updates": {
       "url": "https://u.expo.dev/89031ab0-a5d3-4a44-acab-134069bd0f1e"
     },
