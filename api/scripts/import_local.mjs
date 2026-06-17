@@ -77,14 +77,20 @@ async function search(q, attempt = 1) {
   if (!r.ok) throw new Error(`${r.status}`);
   return r.json();
 }
-function bestMatch(courses, name, distRef) {
+// Name search returns same-named courses nationwide, so GPS proximity to where
+// OSM says this course actually is — NOT name/state — is what rejects wrong
+// matches (Overland Park KS vs CO, Burning Tree KS vs MI, etc.). Accept the
+// nearest candidate only if it's within 30km of the OSM location, else skip.
+function bestMatch(courses, osm) {
   if (!courses?.length) return null;
-  const inState = courses.filter((c) => PREFER.includes(c.location?.state));
-  const pool = inState.length ? inState : courses;
-  const nl = slug(name);
-  return pool.find((c) => slug(c.course_name) === nl)
-    ?? pool.find((c) => slug(c.course_name).startsWith(nl.slice(0, 8)))
-    ?? pool[0];
+  const ranked = courses
+    .map((c) => {
+      const lat = c.location?.latitude ?? c.location?.lat, lng = c.location?.longitude ?? c.location?.lng;
+      return lat == null ? null : { c, d: haversine(osm, { lat, lng }) };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.d - b.d);
+  return ranked.length && ranked[0].d <= 30 ? ranked[0].c : null;
 }
 function courseSQL(c) {
   const cid = `course_api_${c.id}`;
@@ -120,7 +126,7 @@ async function pull() {
     let res;
     try { res = await search(item.name); } catch (e) { console.error(`  err "${item.name}": ${e.message}`); continue; }
     if (res.rateLimited) { console.error('  API daily quota hit — stopping; resumes next run.'); break; }
-    const c = bestMatch(res.courses, item.name);
+    const c = bestMatch(res.courses, { lat: item.lat, lng: item.lng });
     if (c) { const g = courseSQL(c); sql += g.sql; matched++; console.error(`  ✓ ${item.name} (${item.dist}km) → ${c.course_name} [${g.tees} tees]`); }
     else { missed++; console.error(`  – ${item.name} (${item.dist}km): no API match`); }
     q.processed.push(slug(item.name)); // mark done either way (missed = not in API)
