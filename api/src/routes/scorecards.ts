@@ -254,8 +254,14 @@ async function reveal(auth: AuthContext, env: Env, matchId: string): Promise<Res
   if (!isParticipant && !publicCompleted) {
     return error('Not your match', 403);
   }
-  // The lock: refuse until BOTH cards are submitted.
+  // The lock: refuse until BOTH cards are submitted. But a COMPLETED match with a
+  // missing card was won by forfeit — there's no hole-by-hole story, so say that
+  // plainly instead of the misleading "both must submit" (the detail screen shows
+  // the forfeit result).
   if (!match.creator_scorecard_id || !match.opponent_scorecard_id) {
+    if (match.status === 'completed') {
+      return error('Won by forfeit — a forfeit has no hole-by-hole reveal.', 409);
+    }
     return error('Both players must submit before the reveal', 409);
   }
 

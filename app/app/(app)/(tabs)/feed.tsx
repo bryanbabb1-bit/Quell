@@ -676,7 +676,11 @@ function FeedRow({ m, colors, styles, onToggleFollow }: {
   } else if (isLive) headline = 'Live now';
   else if (time) headline = `Tees off ${time}`;
 
-  const dest = isDone ? `/(app)/match/${m.id}/reveal`
+  // A finished match opens its reveal — UNLESS there's no scoreline, which means
+  // a forfeit (no hole-by-hole story to reveal). Those go to the detail screen,
+  // which shows the forfeit result instead of dead-ending on a locked reveal.
+  const dest = isDone
+    ? (m.final_delta ? `/(app)/match/${m.id}/reveal` : `/(app)/match/${m.id}`)
     : (isLive && m.playing_together) ? `/(app)/match/${m.id}/live`
     : `/(app)/match/${m.id}`;
 
